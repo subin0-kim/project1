@@ -1,0 +1,62 @@
+name: 🐛 Bug report
+description: 버그를 제보해 주세요
+title: "[Bug]: "
+labels: ["bug"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        감사합니다! 아래 항목을 가능한 자세히 작성해 주세요.
+
+  - type: input
+    id: version
+    attributes:
+      label: 버전
+      description: 앱/패키지 버전 또는 커밋 해시
+      placeholder: "v1.2.3 / 1a2b3c4"
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: 어떤 문제가 발생했나요?
+      description: 실제 발생한 현상을 적어주세요
+      placeholder: "…를 했더니 …가 발생했습니다"
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: 재현 방법
+      description: 단계별로 적어주세요
+      value: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 기대한 동작
+      placeholder: "원래는 …가 되어야 합니다"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: OS
+      options:
+        - macOS
+        - Windows
+        - Linux
+        - iOS
+        - Android
+        - 기타
+    validations:
+      required: true
