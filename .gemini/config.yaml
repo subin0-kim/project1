@@ -1,0 +1,5 @@
+code_review:
+  comment_severity_threshold: "MEDIUM"
+  disable: false
+ignore_patterns:
+  - ".gitignore"
