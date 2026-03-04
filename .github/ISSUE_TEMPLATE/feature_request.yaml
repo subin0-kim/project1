@@ -21,3 +21,4 @@ body:
       placeholder: 예) 사용자가 개인정보를 수정할 수 있어야 합니다
     validations:
       required: true
+      
