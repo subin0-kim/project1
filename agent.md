@@ -27,7 +27,7 @@
 - **Namespaces:** 모든 스크립트는 `Mukseon.Core`, `Mukseon.Combat`, `Mukseon.UI` 와 같이 네임스페이스로 묶는다.
 - **Naming Rules:**
   - `Class`, `Struct`, `Enum`, `Method`, `Property`: PascalCase (e.g., `PlayerController`, `CalculateDamage`)
-  - `Public / Serialized Fields`: PascalCase 또는 _camelCase (일관성 유지). 인스펙터 노출 변수는 무조건 `[SerializeField] private`을 사용한다. `public` 변수 남용 금지.
+  - `Public / Serialized Fields`: `public` 필드는 PascalCase, `[SerializeField]` 처리된 `private` 필드는 `_camelCase`를 사용합니다. 인스펙터 노출 변수는 `[SerializeField] private` 사용을 원칙으로 하며, `public` 필드 사용은 최소화합니다.
   - `Private / Protected Variables`: _camelCase (언더스코어 접두사) (e.g., `private int _currentHealth;`)
   - `Constants / Readonly`: PascalCase (e.g., `public const float MaxSwipeDistance = 10f;`)
 - **Physics vs Kinematics:** 뱀파이어 서바이버류 게임에서 수많은 몬스터가 등장할 때 유니티 기본 물리 엔진(Rigidbody2D 동적 충돌)은 매우 무겁다. 이동 로직은 `Transform.Translate`나 `Vector2.MoveTowards` 등 Kinematic한 방식을 지향하고, 충돌 감지는 `Physics2D.OverlapCircle`이나 `Collider2D`의 Trigger 처리를 활용해 연산 비용을 줄인다.
