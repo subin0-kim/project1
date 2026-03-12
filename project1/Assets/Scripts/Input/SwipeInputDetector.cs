@@ -18,11 +18,15 @@ namespace Mukseon.Core.Input
 
         private void Update()
         {
-            ProcessTouchInput();
-
 #if UNITY_EDITOR
-            ProcessMouseInputForEditor();
+            if (UnityEngine.Input.touchCount == 0)
+            {
+                ProcessMouseInputForEditor();
+                return;
+            }
 #endif
+
+            ProcessTouchInput();
         }
 
         private void ProcessTouchInput()
