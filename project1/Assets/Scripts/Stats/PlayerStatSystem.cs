@@ -36,7 +36,7 @@ namespace Mukseon.Gameplay.Stats
             }
         }
 
-        public bool TryGetRuntimeStat(StatType statType, out RuntimeStat runtimeStat)
+        internal bool TryGetRuntimeStat(StatType statType, out RuntimeStat runtimeStat)
         {
             return _runtimeStats.TryGetValue(statType, out runtimeStat);
         }

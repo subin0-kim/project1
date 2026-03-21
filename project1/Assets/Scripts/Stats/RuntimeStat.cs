@@ -7,6 +7,8 @@ namespace Mukseon.Gameplay.Stats
     {
         private readonly float _baseValue;
         private readonly List<StatModifier> _modifiers = new List<StatModifier>();
+        private bool _isDirty = true;
+        private float _cachedValue;
 
         public RuntimeStat(float baseValue)
         {
@@ -17,16 +19,35 @@ namespace Mukseon.Gameplay.Stats
         public int ModifierCount => _modifiers.Count;
         public IReadOnlyList<StatModifier> Modifiers => _modifiers;
 
-        public float Value => CalculateValue();
+        public float Value
+        {
+            get
+            {
+                if (_isDirty)
+                {
+                    _cachedValue = CalculateValue();
+                    _isDirty = false;
+                }
+
+                return _cachedValue;
+            }
+        }
 
         public void AddModifier(StatModifier modifier)
         {
             _modifiers.Add(modifier);
+            MarkDirty();
         }
 
         public bool RemoveModifier(StatModifier modifier)
         {
-            return _modifiers.Remove(modifier);
+            bool removed = _modifiers.Remove(modifier);
+            if (removed)
+            {
+                MarkDirty();
+            }
+
+            return removed;
         }
 
         public int RemoveAllModifiersFromSource(object source)
@@ -38,7 +59,13 @@ namespace Mukseon.Gameplay.Stats
 
             int previousCount = _modifiers.Count;
             _modifiers.RemoveAll(modifier => Equals(modifier.Source, source));
-            return previousCount - _modifiers.Count;
+            int removedCount = previousCount - _modifiers.Count;
+            if (removedCount > 0)
+            {
+                MarkDirty();
+            }
+
+            return removedCount;
         }
 
         private float CalculateValue()
@@ -62,6 +89,11 @@ namespace Mukseon.Gameplay.Stats
 
             float finalValue = valueWithFlat * (1f + percentSum);
             return Mathf.Max(0f, finalValue);
+        }
+
+        private void MarkDirty()
+        {
+            _isDirty = true;
         }
     }
 }

@@ -3,6 +3,7 @@ using UnityEngine;
 
 namespace Mukseon.Gameplay.Stats
 {
+    [RequireComponent(typeof(PlayerStatSystem))]
     [DisallowMultipleComponent]
     public class PlayerStatDebugUI : MonoBehaviour
     {
@@ -21,12 +22,16 @@ namespace Mukseon.Gameplay.Stats
         [SerializeField]
         private float _lineHeight = 22f;
 
+        private StatType[] _statTypes;
+
         private void Awake()
         {
             if (_playerStatSystem == null)
             {
                 _playerStatSystem = GetComponent<PlayerStatSystem>();
             }
+
+            _statTypes = (StatType[])Enum.GetValues(typeof(StatType));
         }
 
         private void OnGUI()
@@ -43,14 +48,18 @@ namespace Mukseon.Gameplay.Stats
                 return;
             }
 
-            Array allStatTypes = Enum.GetValues(typeof(StatType));
-            float panelHeight = (allStatTypes.Length + 1f) * _lineHeight + 20f;
+            if (_statTypes == null)
+            {
+                _statTypes = (StatType[])Enum.GetValues(typeof(StatType));
+            }
+
+            float panelHeight = (_statTypes.Length + 1f) * _lineHeight + 20f;
             Rect panelRect = new Rect(_anchorPosition.x, _anchorPosition.y, _panelWidth, panelHeight);
 
             GUILayout.BeginArea(panelRect, GUI.skin.box);
             GUILayout.Label("Player Stat Debug");
 
-            foreach (StatType statType in allStatTypes)
+            foreach (StatType statType in _statTypes)
             {
                 if (!_playerStatSystem.TryGetRuntimeStat(statType, out RuntimeStat runtimeStat))
                 {
