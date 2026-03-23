@@ -1,4 +1,5 @@
 using System;
+using Mukseon.Core.Input;
 using UnityEngine;
 
 namespace Mukseon.Gameplay.Combat
@@ -15,15 +16,35 @@ namespace Mukseon.Gameplay.Combat
         [SerializeField]
         private bool _disableCollidersOnDeath = true;
 
+        [SerializeField]
+        private SwipeDirection _swipeDirection = SwipeDirection.None;
+
         public float MaxHealth => _maxHealth;
         public float CurrentHealth { get; private set; }
         public bool IsAlive { get; private set; }
+        public SwipeDirection SwipeDirection
+        {
+            get
+            {
+                if (_swipeDirection == SwipeDirection.None)
+                {
+                    _swipeDirection = InferSwipeDirectionFromName(gameObject.name);
+                }
+
+                return _swipeDirection;
+            }
+        }
 
         public event Action<float, float> OnDamaged;
         public event Action OnDied;
 
         private void Awake()
         {
+            if (_swipeDirection == SwipeDirection.None)
+            {
+                _swipeDirection = InferSwipeDirectionFromName(gameObject.name);
+            }
+
             ResetHealth();
         }
 
@@ -77,6 +98,42 @@ namespace Mukseon.Gameplay.Combat
             }
 
             gameObject.SetActive(false);
+        }
+
+        public void SetSwipeDirection(SwipeDirection swipeDirection)
+        {
+            _swipeDirection = swipeDirection;
+        }
+
+        private static SwipeDirection InferSwipeDirectionFromName(string objectName)
+        {
+            if (string.IsNullOrWhiteSpace(objectName))
+            {
+                return SwipeDirection.None;
+            }
+
+            string normalizedName = objectName.ToLowerInvariant();
+            if (normalizedName.Contains("up"))
+            {
+                return SwipeDirection.Up;
+            }
+
+            if (normalizedName.Contains("down"))
+            {
+                return SwipeDirection.Down;
+            }
+
+            if (normalizedName.Contains("left"))
+            {
+                return SwipeDirection.Left;
+            }
+
+            if (normalizedName.Contains("right"))
+            {
+                return SwipeDirection.Right;
+            }
+
+            return SwipeDirection.None;
         }
     }
 }

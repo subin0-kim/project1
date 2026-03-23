@@ -1,6 +1,7 @@
 using Mukseon.Gameplay.Combat;
 using NUnit.Framework;
 using UnityEngine;
+using Mukseon.Core.Input;
 
 namespace Mukseon.Tests.EditMode
 {
@@ -48,6 +49,23 @@ namespace Mukseon.Tests.EditMode
 
                 Assert.That(enemyHealth.CurrentHealth, Is.EqualTo(initialHealth));
                 Assert.That(enemyHealth.IsAlive, Is.True);
+            }
+            finally
+            {
+                Object.DestroyImmediate(go);
+            }
+        }
+
+        [Test]
+        public void SetSwipeDirection_UpdatesSwipeDirection()
+        {
+            var go = new GameObject("Enemy");
+
+            try
+            {
+                var enemyHealth = go.AddComponent<EnemyHealth>();
+                enemyHealth.SetSwipeDirection(SwipeDirection.Right);
+                Assert.That(enemyHealth.SwipeDirection, Is.EqualTo(SwipeDirection.Right));
             }
             finally
             {

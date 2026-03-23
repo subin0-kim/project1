@@ -19,24 +19,17 @@ namespace Mukseon.Gameplay.Combat
         private Transform _attackOrigin;
 
         [Header("Attack Settings")]
-        [SerializeField, Min(0.1f)]
-        private float _attackRange = 3f;
-
-        [SerializeField, Range(1f, 180f)]
-        private float _attackArcAngle = 70f;
-
         [SerializeField, Min(0f)]
         private float _baseDamage = 1f;
 
-        [SerializeField]
-        private LayerMask _targetLayers = ~0;
+        [SerializeField, Min(1)]
+        private int _targetsPerAttack = 1;
 
         [Header("Debug")]
         [SerializeField]
         private bool _showDebugLogs = true;
 
-        private readonly Collider2D[] _overlapBuffer = new Collider2D[64];
-        private readonly HashSet<EnemyHealth> _targetBuffer = new HashSet<EnemyHealth>();
+        private readonly List<EnemyHealth> _targetBuffer = new List<EnemyHealth>(16);
 
         private void Awake()
         {
@@ -74,23 +67,22 @@ namespace Mukseon.Gameplay.Combat
 
         private void HandleAttackExecuted(SwipeDirection direction)
         {
-            Vector2 attackDirection = SwipeAttackGeometry.ToVector(direction);
-            if (attackDirection == Vector2.zero)
+            if (direction == SwipeDirection.None)
             {
                 return;
             }
 
-            int hitCount = ApplyDamage(attackDirection);
+            int hitCount = ApplyDamage(direction);
 
 #if UNITY_EDITOR
             if (_showDebugLogs)
             {
-                Debug.Log($"[SwipeAttackEventListener] {direction} attack hit {hitCount} target(s).");
+                Debug.Log($"[SwipeAttackEventListener] {direction} swipe hit {hitCount} target(s).");
             }
 #endif
         }
 
-        private int ApplyDamage(Vector2 attackDirection)
+        private int ApplyDamage(SwipeDirection swipeDirection)
         {
             if (_attackOrigin == null)
             {
@@ -103,50 +95,26 @@ namespace Mukseon.Gameplay.Combat
                 return 0;
             }
 
-            int overlapCount = Physics2D.OverlapCircleNonAlloc(
+            EnemyHealth[] enemies = FindEnemyHealthsInScene();
+            int selectedCount = SwipeAttackTargeting.SelectNearestTargets(
                 _attackOrigin.position,
-                _attackRange,
-                _overlapBuffer,
-                _targetLayers);
+                swipeDirection,
+                enemies,
+                Mathf.Max(1, _targetsPerAttack),
+                _targetBuffer);
 
-            if (overlapCount <= 0)
+            if (selectedCount <= 0)
             {
                 return 0;
             }
 
-            _targetBuffer.Clear();
-            Vector2 attackOrigin = _attackOrigin.position;
-
-            for (int i = 0; i < overlapCount; i++)
+            for (int i = 0; i < selectedCount; i++)
             {
-                Collider2D targetCollider = _overlapBuffer[i];
-                if (targetCollider == null)
-                {
-                    continue;
-                }
-
-                EnemyHealth enemyHealth = targetCollider.GetComponentInParent<EnemyHealth>();
-                if (enemyHealth == null || !enemyHealth.IsAlive || !_targetBuffer.Add(enemyHealth))
-                {
-                    continue;
-                }
-
-                Vector2 targetPosition = targetCollider.bounds.center;
-                bool isInsideArc = SwipeAttackGeometry.IsTargetWithinArc(
-                    attackOrigin,
-                    attackDirection,
-                    targetPosition,
-                    _attackArcAngle);
-
-                if (!isInsideArc)
-                {
-                    continue;
-                }
-
+                EnemyHealth enemyHealth = _targetBuffer[i];
                 enemyHealth.ApplyDamage(damage, this);
             }
 
-            return _targetBuffer.Count;
+            return selectedCount;
         }
 
         private float ResolveDamage()
@@ -160,6 +128,15 @@ namespace Mukseon.Gameplay.Combat
             }
 
             return damage;
+        }
+
+        private static EnemyHealth[] FindEnemyHealthsInScene()
+        {
+#if UNITY_2023_1_OR_NEWER
+            return FindObjectsByType<EnemyHealth>(FindObjectsSortMode.None);
+#else
+            return FindObjectsOfType<EnemyHealth>();
+#endif
         }
     }
 }
