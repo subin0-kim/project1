@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Mukseon.Core.Input;
 using UnityEngine;
 
@@ -7,6 +8,8 @@ namespace Mukseon.Gameplay.Combat
     [DisallowMultipleComponent]
     public class EnemyHealth : MonoBehaviour
     {
+        private static readonly List<EnemyHealth> _activeEnemies = new List<EnemyHealth>();
+
         [SerializeField, Min(1f)]
         private float _maxHealth = 10f;
 
@@ -22,6 +25,7 @@ namespace Mukseon.Gameplay.Combat
         public float MaxHealth => _maxHealth;
         public float CurrentHealth { get; private set; }
         public bool IsAlive { get; private set; }
+        public static IReadOnlyList<EnemyHealth> ActiveEnemies => _activeEnemies;
         public SwipeDirection SwipeDirection
         {
             get
@@ -46,6 +50,19 @@ namespace Mukseon.Gameplay.Combat
             }
 
             ResetHealth();
+        }
+
+        private void OnEnable()
+        {
+            if (!_activeEnemies.Contains(this))
+            {
+                _activeEnemies.Add(this);
+            }
+        }
+
+        private void OnDisable()
+        {
+            _activeEnemies.Remove(this);
         }
 
         public void ResetHealth()

@@ -15,20 +15,20 @@ namespace Mukseon.Gameplay.Combat
         public static int SelectNearestTargets(
             Vector2 origin,
             SwipeDirection swipeDirection,
-            EnemyHealth[] enemies,
+            IReadOnlyList<EnemyHealth> enemies,
             int maxTargets,
             List<EnemyHealth> output)
         {
             output.Clear();
 
-            if (enemies == null || enemies.Length == 0 || maxTargets <= 0 || swipeDirection == SwipeDirection.None)
+            if (enemies == null || enemies.Count == 0 || maxTargets <= 0 || swipeDirection == SwipeDirection.None)
             {
                 return 0;
             }
 
-            var candidates = new List<Candidate>(enemies.Length);
+            var candidates = new List<Candidate>(enemies.Count);
 
-            for (int i = 0; i < enemies.Length; i++)
+            for (int i = 0; i < enemies.Count; i++)
             {
                 EnemyHealth enemy = enemies[i];
                 if (enemy == null || !enemy.IsAlive || enemy.SwipeDirection != swipeDirection)

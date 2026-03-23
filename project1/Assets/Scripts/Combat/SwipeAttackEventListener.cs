@@ -95,11 +95,10 @@ namespace Mukseon.Gameplay.Combat
                 return 0;
             }
 
-            EnemyHealth[] enemies = FindEnemyHealthsInScene();
             int selectedCount = SwipeAttackTargeting.SelectNearestTargets(
                 _attackOrigin.position,
                 swipeDirection,
-                enemies,
+                EnemyHealth.ActiveEnemies,
                 Mathf.Max(1, _targetsPerAttack),
                 _targetBuffer);
 
@@ -128,15 +127,6 @@ namespace Mukseon.Gameplay.Combat
             }
 
             return damage;
-        }
-
-        private static EnemyHealth[] FindEnemyHealthsInScene()
-        {
-#if UNITY_2023_1_OR_NEWER
-            return FindObjectsByType<EnemyHealth>(FindObjectsSortMode.None);
-#else
-            return FindObjectsOfType<EnemyHealth>();
-#endif
         }
     }
 }
