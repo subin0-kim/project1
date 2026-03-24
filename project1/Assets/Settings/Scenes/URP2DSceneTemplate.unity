@@ -564,6 +564,10 @@ GameObject:
   - component: {fileID: 2090177684}
   - component: {fileID: 2090177683}
   - component: {fileID: 2090177682}
+  - component: {fileID: 2090177690}
+  - component: {fileID: 2090177689}
+  - component: {fileID: 2090177688}
+  - component: {fileID: 2090177687}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -702,6 +706,68 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2090177687
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2090177681}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d0e4aa71c5060b64c9edea0e25fc3960, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.Progression.LevelUpPanelPresenter
+  _playerLevelSystem: {fileID: 0}
+  _showExperienceHud: 1
+  _hudPosition: {x: 12, y: 260}
+--- !u!114 &2090177688
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2090177681}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2e81745337df78740bdfd28a9b8e9784, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.Progression.PlayerLevelSystem
+  _playerStatSystem: {fileID: 0}
+  _swipeAttackEventListener: {fileID: 0}
+  _soulCollector: {fileID: 0}
+  _baseExperienceThreshold: 5
+  _thresholdGrowthFactor: 1.35
+  _pauseGameOnSelection: 1
+  _skillDefinitions: []
+--- !u!114 &2090177689
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2090177681}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ee86c70a10459d34fa41e3533c82c0a4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.Progression.SoulCollector
+  _playerLevelSystem: {fileID: 0}
+  _attractionRadius: 2.5
+  _collectRadius: 0.45
+--- !u!114 &2090177690
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2090177681}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 80579bee09507d74f904e142e3126e7a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.Stats.PlayerStatSystem
+  _initialStats: {fileID: 11400000, guid: a916fc540523e704dbb15d407ab587f7, type: 2}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
