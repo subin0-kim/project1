@@ -25,6 +25,8 @@ namespace Mukseon.Gameplay.Combat
         [SerializeField, Min(1)]
         private int _targetsPerAttack = 1;
 
+        private int _bonusTargets;
+
         [Header("Debug")]
         [SerializeField]
         private bool _showDebugLogs = true;
@@ -99,7 +101,7 @@ namespace Mukseon.Gameplay.Combat
                 _attackOrigin.position,
                 swipeDirection,
                 EnemyHealth.ActiveEnemies,
-                Mathf.Max(1, _targetsPerAttack),
+                Mathf.Max(1, _targetsPerAttack + _bonusTargets),
                 _targetBuffer);
 
             if (selectedCount <= 0)
@@ -127,6 +129,16 @@ namespace Mukseon.Gameplay.Combat
             }
 
             return damage;
+        }
+
+        public void AddBonusTargets(int amount)
+        {
+            _bonusTargets = Mathf.Max(0, _bonusTargets + Mathf.Max(0, amount));
+        }
+
+        public int GetCurrentMaxTargets()
+        {
+            return Mathf.Max(1, _targetsPerAttack + _bonusTargets);
         }
     }
 }
