@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3fb5b51345781604d8c6537b1682a950, type: 3}
+  m_Name: PlayerStats_Baksu
+  m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.Stats.PlayerStatsDefinition
+  _stats:
+  - _statType: 0
+    _baseValue: 130
+  - _statType: 1
+    _baseValue: 2.5
+  - _statType: 2
+    _baseValue: 0.8

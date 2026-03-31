@@ -19,11 +19,15 @@ namespace Mukseon.Gameplay.Progression
         [SerializeField, Min(0f)]
         private float _dropRadius = 0.3f;
 
+        [SerializeField]
+        private MonsterData _monsterData;
+
         private EnemyHealth _enemyHealth;
 
         private void Awake()
         {
             _enemyHealth = GetComponent<EnemyHealth>();
+            ApplyMonsterData(_enemyHealth != null ? _enemyHealth.MonsterData : _monsterData);
         }
 
         private void OnEnable()
@@ -58,6 +62,18 @@ namespace Mukseon.Gameplay.Progression
                 SoulOrb orb = Instantiate(_soulOrbPrefab, spawnPosition, Quaternion.identity);
                 orb.SetExperienceAmount(Mathf.Max(1, _experiencePerOrb));
             }
+        }
+
+        public void ApplyMonsterData(MonsterData monsterData)
+        {
+            if (monsterData == null)
+            {
+                return;
+            }
+
+            _monsterData = monsterData;
+            _dropCount = monsterData.SoulDropCount;
+            _experiencePerOrb = monsterData.ExperiencePerOrb;
         }
     }
 }

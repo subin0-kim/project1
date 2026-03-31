@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 20cf786ac750d4045864462fab650a33, type: 3}
+  m_Name: Character_Baksu
+  m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.Stats.CharacterData
+  _characterId: character.baksu
+  _displayName: Baksu
+  _initialStats: {fileID: 11400000, guid: a90f0568f32527641acba37fff6e162d, type: 2}
+  _baseAttackDamage: 2
+  _targetsPerAttack: 1
+  _levelUpSkills:
+  - {fileID: 11400000, guid: 8943e41f2a1c6f5469e7042bf0b9155e, type: 2}
+  - {fileID: 11400000, guid: 92fc1fc4a1ba912488a7d89087536e99, type: 2}
+  - {fileID: 11400000, guid: c97c1a3ae04c63d41b95b4a436dee74c, type: 2}
+  - {fileID: 11400000, guid: 97c074d38c7e7b041ba5fe136301f1cc, type: 2}
+  - {fileID: 11400000, guid: b5f6b329496938f4780bf000813e8429, type: 2}

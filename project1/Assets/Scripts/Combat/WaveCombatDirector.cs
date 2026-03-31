@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Mukseon.Gameplay.Progression;
 using UnityEngine;
 
 namespace Mukseon.Gameplay.Combat
@@ -254,8 +255,14 @@ namespace Mukseon.Gameplay.Combat
             for (int i = 0; i < wave.Enemies.Count; i++)
             {
                 WaveEnemySpawnEntry entry = wave.Enemies[i];
-                if (entry == null || entry.EnemyPrefab == null || entry.Count <= 0)
+                if (entry == null || entry.Count <= 0)
                 {
+                    continue;
+                }
+
+                if (!entry.IsValid(out string reason))
+                {
+                    Debug.LogWarning($"[WaveCombatDirector] Wave '{wave.WaveName}' contains invalid enemy entry. {reason}");
                     continue;
                 }
 
@@ -312,7 +319,14 @@ namespace Mukseon.Gameplay.Combat
                     spawnPoint.position,
                     spawnPoint.rotation);
 
+                spawnedEnemy.ApplyMonsterData(runtimeEntry.Entry.MonsterData);
                 spawnedEnemy.SetMoveSpeed(runtimeEntry.Entry.MoveSpeed);
+                EnemySoulDropper soulDropper = spawnedEnemy.GetComponent<EnemySoulDropper>();
+                if (soulDropper != null)
+                {
+                    soulDropper.ApplyMonsterData(runtimeEntry.Entry.MonsterData);
+                }
+
                 spawnedEnemy.OnDeath += HandleSpawnedEnemyDeath;
                 _aliveEnemies.Add(spawnedEnemy);
 

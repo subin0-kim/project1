@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Mukseon.Gameplay.Combat;
 using Mukseon.Gameplay.Stats;
@@ -12,57 +12,6 @@ namespace Mukseon.Gameplay.Progression
         StatPercent = 1,
         BonusTargets = 2,
         PickupRadius = 3
-    }
-
-    [Serializable]
-    public class LevelUpSkillDefinition
-    {
-        [SerializeField]
-        private string _skillId;
-
-        [SerializeField]
-        private string _displayName;
-
-        [SerializeField, TextArea]
-        private string _description;
-
-        [SerializeField]
-        private LevelUpSkillEffectType _effectType;
-
-        [SerializeField]
-        private StatType _statType = StatType.AttackPower;
-
-        [SerializeField, Min(0f)]
-        private float _value = 1f;
-
-        [SerializeField, Min(1)]
-        private int _maxLevel = 5;
-
-        public string SkillId => string.IsNullOrWhiteSpace(_skillId) ? DisplayName : _skillId;
-        public string DisplayName => string.IsNullOrWhiteSpace(_displayName) ? "Skill" : _displayName;
-        public string Description => _description;
-        public LevelUpSkillEffectType EffectType => _effectType;
-        public StatType StatType => _statType;
-        public float Value => _value;
-        public int MaxLevel => Mathf.Max(1, _maxLevel);
-
-        public void Configure(
-            string skillId,
-            string displayName,
-            string description,
-            LevelUpSkillEffectType effectType,
-            StatType statType,
-            float value,
-            int maxLevel)
-        {
-            _skillId = skillId;
-            _displayName = displayName;
-            _description = description;
-            _effectType = effectType;
-            _statType = statType;
-            _value = value;
-            _maxLevel = Mathf.Max(1, maxLevel);
-        }
     }
 
     [DisallowMultipleComponent]
@@ -90,24 +39,24 @@ namespace Mukseon.Gameplay.Progression
 
         [Header("Skill Pool")]
         [SerializeField]
-        private List<LevelUpSkillDefinition> _skillDefinitions = new List<LevelUpSkillDefinition>();
+        private List<SkillData> _skillDefinitions = new List<SkillData>();
 
-        private readonly List<LevelUpSkillDefinition> _currentChoices = new List<LevelUpSkillDefinition>(3);
+        private readonly List<SkillData> _currentChoices = new List<SkillData>(3);
         private readonly Dictionary<string, int> _skillLevels = new Dictionary<string, int>();
 
         private LevelProgressionModel _progressionModel;
         private float _timeScaleBeforePause = 1f;
 
         public event Action<int, float, float> OnExperienceChanged;
-        public event Action<int, IReadOnlyList<LevelUpSkillDefinition>> OnLevelSelectionOpened;
+        public event Action<int, IReadOnlyList<SkillData>> OnLevelSelectionOpened;
         public event Action<int> OnLevelSelectionClosed;
-        public event Action<LevelUpSkillDefinition, int> OnSkillApplied;
+        public event Action<SkillData, int> OnSkillApplied;
 
         public int CurrentLevel => _progressionModel != null ? _progressionModel.Level : 1;
         public float CurrentExperience => _progressionModel != null ? _progressionModel.CurrentExperience : 0f;
         public float CurrentThreshold => _progressionModel != null ? _progressionModel.GetCurrentThreshold() : Mathf.Max(1f, _baseExperienceThreshold);
         public bool IsSelectionOpen { get; private set; }
-        public IReadOnlyList<LevelUpSkillDefinition> CurrentChoices => _currentChoices;
+        public IReadOnlyList<SkillData> CurrentChoices => _currentChoices;
 
         private void Awake()
         {
@@ -126,7 +75,7 @@ namespace Mukseon.Gameplay.Progression
                 _soulCollector = GetComponent<SoulCollector>();
             }
 
-            EnsureDefaultSkills();
+            ResolveSkillDefinitions();
             _progressionModel = new LevelProgressionModel(_baseExperienceThreshold, _thresholdGrowthFactor);
             NotifyExperienceChanged();
         }
@@ -168,7 +117,7 @@ namespace Mukseon.Gameplay.Progression
                 return false;
             }
 
-            LevelUpSkillDefinition selected = _currentChoices[choiceIndex];
+            SkillData selected = _currentChoices[choiceIndex];
             ApplySkillEffect(selected);
 
             int newLevel = IncrementSkillLevel(selected.SkillId);
@@ -221,12 +170,19 @@ namespace Mukseon.Gameplay.Progression
         {
             _currentChoices.Clear();
 
-            var candidates = new List<LevelUpSkillDefinition>(_skillDefinitions.Count);
+            var candidates = new List<SkillData>(_skillDefinitions.Count);
             for (int i = 0; i < _skillDefinitions.Count; i++)
             {
-                LevelUpSkillDefinition definition = _skillDefinitions[i];
+                SkillData definition = _skillDefinitions[i];
                 if (definition == null)
                 {
+                    Debug.LogWarning("[PlayerLevelSystem] SkillData list contains a null entry.");
+                    continue;
+                }
+
+                if (!definition.IsValid(out string reason))
+                {
+                    Debug.LogWarning($"[PlayerLevelSystem] SkillData '{definition.name}' is invalid. {reason}");
                     continue;
                 }
 
@@ -260,7 +216,7 @@ namespace Mukseon.Gameplay.Progression
             }
         }
 
-        private void ApplySkillEffect(LevelUpSkillDefinition definition)
+        private void ApplySkillEffect(SkillData definition)
         {
             switch (definition.EffectType)
             {
@@ -304,23 +260,21 @@ namespace Mukseon.Gameplay.Progression
             return current;
         }
 
-        private void EnsureDefaultSkills()
+        private void ResolveSkillDefinitions()
         {
             if (_skillDefinitions != null && _skillDefinitions.Count > 0)
             {
                 return;
             }
 
-            _skillDefinitions = new List<LevelUpSkillDefinition>
+            CharacterData characterData = _playerStatSystem?.CharacterData;
+            if (characterData != null && characterData.LevelUpSkills != null && characterData.LevelUpSkills.Count > 0)
             {
-                new LevelUpSkillDefinition(),
-                new LevelUpSkillDefinition(),
-                new LevelUpSkillDefinition()
-            };
+                _skillDefinitions = new List<SkillData>(characterData.LevelUpSkills);
+                return;
+            }
 
-            _skillDefinitions[0].Configure("atk_up", "공격력 강화", "공격력이 영구히 +1 증가합니다.", LevelUpSkillEffectType.StatFlat, StatType.AttackPower, 1f, 10);
-            _skillDefinitions[1].Configure("multi_hit", "다중 타격", "한 번의 공격으로 맞는 적 수가 +1 증가합니다.", LevelUpSkillEffectType.BonusTargets, StatType.AttackPower, 1f, 5);
-            _skillDefinitions[2].Configure("magnet", "혼불 자력", "혼불 흡수 반경이 +0.75 증가합니다.", LevelUpSkillEffectType.PickupRadius, StatType.AttackPower, 0.75f, 8);
+            Debug.LogWarning("[PlayerLevelSystem] No SkillData configured. Level-up choices will be unavailable.");
         }
 
         private void NotifyExperienceChanged()
