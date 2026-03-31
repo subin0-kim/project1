@@ -6,6 +6,8 @@ using UnityEngine;
 namespace Mukseon.Gameplay.Combat
 {
     [DisallowMultipleComponent]
+    [RequireComponent(typeof(GangshinInputDetector))]
+    [RequireComponent(typeof(PlayerStatSystem))]
     public class GangshinController : MonoBehaviour
     {
         [Header("References")]
@@ -208,7 +210,7 @@ namespace Mukseon.Gameplay.Combat
             }
 
             var activeEnemies = EnemyHealth.ActiveEnemies;
-            for (int i = 0; i < activeEnemies.Count; i++)
+            for (int i = activeEnemies.Count - 1; i >= 0; i--)
             {
                 EnemyHealth enemy = activeEnemies[i];
                 if (enemy == null || !enemy.IsAlive)

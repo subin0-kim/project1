@@ -145,19 +145,19 @@ namespace Mukseon.Gameplay.Combat
 
         private float ResolveBaseDamage()
         {
-            CharacterData characterData = _playerStatSystem != null ? _playerStatSystem.CharacterData : null;
+            CharacterData characterData = _playerStatSystem?.CharacterData;
             return characterData != null ? characterData.BaseAttackDamage : _baseDamage;
         }
 
         private int ResolveTargetsPerAttack()
         {
-            CharacterData characterData = _playerStatSystem != null ? _playerStatSystem.CharacterData : null;
+            CharacterData characterData = _playerStatSystem?.CharacterData;
             return characterData != null ? characterData.TargetsPerAttack : _targetsPerAttack;
         }
 
         private void ValidateCharacterData()
         {
-            CharacterData characterData = _playerStatSystem != null ? _playerStatSystem.CharacterData : null;
+            CharacterData characterData = _playerStatSystem?.CharacterData;
             if (characterData == null)
             {
                 return;

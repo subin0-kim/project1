@@ -45,6 +45,17 @@ namespace Mukseon.Gameplay.Combat
             }
         }
 
+        private void OnDestroy()
+        {
+            if (_pixel == null)
+            {
+                return;
+            }
+
+            Destroy(_pixel);
+            _pixel = null;
+        }
+
         private void OnGUI()
         {
             if (_gangshinController == null)

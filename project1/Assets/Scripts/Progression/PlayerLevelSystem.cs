@@ -267,7 +267,7 @@ namespace Mukseon.Gameplay.Progression
                 return;
             }
 
-            CharacterData characterData = _playerStatSystem != null ? _playerStatSystem.CharacterData : null;
+            CharacterData characterData = _playerStatSystem?.CharacterData;
             if (characterData != null && characterData.LevelUpSkills != null && characterData.LevelUpSkills.Count > 0)
             {
                 _skillDefinitions = new List<SkillData>(characterData.LevelUpSkills);
