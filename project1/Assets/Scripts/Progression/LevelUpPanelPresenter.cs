@@ -53,7 +53,7 @@ namespace Mukseon.Gameplay.Progression
 
         private void DrawLevelUpPanel()
         {
-            IReadOnlyList<LevelUpSkillDefinition> choices = _playerLevelSystem.CurrentChoices;
+            IReadOnlyList<SkillData> choices = _playerLevelSystem.CurrentChoices;
             if (choices == null || choices.Count <= 0)
             {
                 return;
@@ -73,7 +73,7 @@ namespace Mukseon.Gameplay.Progression
 
             for (int i = 0; i < choices.Count; i++)
             {
-                LevelUpSkillDefinition choice = choices[i];
+                SkillData choice = choices[i];
                 int nextLevel = _playerLevelSystem.GetSkillLevel(choice.SkillId) + 1;
 
                 GUILayout.BeginVertical(GUI.skin.box);

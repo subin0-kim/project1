@@ -11,6 +11,9 @@ namespace Mukseon.Gameplay.Combat
         private string _enemyType = "Default";
 
         [SerializeField]
+        private MonsterData _monsterData;
+
+        [SerializeField]
         private EnemyHealth _enemyPrefab;
 
         [SerializeField, Min(1)]
@@ -20,9 +23,27 @@ namespace Mukseon.Gameplay.Combat
         private float _moveSpeed = 1f;
 
         public string EnemyType => string.IsNullOrWhiteSpace(_enemyType) ? "Default" : _enemyType;
-        public EnemyHealth EnemyPrefab => _enemyPrefab;
+        public MonsterData MonsterData => _monsterData;
+        public EnemyHealth EnemyPrefab => _monsterData != null && _monsterData.EnemyPrefab != null ? _monsterData.EnemyPrefab : _enemyPrefab;
         public int Count => Mathf.Max(0, _count);
-        public float MoveSpeed => Mathf.Max(0f, _moveSpeed);
+        public float MoveSpeed => _monsterData != null ? _monsterData.MoveSpeed : Mathf.Max(0f, _moveSpeed);
+
+        public bool IsValid(out string reason)
+        {
+            if (_monsterData != null)
+            {
+                return _monsterData.IsValid(out reason);
+            }
+
+            if (_enemyPrefab == null)
+            {
+                reason = "Enemy prefab is missing.";
+                return false;
+            }
+
+            reason = null;
+            return true;
+        }
     }
 
     [Serializable]

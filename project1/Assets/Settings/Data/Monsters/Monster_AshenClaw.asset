@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dad141cadcb6cef41a0c485253bfb68b, type: 3}
+  m_Name: Monster_AshenClaw
+  m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.Combat.MonsterData
+  _monsterId: monster.ashen_claw
+  _displayName: Ashen Claw
+  _enemyPrefab: {fileID: 3535088139439741544, guid: 9f359b9056e17c241bc9c9c0ecd3976f, type: 3}
+  _swipeDirection: 1
+  _maxHealth: 18
+  _moveSpeed: 1.2
+  _soulDropCount: 1
+  _experiencePerOrb: 1

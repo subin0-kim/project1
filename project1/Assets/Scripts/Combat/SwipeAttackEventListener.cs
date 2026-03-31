@@ -49,6 +49,8 @@ namespace Mukseon.Gameplay.Combat
             {
                 _attackOrigin = transform;
             }
+
+            ValidateCharacterData();
         }
 
         private void OnEnable()
@@ -101,7 +103,7 @@ namespace Mukseon.Gameplay.Combat
                 _attackOrigin.position,
                 swipeDirection,
                 EnemyHealth.ActiveEnemies,
-                Mathf.Max(1, _targetsPerAttack + _bonusTargets),
+                Mathf.Max(1, ResolveTargetsPerAttack() + _bonusTargets),
                 _targetBuffer);
 
             if (selectedCount <= 0)
@@ -120,7 +122,7 @@ namespace Mukseon.Gameplay.Combat
 
         private float ResolveDamage()
         {
-            float damage = Mathf.Max(0f, _baseDamage);
+            float damage = Mathf.Max(0f, ResolveBaseDamage());
 
             if (_playerStatSystem != null)
             {
@@ -138,7 +140,33 @@ namespace Mukseon.Gameplay.Combat
 
         public int GetCurrentMaxTargets()
         {
-            return Mathf.Max(1, _targetsPerAttack + _bonusTargets);
+            return Mathf.Max(1, ResolveTargetsPerAttack() + _bonusTargets);
+        }
+
+        private float ResolveBaseDamage()
+        {
+            CharacterData characterData = _playerStatSystem != null ? _playerStatSystem.CharacterData : null;
+            return characterData != null ? characterData.BaseAttackDamage : _baseDamage;
+        }
+
+        private int ResolveTargetsPerAttack()
+        {
+            CharacterData characterData = _playerStatSystem != null ? _playerStatSystem.CharacterData : null;
+            return characterData != null ? characterData.TargetsPerAttack : _targetsPerAttack;
+        }
+
+        private void ValidateCharacterData()
+        {
+            CharacterData characterData = _playerStatSystem != null ? _playerStatSystem.CharacterData : null;
+            if (characterData == null)
+            {
+                return;
+            }
+
+            if (!characterData.IsValid(out string reason))
+            {
+                Debug.LogWarning($"[SwipeAttackEventListener] CharacterData '{characterData.name}' is invalid. {reason}");
+            }
         }
     }
 }

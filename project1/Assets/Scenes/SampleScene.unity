@@ -335,6 +335,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 80579bee09507d74f904e142e3126e7a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.Stats.PlayerStatSystem
+  _characterData: {fileID: 11400000, guid: 1e2bc5133718e524ca66b76fada5e98b, type: 2}
   _initialStats: {fileID: 11400000, guid: a916fc540523e704dbb15d407ab587f7, type: 2}
 --- !u!1 &289712652
 GameObject:

@@ -9,6 +9,7 @@ namespace Mukseon.Gameplay.Combat
     public class EnemyHealth : MonoBehaviour
     {
         private static readonly List<EnemyHealth> _activeEnemies = new List<EnemyHealth>();
+        public static event Action<EnemyHealth> AnyEnemyDied;
 
         [SerializeField, Min(1f)]
         private float _maxHealth = 10f;
@@ -22,6 +23,9 @@ namespace Mukseon.Gameplay.Combat
         [SerializeField]
         private SwipeDirection _swipeDirection = SwipeDirection.None;
 
+        [SerializeField]
+        private MonsterData _monsterData;
+
         [SerializeField, Min(0f)]
         private float _moveSpeed = 1f;
 
@@ -30,6 +34,7 @@ namespace Mukseon.Gameplay.Combat
         public bool IsAlive { get; private set; }
         public float MoveSpeed => Mathf.Max(0f, _moveSpeed);
         public static IReadOnlyList<EnemyHealth> ActiveEnemies => _activeEnemies;
+        public MonsterData MonsterData => _monsterData;
         public SwipeDirection SwipeDirection
         {
             get
@@ -49,6 +54,8 @@ namespace Mukseon.Gameplay.Combat
 
         private void Awake()
         {
+            ApplyMonsterData();
+
             if (_swipeDirection == SwipeDirection.None)
             {
                 _swipeDirection = InferSwipeDirectionFromName(gameObject.name);
@@ -113,6 +120,7 @@ namespace Mukseon.Gameplay.Combat
 
             OnDied?.Invoke();
             OnDeath?.Invoke(this);
+            AnyEnemyDied?.Invoke(this);
 
             if (_destroyOnDeath)
             {
@@ -131,6 +139,32 @@ namespace Mukseon.Gameplay.Combat
         public void SetMoveSpeed(float moveSpeed)
         {
             _moveSpeed = Mathf.Max(0f, moveSpeed);
+        }
+
+        public void ApplyMonsterData(MonsterData monsterData = null)
+        {
+            if (monsterData != null)
+            {
+                _monsterData = monsterData;
+            }
+
+            if (_monsterData == null)
+            {
+                return;
+            }
+
+            if (!_monsterData.IsValid(out string reason))
+            {
+                Debug.LogWarning($"[EnemyHealth] MonsterData '{_monsterData.name}' is invalid. {reason}");
+                return;
+            }
+
+            _maxHealth = _monsterData.MaxHealth;
+            _moveSpeed = _monsterData.MoveSpeed;
+            if (_monsterData.SwipeDirection != SwipeDirection.None)
+            {
+                _swipeDirection = _monsterData.SwipeDirection;
+            }
         }
 
         private static SwipeDirection InferSwipeDirectionFromName(string objectName)

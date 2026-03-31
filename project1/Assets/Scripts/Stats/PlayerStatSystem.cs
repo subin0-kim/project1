@@ -8,11 +8,15 @@ namespace Mukseon.Gameplay.Stats
     public class PlayerStatSystem : MonoBehaviour
     {
         [SerializeField]
+        private CharacterData _characterData;
+
+        [SerializeField]
         private PlayerStatsDefinition _initialStats;
 
         private readonly Dictionary<StatType, RuntimeStat> _runtimeStats = new Dictionary<StatType, RuntimeStat>();
 
         public event Action<StatType, float> OnStatChanged;
+        public CharacterData CharacterData => _characterData;
 
         private void Awake()
         {
@@ -23,17 +27,35 @@ namespace Mukseon.Gameplay.Stats
         {
             _runtimeStats.Clear();
 
-            if (_initialStats == null)
+            PlayerStatsDefinition sourceDefinition = ResolveInitialStatsDefinition();
+            if (sourceDefinition == null)
             {
                 Debug.LogWarning("[PlayerStatSystem] Initial stat definition is missing.");
                 return;
             }
 
-            for (int i = 0; i < _initialStats.Stats.Count; i++)
+            for (int i = 0; i < sourceDefinition.Stats.Count; i++)
             {
-                StatValueDefinition definition = _initialStats.Stats[i];
+                StatValueDefinition definition = sourceDefinition.Stats[i];
                 _runtimeStats[definition.StatType] = new RuntimeStat(definition.BaseValue);
             }
+        }
+
+        private PlayerStatsDefinition ResolveInitialStatsDefinition()
+        {
+            if (_characterData != null)
+            {
+                if (_characterData.InitialStats == null)
+                {
+                    Debug.LogWarning($"[PlayerStatSystem] CharacterData '{_characterData.name}' is missing InitialStats.");
+                }
+                else
+                {
+                    return _characterData.InitialStats;
+                }
+            }
+
+            return _initialStats;
         }
 
         internal bool TryGetRuntimeStat(StatType statType, out RuntimeStat runtimeStat)
