@@ -1,4 +1,4 @@
-﻿%YAML 1.1
+%YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
 --- !u!1 &5516339678559892061
 GameObject:
@@ -84,7 +84,7 @@ SpriteRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 5
   m_MaskInteraction: 0
-  m_Sprite: {fileID: 21300000, guid: 092177fa3dc33cc4b94f2ac63ecb9faf, type: 3}
+  m_Sprite: {fileID: 21300001, guid: 4cdb2ad2089a6284fad08dabf80221f5, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -132,7 +132,7 @@ BoxCollider2D:
   m_SpriteTilingProperty:
     border: {x: 0, y: 0, z: 0, w: 0}
     pivot: {x: 0.5, y: 0.5}
-    oldSize: {x: 1, y: 1}
+    oldSize: {x: 0.7109375, y: 1}
     newSize: {x: 1, y: 1}
     adaptiveTilingThreshold: 0.5
     drawMode: 0
@@ -156,6 +156,7 @@ MonoBehaviour:
   _destroyOnDeath: 1
   _disableCollidersOnDeath: 1
   _swipeDirection: 4
+  _monsterData: {fileID: 0}
   _moveSpeed: 1
 --- !u!114 &1831119107564088829
 MonoBehaviour:
@@ -173,4 +174,4 @@ MonoBehaviour:
   _dropCount: 1
   _experiencePerOrb: 1
   _dropRadius: 0.25
-
+  _monsterData: {fileID: 0}
