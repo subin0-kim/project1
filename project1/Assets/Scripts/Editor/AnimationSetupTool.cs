@@ -39,11 +39,12 @@ public static class AnimationSetupTool
                   $"{attackFrames.Length} attack frames.");
 
         // 2. Create animation clips
-        var idleClip   = CreateSpriteClip(idleFrames,   IdleClipPath,   loop: true);
+        // TODO: Idle 애니메이션을 실제 사용할 경우 아래 주석을 해제하고 SetupController에 전달하세요.
+        // var idleClip = CreateSpriteClip(idleFrames, IdleClipPath, loop: true);
         var attackClip = CreateSpriteClip(attackFrames, AttackClipPath, loop: false);
 
         // 3. Wire up the Animator Controller
-        SetupController(idleClip, attackClip);
+        SetupController(attackClip);
 
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
@@ -107,7 +108,7 @@ public static class AnimationSetupTool
         return clip;
     }
 
-    static void SetupController(AnimationClip idleClip, AnimationClip attackClip)
+    static void SetupController(AnimationClip attackClip)
     {
         var controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(ControllerPath);
         if (controller == null)
