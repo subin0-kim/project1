@@ -136,7 +136,7 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: mudang_attack_00
+      name: mudang_attack_ru_00
       rect:
         serializedVersion: 2
         x: 5
@@ -158,7 +158,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: mudang_attack_01
+      name: mudang_attack_ru_01
       rect:
         serializedVersion: 2
         x: 155
@@ -180,7 +180,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: mudang_attack_02
+      name: mudang_attack_ru_02
       rect:
         serializedVersion: 2
         x: 304
@@ -202,7 +202,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: mudang_attack_03
+      name: mudang_attack_ru_03
       rect:
         serializedVersion: 2
         x: 443
@@ -224,7 +224,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: mudang_attack_04
+      name: mudang_attack_ru_04
       rect:
         serializedVersion: 2
         x: 587
@@ -246,7 +246,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: mudang_attack_05
+      name: mudang_attack_ru_05
       rect:
         serializedVersion: 2
         x: 729
@@ -268,7 +268,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: mudang_attack_06
+      name: mudang_attack_ru_06
       rect:
         serializedVersion: 2
         x: 880
@@ -290,7 +290,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: mudang_attack_07
+      name: mudang_attack_ru_07
       rect:
         serializedVersion: 2
         x: 5
@@ -312,7 +312,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: mudang_attack_08
+      name: mudang_attack_ru_08
       rect:
         serializedVersion: 2
         x: 155
@@ -334,7 +334,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: mudang_attack_09
+      name: mudang_attack_ru_09
       rect:
         serializedVersion: 2
         x: 304
@@ -356,7 +356,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: mudang_attack_10
+      name: mudang_attack_ru_10
       rect:
         serializedVersion: 2
         x: 443
@@ -378,7 +378,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: mudang_attack_11
+      name: mudang_attack_ru_11
       rect:
         serializedVersion: 2
         x: 587
@@ -400,7 +400,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: mudang_attack_12
+      name: mudang_attack_ru_12
       rect:
         serializedVersion: 2
         x: 729
@@ -422,7 +422,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: mudang_attack_13
+      name: mudang_attack_ru_13
       rect:
         serializedVersion: 2
         x: 880

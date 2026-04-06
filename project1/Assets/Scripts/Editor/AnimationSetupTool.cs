@@ -4,30 +4,36 @@ using UnityEditor.Animations;
 using UnityEngine;
 
 /// <summary>
-/// Builds Idle + Attack animation clips from the mudang spritesheets
+/// Builds Attack animation clips from the mudang spritesheets
 /// and wires them into the existing Player.controller.
+///
+/// mudang_attack_ru_sheet → AttackRU state (우/상 스와이프: AttackRight, AttackUp)
+/// mudang_attack_ld_sheet → AttackLD state (좌/하 스와이프: AttackLeft, AttackDown)
+///
 /// Menu: Tools / Mukseon / Setup Player Animations
 /// </summary>
 public static class AnimationSetupTool
 {
-    const string IdleSheetPath   = "Assets/Art/Characters/Player/Sprites/mudang_idle_sheet.png";
-    const string AttackSheetPath = "Assets/Art/Characters/Player/Sprites/mudang_attack_sheet.png";
-    const string ControllerPath  = "Assets/Animations/Player.controller";
-    const string IdleClipPath    = "Assets/Animations/Player_Idle.anim";
-    const string AttackClipPath  = "Assets/Animations/Player_Attack.anim";
-    const float  FPS             = 12f;
+    const string AttackRUSheetPath = "Assets/Art/Characters/Player/Sprites/mudang_attack_ru_sheet.png";
+    const string AttackLDSheetPath = "Assets/Art/Characters/Player/Sprites/mudang_attack_ld_sheet.png";
+    const string ControllerPath    = "Assets/Animations/Player.controller";
+    const string AttackRUClipPath  = "Assets/Animations/Player_Attack_RU.anim";
+    const string AttackLDClipPath  = "Assets/Animations/Player_Attack_LD.anim";
+    const float  FPS               = 12f;
 
-    static readonly string[] AttackTriggers =
-        { "AttackUp", "AttackDown", "AttackLeft", "AttackRight" };
+    // 우/상 스와이프 트리거 → AttackRU 상태
+    static readonly string[] RUTriggers = { "AttackRight", "AttackUp" };
+    // 좌/하 스와이프 트리거 → AttackLD 상태
+    static readonly string[] LDTriggers = { "AttackLeft", "AttackDown" };
 
     [MenuItem("Tools/Mukseon/Setup Player Animations")]
     public static void SetupAnimations()
     {
         // 1. Load sprite frames from sheets
-        var idleFrames   = LoadSprites(IdleSheetPath);
-        var attackFrames = LoadSprites(AttackSheetPath);
+        var ruFrames = LoadSprites(AttackRUSheetPath);
+        var ldFrames = LoadSprites(AttackLDSheetPath);
 
-        if (idleFrames.Length == 0 || attackFrames.Length == 0)
+        if (ruFrames.Length == 0 || ldFrames.Length == 0)
         {
             Debug.LogError("[AnimationSetupTool] Could not load sprite frames. " +
                            "Make sure spritesheets are imported as Multiple sprites first " +
@@ -35,16 +41,15 @@ public static class AnimationSetupTool
             return;
         }
 
-        Debug.Log($"[AnimationSetupTool] Loaded {idleFrames.Length} idle frames, " +
-                  $"{attackFrames.Length} attack frames.");
+        Debug.Log($"[AnimationSetupTool] Loaded {ruFrames.Length} RU frames, " +
+                  $"{ldFrames.Length} LD frames.");
 
         // 2. Create animation clips
-        // TODO: Idle 애니메이션을 실제 사용할 경우 아래 주석을 해제하고 SetupController에 전달하세요.
-        // var idleClip = CreateSpriteClip(idleFrames, IdleClipPath, loop: true);
-        var attackClip = CreateSpriteClip(attackFrames, AttackClipPath, loop: false);
+        var attackRUClip = CreateSpriteClip(ruFrames, AttackRUClipPath, loop: false);
+        var attackLDClip = CreateSpriteClip(ldFrames, AttackLDClipPath, loop: false);
 
         // 3. Wire up the Animator Controller
-        SetupController(attackClip);
+        SetupController(attackRUClip, attackLDClip);
 
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
@@ -64,12 +69,10 @@ public static class AnimationSetupTool
     {
         var clip = new AnimationClip { frameRate = FPS };
 
-        // Loop / no-loop setting
         var settings = AnimationUtility.GetAnimationClipSettings(clip);
         settings.loopTime = loop;
         AnimationUtility.SetAnimationClipSettings(clip, settings);
 
-        // Build object-reference keyframes for SpriteRenderer.m_Sprite
         var binding = new EditorCurveBinding
         {
             type         = typeof(SpriteRenderer),
@@ -93,7 +96,6 @@ public static class AnimationSetupTool
 
         AnimationUtility.SetObjectReferenceCurve(clip, binding, keyframes);
 
-        // Save to disk (overwrite if exists)
         var existing = AssetDatabase.LoadAssetAtPath<AnimationClip>(savePath);
         if (existing != null)
         {
@@ -108,7 +110,7 @@ public static class AnimationSetupTool
         return clip;
     }
 
-    static void SetupController(AnimationClip attackClip)
+    static void SetupController(AnimationClip attackRUClip, AnimationClip attackLDClip)
     {
         var controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(ControllerPath);
         if (controller == null)
@@ -119,42 +121,66 @@ public static class AnimationSetupTool
 
         var sm = controller.layers[0].stateMachine;
 
-        // Remove any existing states to start clean
+        // 기존 상태/트랜지션 제거 후 재구성
         foreach (var s in sm.states.ToArray())
             sm.RemoveState(s.state);
         foreach (var t in sm.anyStateTransitions.ToArray())
             sm.RemoveAnyStateTransition(t);
 
-        // Add Idle state (default) — no motion: player holds static pose until attacking
+        // Idle 상태 (기본) — motion null: 공격 입력 전까지 정지 포즈 유지
         var idleState = sm.AddState("Idle");
         idleState.motion = null;
         sm.defaultState = idleState;
 
-        // Add Attack state
-        var attackState = sm.AddState("Attack");
-        attackState.motion = attackClip;
+        // AttackRU 상태 (우/상 스와이프)
+        var attackRUState = sm.AddState("AttackRU");
+        attackRUState.motion = attackRUClip;
 
-        // Any State → Attack (on each attack trigger)
-        foreach (var trigger in AttackTriggers)
+        // AttackLD 상태 (좌/하 스와이프)
+        var attackLDState = sm.AddState("AttackLD");
+        attackLDState.motion = attackLDClip;
+
+        // AnyState → AttackRU (AttackRight, AttackUp 트리거)
+        foreach (var trigger in RUTriggers)
         {
-            // Ensure the parameter exists
-            if (!controller.parameters.Any(p => p.name == trigger))
-                controller.AddParameter(trigger, AnimatorControllerParameterType.Trigger);
-
-            var t = sm.AddAnyStateTransition(attackState);
+            EnsureParameter(controller, trigger);
+            var t = sm.AddAnyStateTransition(attackRUState);
             t.hasExitTime       = false;
             t.duration          = 0f;
             t.canTransitionToSelf = false;
             t.AddCondition(AnimatorConditionMode.If, 0, trigger);
         }
 
-        // Attack → Idle (when clip finishes)
-        var backTransition = attackState.AddTransition(idleState);
-        backTransition.hasExitTime = true;
-        backTransition.exitTime    = 1f;
-        backTransition.duration    = 0f;
+        // AnyState → AttackLD (AttackLeft, AttackDown 트리거)
+        foreach (var trigger in LDTriggers)
+        {
+            EnsureParameter(controller, trigger);
+            var t = sm.AddAnyStateTransition(attackLDState);
+            t.hasExitTime       = false;
+            t.duration          = 0f;
+            t.canTransitionToSelf = false;
+            t.AddCondition(AnimatorConditionMode.If, 0, trigger);
+        }
+
+        // AttackRU → Idle (클립 종료 후)
+        var backRU = attackRUState.AddTransition(idleState);
+        backRU.hasExitTime = true;
+        backRU.exitTime    = 1f;
+        backRU.duration    = 0f;
+
+        // AttackLD → Idle (클립 종료 후)
+        var backLD = attackLDState.AddTransition(idleState);
+        backLD.hasExitTime = true;
+        backLD.exitTime    = 1f;
+        backLD.duration    = 0f;
 
         EditorUtility.SetDirty(controller);
-        Debug.Log("[AnimationSetupTool] Animator Controller states configured.");
+        Debug.Log("[AnimationSetupTool] Animator Controller configured: Idle / AttackRU / AttackLD.");
+    }
+
+    static void EnsureParameter(AnimatorController controller, string name)
+    {
+        if (!controller.parameters.Any(p => p.name == name))
+            controller.AddParameter(name, AnimatorControllerParameterType.Trigger);
     }
 }

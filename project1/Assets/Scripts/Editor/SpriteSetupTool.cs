@@ -15,8 +15,8 @@ public static class SpriteSetupTool
 {
     // ── Paths ───────────────────────────────────────────────────────────────
     const string PlayerRefPath   = "Assets/Art/Characters/Player/Reference/mudang_reference.png";
-    const string PlayerIdlePath  = "Assets/Art/Characters/Player/Sprites/mudang_idle_sheet.png";
-    const string PlayerAtkPath   = "Assets/Art/Characters/Player/Sprites/mudang_attack_sheet.png";
+    const string PlayerAtkRUPath = "Assets/Art/Characters/Player/Sprites/mudang_attack_ru_sheet.png"; // 우/상 스와이프
+    const string PlayerAtkLDPath = "Assets/Art/Characters/Player/Sprites/mudang_attack_ld_sheet.png"; // 좌/하 스와이프
     const string EnemyRefPath    = "Assets/Art/Characters/Enemies/Reference/zombie_reference.png";
     const string EnemyWalkPath   = "Assets/Art/Characters/Enemies/Sprites/zombie_walk_sheet.png";
     const string EnemyAtkPath    = "Assets/Art/Characters/Enemies/Sprites/zombie_attack_sheet.png";
@@ -49,8 +49,8 @@ public static class SpriteSetupTool
         SetupSingleSprite(EnemyRefPath,  EnemyRefPPU);
 
         // 2. 스프라이트시트 임포트 + 2D 자동 슬라이싱
-        SetupAndSliceSpritesheet(PlayerIdlePath, SheetPPU);
-        SetupAndSliceSpritesheet(PlayerAtkPath,  SheetPPU);
+        SetupAndSliceSpritesheet(PlayerAtkRUPath, SheetPPU);
+        SetupAndSliceSpritesheet(PlayerAtkLDPath, SheetPPU);
         SetupAndSliceSpritesheet(EnemyWalkPath,  SheetPPU);
         SetupAndSliceSpritesheet(EnemyAtkPath,   SheetPPU);
 
@@ -318,7 +318,7 @@ public static class SpriteSetupTool
             return;
         }
 
-        var firstFrame = LoadFirstSpriteFrame(PlayerIdlePath);
+        var firstFrame = LoadFirstSpriteFrame(PlayerAtkRUPath);
         if (firstFrame == null)
         {
             Debug.LogError("[SpriteSetupTool] mudang_idle_sheet frame 00 not found – skipping player assignment.");
