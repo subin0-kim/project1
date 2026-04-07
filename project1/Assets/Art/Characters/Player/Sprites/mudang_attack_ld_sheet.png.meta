@@ -457,6 +457,20 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
+      mudang_attack_ld_00: 21300001
+      mudang_attack_ld_01: 21300002
+      mudang_attack_ld_02: 21300003
+      mudang_attack_ld_03: 21300004
+      mudang_attack_ld_04: 21300005
+      mudang_attack_ld_05: 21300006
+      mudang_attack_ld_06: 21300007
+      mudang_attack_ld_07: 21300008
+      mudang_attack_ld_08: 21300009
+      mudang_attack_ld_09: 21300010
+      mudang_attack_ld_10: 21300011
+      mudang_attack_ld_11: 21300012
+      mudang_attack_ld_12: 21300013
+      mudang_attack_ld_13: 21300014
       mudang_idle_00: 21300001
       mudang_idle_01: 21300002
       mudang_idle_02: 21300003
