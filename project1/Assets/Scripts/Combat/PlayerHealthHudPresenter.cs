@@ -44,9 +44,42 @@ namespace Mukseon.Gameplay.Combat
         private GUIStyle _labelStyle;
         private GUIStyle _gameOverStyle;
         private Texture2D _pixel;
+        private string _cachedHealthLabel;
+        private bool _referencesResolved;
 
         private void Awake()
         {
+            TryResolveReferences();
+        }
+
+        private void OnEnable()
+        {
+            if (_playerHealth != null)
+            {
+                _playerHealth.OnHealthChanged += HandleHealthChanged;
+            }
+        }
+
+        private void OnDisable()
+        {
+            if (_playerHealth != null)
+            {
+                _playerHealth.OnHealthChanged -= HandleHealthChanged;
+            }
+        }
+
+        private void HandleHealthChanged(float current, float max)
+        {
+            _cachedHealthLabel = $"HP {Mathf.CeilToInt(current)}/{Mathf.CeilToInt(max)}";
+        }
+
+        private void TryResolveReferences()
+        {
+            if (_referencesResolved)
+            {
+                return;
+            }
+
             if (_playerHealth == null)
             {
                 _playerHealth = FindPlayerHealth();
@@ -55,6 +88,11 @@ namespace Mukseon.Gameplay.Combat
             if (_gameOverHandler == null)
             {
                 _gameOverHandler = FindGameOverHandler();
+            }
+
+            if (_playerHealth != null && _gameOverHandler != null)
+            {
+                _referencesResolved = true;
             }
         }
 
@@ -69,6 +107,11 @@ namespace Mukseon.Gameplay.Combat
 
         private void OnGUI()
         {
+            if (!_referencesResolved)
+            {
+                TryResolveReferences();
+            }
+
             EnsureGuiResources();
 
             if (_playerHealth != null)
@@ -95,10 +138,14 @@ namespace Mukseon.Gameplay.Combat
                 DrawRect(new Rect(backgroundRect.x, backgroundRect.y, fillWidth, backgroundRect.height), fillColor);
             }
 
-            string label = $"HP {Mathf.CeilToInt(_playerHealth.CurrentHealth)}/{Mathf.CeilToInt(_playerHealth.MaxHealth)}";
+            if (string.IsNullOrEmpty(_cachedHealthLabel))
+            {
+                _cachedHealthLabel = $"HP {Mathf.CeilToInt(_playerHealth.CurrentHealth)}/{Mathf.CeilToInt(_playerHealth.MaxHealth)}";
+            }
+
             GUI.Label(
                 new Rect(backgroundRect.x, backgroundRect.y + backgroundRect.height + 2f, backgroundRect.width + 80f, 20f),
-                label,
+                _cachedHealthLabel,
                 _labelStyle);
         }
 

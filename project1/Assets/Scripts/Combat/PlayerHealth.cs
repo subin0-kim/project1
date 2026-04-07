@@ -46,16 +46,25 @@ namespace Mukseon.Gameplay.Combat
             }
         }
 
+        private bool _initialized;
+
+        private void Start()
+        {
+            if (!_initialized)
+            {
+                ResolveMaxHealth();
+                _currentHealth = _resolvedMaxHealth;
+                _isDead = false;
+                _initialized = true;
+            }
+        }
+
         private void OnEnable()
         {
             if (_playerStatSystem != null)
             {
                 _playerStatSystem.OnStatChanged += HandleStatChanged;
             }
-
-            ResolveMaxHealth();
-            _currentHealth = _resolvedMaxHealth;
-            _isDead = false;
         }
 
         private void OnDisable()

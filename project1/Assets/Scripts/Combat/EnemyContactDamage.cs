@@ -41,7 +41,7 @@ namespace Mukseon.Gameplay.Combat
 
             if (_destroyOnContact && _enemyHealth != null && _enemyHealth.IsAlive)
             {
-                _enemyHealth.ApplyDamage(_enemyHealth.MaxHealth * 10f, this);
+                _enemyHealth.Kill(countAsKill: false);
             }
         }
     }
