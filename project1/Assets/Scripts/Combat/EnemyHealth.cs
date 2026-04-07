@@ -100,7 +100,22 @@ namespace Mukseon.Gameplay.Combat
             }
         }
 
-        private void Die()
+        /// <summary>
+        /// Instantly kills this enemy. Use countAsKill=false for self-destruct/contact deaths
+        /// that should not grant kill rewards (e.g. Gangshin gauge).
+        /// </summary>
+        public void Kill(bool countAsKill = true)
+        {
+            if (!IsAlive)
+            {
+                return;
+            }
+
+            CurrentHealth = 0f;
+            Die(countAsKill);
+        }
+
+        private void Die(bool countAsKill = true)
         {
             if (!IsAlive)
             {
@@ -120,7 +135,11 @@ namespace Mukseon.Gameplay.Combat
 
             OnDied?.Invoke();
             OnDeath?.Invoke(this);
-            AnyEnemyDied?.Invoke(this);
+
+            if (countAsKill)
+            {
+                AnyEnemyDied?.Invoke(this);
+            }
 
             if (_destroyOnDeath)
             {
