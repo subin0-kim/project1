@@ -3,8 +3,8 @@ using UnityEngine;
 
 namespace Mukseon.Gameplay.Combat
 {
-    [CreateAssetMenu(fileName = "MonsterData", menuName = "Mukseon/Data/Monster Data")]
-    public class MonsterData : ScriptableObject
+    [CreateAssetMenu(fileName = "EnemyData", menuName = "Data/EnemyData")]
+    public class EnemyData : ScriptableObject
     {
         [SerializeField]
         private string _monsterId = "monster.default";

@@ -20,7 +20,7 @@ namespace Mukseon.Gameplay.Progression
         private float _dropRadius = 0.3f;
 
         [SerializeField]
-        private MonsterData _monsterData;
+        private EnemyData _monsterData;
 
         private EnemyHealth _enemyHealth;
 
@@ -64,7 +64,7 @@ namespace Mukseon.Gameplay.Progression
             }
         }
 
-        public void ApplyMonsterData(MonsterData monsterData)
+        public void ApplyMonsterData(EnemyData monsterData)
         {
             if (monsterData == null)
             {

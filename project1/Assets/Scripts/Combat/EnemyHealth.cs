@@ -24,7 +24,7 @@ namespace Mukseon.Gameplay.Combat
         private SwipeDirection _swipeDirection = SwipeDirection.None;
 
         [SerializeField]
-        private MonsterData _monsterData;
+        private EnemyData _monsterData;
 
         [SerializeField, Min(0f)]
         private float _moveSpeed = 1f;
@@ -34,7 +34,7 @@ namespace Mukseon.Gameplay.Combat
         public bool IsAlive { get; private set; }
         public float MoveSpeed => Mathf.Max(0f, _moveSpeed);
         public static IReadOnlyList<EnemyHealth> ActiveEnemies => _activeEnemies;
-        public MonsterData MonsterData => _monsterData;
+        public EnemyData MonsterData => _monsterData;
         public SwipeDirection SwipeDirection
         {
             get
@@ -160,7 +160,7 @@ namespace Mukseon.Gameplay.Combat
             _moveSpeed = Mathf.Max(0f, moveSpeed);
         }
 
-        public void ApplyMonsterData(MonsterData monsterData = null)
+        public void ApplyMonsterData(EnemyData monsterData = null)
         {
             if (monsterData != null)
             {
