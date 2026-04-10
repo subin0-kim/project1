@@ -44,6 +44,7 @@ namespace Mukseon.Gameplay.Combat
         protected virtual void Awake()
         {
             _rigidbody = GetComponent<Rigidbody2D>();
+            _rigidbody.gravityScale = 0f;
             _stateMachine = new StateMachine();
 
             _moveState = new MoveState(this);
