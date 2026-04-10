@@ -47,6 +47,10 @@ namespace Mukseon.Gameplay.Combat
                     _playerTarget = playerHealth.transform;
                 }
             }
+
+#if UNITY_EDITOR
+            Debug.Log($"[EnemyMover] {name} enabled at {transform.position}. target={((_playerTarget != null) ? _playerTarget.name : "NULL")} speed={(_enemyHealth != null ? _enemyHealth.MoveSpeed.ToString() : "N/A")}");
+#endif
         }
 
         private void Update()

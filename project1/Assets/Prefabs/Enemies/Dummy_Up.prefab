@@ -13,6 +13,7 @@ GameObject:
   - component: {fileID: 5961446520261883368}
   - component: {fileID: 3535088139439741544}
   - component: {fileID: 8930110949059020394}
+  - component: {fileID: 753179079726369400}
   m_Layer: 0
   m_Name: Dummy_Up
   m_TagString: Untagged
@@ -131,8 +132,8 @@ BoxCollider2D:
   m_Offset: {x: 0, y: 0}
   m_SpriteTilingProperty:
     border: {x: 0, y: 0, z: 0, w: 0}
-    pivot: {x: 0.5, y: 0.5}
-    oldSize: {x: 0.7109375, y: 1}
+    pivot: {x: 0.5, y: 0}
+    oldSize: {x: 0.274359, y: 0.36410257}
     newSize: {x: 1, y: 1}
     adaptiveTilingThreshold: 0.5
     drawMode: 0
@@ -175,3 +176,17 @@ MonoBehaviour:
   _experiencePerOrb: 1
   _dropRadius: 0.25
   _monsterData: {fileID: 0}
+--- !u!114 &753179079726369400
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7248748341038818817}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e6bdc35d1968644096427de179a7154, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.Combat.EnemyMover
+  _movePattern: 0
+  _playerTarget: {fileID: 0}
