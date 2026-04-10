@@ -13,6 +13,9 @@ namespace Mukseon.Gameplay.Combat
         private string _displayName = "Monster";
 
         [SerializeField]
+        private bool _isBoss;
+
+        [SerializeField]
         private EnemyHealth _enemyPrefab;
 
         [SerializeField]
@@ -32,6 +35,7 @@ namespace Mukseon.Gameplay.Combat
 
         public string MonsterId => string.IsNullOrWhiteSpace(_monsterId) ? name : _monsterId;
         public string DisplayName => string.IsNullOrWhiteSpace(_displayName) ? name : _displayName;
+        public bool IsBoss => _isBoss;
         public EnemyHealth EnemyPrefab => _enemyPrefab;
         public SwipeDirection SwipeDirection => _swipeDirection;
         public float MaxHealth => Mathf.Max(1f, _maxHealth);

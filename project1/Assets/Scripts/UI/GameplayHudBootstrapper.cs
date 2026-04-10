@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Mukseon.Core.Input;
 using Mukseon.Gameplay.Combat;
 using Mukseon.Gameplay.Progression;
 using UnityEngine;
@@ -10,40 +11,52 @@ namespace Mukseon.Gameplay.UI
     [DisallowMultipleComponent]
     public sealed class GameplayHudBootstrapper : MonoBehaviour
     {
+        private sealed class FloatingText
+        {
+            public EnemyHealth Enemy;
+            public Label Label;
+            public float TimeLeft;
+            public float OffsetY;
+        }
+
         private const string RootObjectName = "GameplayHudRuntime";
 
         private PlayerHealth _playerHealth;
         private GangshinController _gangshinController;
         private PlayerLevelSystem _playerLevelSystem;
         private WaveCombatDirector _waveCombatDirector;
+        private EnemyHealth _bossEnemy;
 
-        private UIDocument _uiDocument;
+        private UIDocument _document;
         private PanelSettings _panelSettings;
         private VisualElement _root;
+        private VisualElement _overlay;
+        private VisualElement _worldRoot;
 
         private VisualElement _healthRoot;
         private VisualElement _healthFill;
         private Label _healthLabel;
-
         private VisualElement _gangshinRoot;
         private VisualElement _gangshinFill;
         private Label _gangshinStateLabel;
         private Label _gangshinGaugeLabel;
-
         private VisualElement _experienceRoot;
         private VisualElement _experienceFill;
         private Label _experienceLabel;
-
         private VisualElement _waveRoot;
         private Label _waveLabel;
         private Label _remainingLabel;
-
-        private VisualElement _overlay;
+        private VisualElement _bossRoot;
+        private VisualElement _bossFill;
+        private Label _bossLabel;
         private VisualElement _levelUpPanel;
-        private Label _levelUpTitleLabel;
+        private Label _levelUpTitle;
         private readonly List<Button> _choiceButtons = new List<Button>(3);
 
-        private bool _uiBuilt;
+        private readonly HashSet<EnemyHealth> _trackedEnemies = new HashSet<EnemyHealth>();
+        private readonly Dictionary<EnemyHealth, Label> _arrowLabels = new Dictionary<EnemyHealth, Label>();
+        private readonly List<FloatingText> _floatingTexts = new List<FloatingText>();
+        private readonly List<EnemyHealth> _enemyBuffer = new List<EnemyHealth>(64);
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void EnsureHudBootstrapper()
@@ -55,43 +68,9 @@ namespace Mukseon.Gameplay.UI
                 return;
             }
 
-            var root = new GameObject(RootObjectName);
+            GameObject root = new GameObject(RootObjectName);
             DontDestroyOnLoad(root);
             root.AddComponent<GameplayHudBootstrapper>();
-        }
-
-        private void Awake()
-        {
-            DontDestroyOnLoad(gameObject);
-            SceneManager.sceneLoaded += HandleSceneLoaded;
-            EnsureUi();
-            HandleSceneLoaded();
-        }
-
-        private void OnEnable()
-        {
-            TryResolveSources();
-        }
-
-        private void Update()
-        {
-            if (_playerHealth == null || _gangshinController == null || _playerLevelSystem == null || _waveCombatDirector == null)
-            {
-                TryResolveSources();
-            }
-
-            RefreshView();
-        }
-
-        private void OnDestroy()
-        {
-            SceneManager.sceneLoaded -= HandleSceneLoaded;
-            UnsubscribeAll();
-
-            if (_panelSettings != null)
-            {
-                Destroy(_panelSettings);
-            }
         }
 
         private static GameplayHudBootstrapper FindBootstrapper()
@@ -103,6 +82,47 @@ namespace Mukseon.Gameplay.UI
 #endif
         }
 
+        private static T FindSceneObject<T>() where T : Object
+        {
+#if UNITY_2023_1_OR_NEWER
+            return FindFirstObjectByType<T>(FindObjectsInactive.Include);
+#else
+            return FindObjectOfType<T>();
+#endif
+        }
+
+        private void Awake()
+        {
+            DontDestroyOnLoad(gameObject);
+            SceneManager.sceneLoaded += HandleSceneLoaded;
+            EnsureUi();
+            HandleSceneLoaded();
+        }
+
+        private void OnDestroy()
+        {
+            SceneManager.sceneLoaded -= HandleSceneLoaded;
+            UnsubscribeAll();
+            ClearEnemies();
+
+            if (_panelSettings != null)
+            {
+                Destroy(_panelSettings);
+            }
+        }
+
+        private void Update()
+        {
+            if (_playerHealth == null || _gangshinController == null || _playerLevelSystem == null || _waveCombatDirector == null)
+            {
+                TryResolveSources();
+            }
+
+            SyncEnemies();
+            RefreshHud();
+            UpdateWorldElements(Time.unscaledDeltaTime);
+        }
+
         private void HandleSceneLoaded(Scene scene, LoadSceneMode mode)
         {
             HandleSceneLoaded();
@@ -111,19 +131,19 @@ namespace Mukseon.Gameplay.UI
         private void HandleSceneLoaded()
         {
             UnsubscribeAll();
+            ClearEnemies();
             _playerHealth = null;
             _gangshinController = null;
             _playerLevelSystem = null;
             _waveCombatDirector = null;
-
+            _bossEnemy = null;
             EnsureUi();
             TryResolveSources();
-            RefreshView();
         }
 
         private void EnsureUi()
         {
-            if (_uiBuilt)
+            if (_document != null)
             {
                 return;
             }
@@ -135,40 +155,79 @@ namespace Mukseon.Gameplay.UI
             _panelSettings.sortingOrder = 500;
             _panelSettings.themeStyleSheet = Resources.Load<ThemeStyleSheet>("UnityDefaultRuntimeTheme");
 
-            _uiDocument = gameObject.AddComponent<UIDocument>();
-            _uiDocument.panelSettings = _panelSettings;
-
-            _root = _uiDocument.rootVisualElement;
+            _document = gameObject.AddComponent<UIDocument>();
+            _document.panelSettings = _panelSettings;
+            _root = _document.rootVisualElement;
             _root.style.flexGrow = 1f;
-            _root.style.backgroundColor = Color.clear;
 
-            _overlay = CreateBox(_root, "overlay");
-            _overlay.style.left = 0f;
-            _overlay.style.top = 0f;
-            _overlay.style.right = 0f;
-            _overlay.style.bottom = 0f;
+            _overlay = Box(_root);
+            Stretch(_overlay);
             _overlay.style.display = DisplayStyle.None;
 
-            CreateHealthHud();
-            CreateBottomHud();
-            CreateWaveHud();
-            CreateLevelUpPanel();
+            _worldRoot = Box(_root);
+            Stretch(_worldRoot);
 
-            _uiBuilt = true;
+            _healthRoot = Panel(_root, 16f, 16f, 240f, 52f);
+            _healthFill = Bar(_healthRoot, out _healthLabel, false);
+
+            _gangshinRoot = Panel(_root, 790f, 912f, 340f, 70f);
+            _gangshinStateLabel = Text(_gangshinRoot, 0f, 4f, 340f, 18f, 18, TextAnchor.MiddleCenter);
+            _gangshinFill = Bar(_gangshinRoot, out _gangshinGaugeLabel, true);
+
+            _experienceRoot = Panel(_root, 760f, 972f, 400f, 52f);
+            _experienceFill = Bar(_experienceRoot, out _experienceLabel, true);
+
+            _waveRoot = Panel(_root, 790f, 16f, 340f, 54f);
+            _waveLabel = Text(_waveRoot, 0f, 4f, 340f, 22f, 22, TextAnchor.MiddleCenter);
+            _remainingLabel = Text(_waveRoot, 0f, 28f, 340f, 18f, 16, TextAnchor.MiddleCenter);
+
+            _bossRoot = Panel(_root, 360f, 74f, 1200f, 62f);
+            _bossRoot.style.backgroundColor = new Color(0.18f, 0.04f, 0.04f, 0.78f);
+            _bossLabel = Text(_bossRoot, 0f, 4f, 1200f, 18f, 20, TextAnchor.MiddleCenter);
+            _bossFill = Bar(_bossRoot, out _, true);
+            _bossFill.style.backgroundColor = new Color(0.88f, 0.12f, 0.12f);
+            _bossRoot.style.display = DisplayStyle.None;
+
+            _levelUpPanel = Panel(_root, 680f, 360f, 560f, 360f);
+            _levelUpPanel.style.backgroundColor = new Color(0.08f, 0.08f, 0.12f, 0.94f);
+            _levelUpTitle = Text(_levelUpPanel, 24f, 24f, 512f, 28f, 24, TextAnchor.MiddleCenter);
+            _levelUpPanel.style.display = DisplayStyle.None;
+
+            for (int i = 0; i < 3; i++)
+            {
+                int choiceIndex = i;
+                Button button = new Button(() =>
+                {
+                    if (_playerLevelSystem != null)
+                    {
+                        _playerLevelSystem.ApplyChoice(choiceIndex);
+                    }
+                });
+
+                button.style.position = Position.Absolute;
+                button.style.left = 24f;
+                button.style.top = 72f + (84f * i);
+                button.style.width = 512f;
+                button.style.height = 68f;
+                button.style.whiteSpace = WhiteSpace.Normal;
+                button.style.unityTextAlign = TextAnchor.MiddleLeft;
+                button.style.fontSize = 18f;
+                button.style.backgroundColor = new Color(0.14f, 0.16f, 0.24f, 0.96f);
+                button.style.color = Color.white;
+                _levelUpPanel.Add(button);
+                _choiceButtons.Add(button);
+            }
         }
 
         private void TryResolveSources()
         {
-            bool changed = false;
-
             if (_playerHealth == null)
             {
                 _playerHealth = FindSceneObject<PlayerHealth>();
                 if (_playerHealth != null)
                 {
                     _playerHealth.OnHealthChanged += HandlePlayerHealthChanged;
-                    DisableLegacyPresenter<PlayerHealthHudPresenter>();
-                    changed = true;
+                    DisableLegacy<PlayerHealthHudPresenter>();
                 }
             }
 
@@ -179,8 +238,7 @@ namespace Mukseon.Gameplay.UI
                 {
                     _gangshinController.OnGaugeChanged += HandleGangshinGaugeChanged;
                     _gangshinController.OnStateChanged += HandleGangshinStateChanged;
-                    DisableLegacyPresenter<GangshinHudPresenter>();
-                    changed = true;
+                    DisableLegacy<GangshinHudPresenter>();
                 }
             }
 
@@ -192,8 +250,7 @@ namespace Mukseon.Gameplay.UI
                     _playerLevelSystem.OnExperienceChanged += HandleExperienceChanged;
                     _playerLevelSystem.OnLevelSelectionOpened += HandleLevelSelectionOpened;
                     _playerLevelSystem.OnLevelSelectionClosed += HandleLevelSelectionClosed;
-                    DisableLegacyPresenter<LevelUpPanelPresenter>();
-                    changed = true;
+                    DisableLegacy<LevelUpPanelPresenter>();
                 }
             }
 
@@ -204,16 +261,10 @@ namespace Mukseon.Gameplay.UI
                 {
                     _waveCombatDirector.OnWaveStarted += HandleWaveStarted;
                     _waveCombatDirector.OnWaveEnded += HandleWaveEnded;
-                    _waveCombatDirector.OnRemainingEnemyCountChanged += HandleRemainingChanged;
+                    _waveCombatDirector.OnRemainingEnemyCountChanged += HandleRemainingEnemyCountChanged;
                     _waveCombatDirector.OnAllWavesCompleted += HandleAllWavesCompleted;
-                    DisableLegacyPresenter<WaveHudPresenter>();
-                    changed = true;
+                    DisableLegacy<WaveHudPresenter>();
                 }
-            }
-
-            if (changed)
-            {
-                RefreshView();
             }
         }
 
@@ -241,50 +292,48 @@ namespace Mukseon.Gameplay.UI
             {
                 _waveCombatDirector.OnWaveStarted -= HandleWaveStarted;
                 _waveCombatDirector.OnWaveEnded -= HandleWaveEnded;
-                _waveCombatDirector.OnRemainingEnemyCountChanged -= HandleRemainingChanged;
+                _waveCombatDirector.OnRemainingEnemyCountChanged -= HandleRemainingEnemyCountChanged;
                 _waveCombatDirector.OnAllWavesCompleted -= HandleAllWavesCompleted;
             }
         }
 
-        private void RefreshView()
+        private void RefreshHud()
         {
-            RefreshHealthHud();
-            RefreshGangshinHud();
-            RefreshExperienceHud();
-            RefreshWaveHud();
-            RefreshLevelUpPanel();
+            RefreshHealth();
+            RefreshGangshin();
+            RefreshExperience();
+            RefreshWave();
+            RefreshBoss();
+            RefreshLevelUp();
         }
 
-        private void RefreshHealthHud()
+        private void RefreshHealth()
         {
-            bool isVisible = _playerHealth != null;
-            _healthRoot.style.display = isVisible ? DisplayStyle.Flex : DisplayStyle.None;
-            if (!isVisible)
+            bool visible = _playerHealth != null;
+            _healthRoot.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
+            if (!visible)
             {
                 return;
             }
 
-            SetFillWidth(_healthFill, _playerHealth.HealthNormalized);
-            _healthFill.style.backgroundColor = _playerHealth.HealthNormalized <= 0.3f
-                ? new Color(0.95f, 0.24f, 0.2f)
-                : new Color(0.82f, 0.22f, 0.22f);
+            Fill(_healthFill, _playerHealth.HealthNormalized);
+            _healthFill.style.backgroundColor = _playerHealth.HealthNormalized <= 0.3f ? new Color(0.95f, 0.24f, 0.2f) : new Color(0.82f, 0.22f, 0.22f);
             _healthLabel.text = $"HP {Mathf.CeilToInt(_playerHealth.CurrentHealth)}/{Mathf.CeilToInt(_playerHealth.MaxHealth)}";
         }
 
-        private void RefreshGangshinHud()
+        private void RefreshGangshin()
         {
-            bool isVisible = _gangshinController != null;
-            _gangshinRoot.style.display = isVisible ? DisplayStyle.Flex : DisplayStyle.None;
-            if (!isVisible)
+            bool visible = _gangshinController != null;
+            _gangshinRoot.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
+            if (!visible)
             {
                 _overlay.style.display = DisplayStyle.None;
                 return;
             }
 
-            SetFillWidth(_gangshinFill, _gangshinController.GaugeNormalized);
-            _gangshinFill.style.backgroundColor = _gangshinController.IsReady
-                ? new Color(1f, 0.47f, 0.22f)
-                : new Color(0.96f, 0.82f, 0.28f);
+            Fill(_gangshinFill, _gangshinController.GaugeNormalized);
+            _gangshinFill.style.backgroundColor = _gangshinController.IsReady ? new Color(1f, 0.47f, 0.22f) : new Color(0.96f, 0.82f, 0.28f);
+            _gangshinGaugeLabel.text = $"Gangshin {Mathf.RoundToInt(_gangshinController.CurrentGauge)}/{Mathf.RoundToInt(_gangshinController.MaxGauge)}";
 
             switch (_gangshinController.CurrentState)
             {
@@ -307,63 +356,64 @@ namespace Mukseon.Gameplay.UI
                     _overlay.style.display = DisplayStyle.None;
                     break;
             }
-
-            _gangshinGaugeLabel.text =
-                $"Gangshin {Mathf.RoundToInt(_gangshinController.CurrentGauge)}/{Mathf.RoundToInt(_gangshinController.MaxGauge)}";
         }
 
-        private void RefreshExperienceHud()
+        private void RefreshExperience()
         {
-            bool isVisible = _playerLevelSystem != null;
-            _experienceRoot.style.display = isVisible ? DisplayStyle.Flex : DisplayStyle.None;
-            if (!isVisible)
+            bool visible = _playerLevelSystem != null;
+            _experienceRoot.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
+            if (!visible)
             {
                 return;
             }
 
             float threshold = Mathf.Max(1f, _playerLevelSystem.CurrentThreshold);
-            SetFillWidth(_experienceFill, _playerLevelSystem.CurrentExperience / threshold);
-            _experienceLabel.text =
-                $"Lv {_playerLevelSystem.CurrentLevel}  EXP {_playerLevelSystem.CurrentExperience:0.##}/{threshold:0.##}";
+            Fill(_experienceFill, _playerLevelSystem.CurrentExperience / threshold);
+            _experienceLabel.text = $"Lv {_playerLevelSystem.CurrentLevel}  EXP {_playerLevelSystem.CurrentExperience:0.##}/{threshold:0.##}";
         }
 
-        private void RefreshWaveHud()
+        private void RefreshWave()
         {
-            bool isVisible = _waveCombatDirector != null;
-            _waveRoot.style.display = isVisible ? DisplayStyle.Flex : DisplayStyle.None;
-            if (!isVisible)
+            bool visible = _waveCombatDirector != null;
+            _waveRoot.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
+            if (!visible)
             {
                 return;
             }
 
-            if (!_waveCombatDirector.IsRunning)
-            {
-                _waveLabel.text = "Wave 0";
-                _remainingLabel.text = "Remaining: 0";
-                return;
-            }
-
-            _waveLabel.text = $"Wave {_waveCombatDirector.CurrentWaveNumber}";
-            _remainingLabel.text = $"Remaining: {_waveCombatDirector.RemainingEnemyCount}";
+            _waveLabel.text = _waveCombatDirector.IsRunning ? $"Wave {_waveCombatDirector.CurrentWaveNumber}" : "Wave 0";
+            _remainingLabel.text = $"Remaining: {(_waveCombatDirector.IsRunning ? _waveCombatDirector.RemainingEnemyCount : 0)}";
         }
 
-        private void RefreshLevelUpPanel()
+        private void RefreshBoss()
         {
-            bool isVisible = _playerLevelSystem != null && _playerLevelSystem.IsSelectionOpen && _playerLevelSystem.CurrentChoices.Count > 0;
-            _levelUpPanel.style.display = isVisible ? DisplayStyle.Flex : DisplayStyle.None;
-            if (!isVisible)
+            ResolveBossEnemy();
+            bool visible = _bossEnemy != null && _bossEnemy.IsAlive;
+            _bossRoot.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
+            if (!visible)
             {
                 return;
             }
 
-            _levelUpTitleLabel.text = $"Level {_playerLevelSystem.CurrentLevel} - choose a skill";
+            _bossLabel.text = _bossEnemy.DisplayName;
+            Fill(_bossFill, _bossEnemy.CurrentHealth / Mathf.Max(1f, _bossEnemy.MaxHealth));
+        }
 
+        private void RefreshLevelUp()
+        {
+            bool visible = _playerLevelSystem != null && _playerLevelSystem.IsSelectionOpen && _playerLevelSystem.CurrentChoices.Count > 0;
+            _levelUpPanel.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
+            if (!visible)
+            {
+                return;
+            }
+
+            _levelUpTitle.text = $"Level {_playerLevelSystem.CurrentLevel} - choose a skill";
             IReadOnlyList<SkillData> choices = _playerLevelSystem.CurrentChoices;
             for (int i = 0; i < _choiceButtons.Count; i++)
             {
-                Button button = _choiceButtons[i];
                 bool hasChoice = i < choices.Count;
-                button.style.display = hasChoice ? DisplayStyle.Flex : DisplayStyle.None;
+                _choiceButtons[i].style.display = hasChoice ? DisplayStyle.Flex : DisplayStyle.None;
                 if (!hasChoice)
                 {
                     continue;
@@ -371,85 +421,300 @@ namespace Mukseon.Gameplay.UI
 
                 SkillData choice = choices[i];
                 int nextLevel = _playerLevelSystem.GetSkillLevel(choice.SkillId) + 1;
-                button.text = $"{choice.DisplayName} Lv.{nextLevel}\n{choice.Description}";
+                _choiceButtons[i].text = $"{choice.DisplayName} Lv.{nextLevel}\n{choice.Description}";
             }
         }
 
-        private void HandlePlayerHealthChanged(float current, float max) => RefreshHealthHud();
-        private void HandleGangshinGaugeChanged(float current, float max) => RefreshGangshinHud();
-        private void HandleGangshinStateChanged(GangshinState state) => RefreshGangshinHud();
-        private void HandleExperienceChanged(int level, float current, float threshold) => RefreshExperienceHud();
-        private void HandleLevelSelectionOpened(int level, IReadOnlyList<SkillData> choices) => RefreshLevelUpPanel();
-        private void HandleLevelSelectionClosed(int level) => RefreshLevelUpPanel();
-        private void HandleWaveStarted(int waveNumber, WaveDefinition wave) => RefreshWaveHud();
-        private void HandleWaveEnded(int waveNumber, WaveEndReason endReason) => RefreshWaveHud();
-        private void HandleRemainingChanged(int waveNumber, int remainingEnemyCount) => RefreshWaveHud();
-
-        private void HandleAllWavesCompleted()
+        private void SyncEnemies()
         {
-            _waveLabel.text = "All Waves Cleared";
-            _remainingLabel.text = "Remaining: 0";
-        }
-
-        private void CreateHealthHud()
-        {
-            _healthRoot = CreatePanel(_root, 16f, 16f, 240f, 52f);
-            CreateBar(_healthRoot, out _healthFill, out _healthLabel, false);
-        }
-
-        private void CreateBottomHud()
-        {
-            _gangshinRoot = CreatePanel(_root, 790f, 912f, 340f, 70f);
-            _gangshinStateLabel = CreateLabel(_gangshinRoot, 0f, 4f, 340f, 18f, 18, TextAnchor.MiddleCenter);
-            CreateBar(_gangshinRoot, out _gangshinFill, out _gangshinGaugeLabel, true);
-
-            _experienceRoot = CreatePanel(_root, 760f, 972f, 400f, 52f);
-            CreateBar(_experienceRoot, out _experienceFill, out _experienceLabel, true);
-        }
-
-        private void CreateWaveHud()
-        {
-            _waveRoot = CreatePanel(_root, 790f, 16f, 340f, 54f);
-            _waveLabel = CreateLabel(_waveRoot, 0f, 4f, 340f, 22f, 22, TextAnchor.MiddleCenter);
-            _remainingLabel = CreateLabel(_waveRoot, 0f, 28f, 340f, 18f, 16, TextAnchor.MiddleCenter);
-        }
-
-        private void CreateLevelUpPanel()
-        {
-            _levelUpPanel = CreatePanel(_root, 680f, 360f, 560f, 360f);
-            _levelUpPanel.style.backgroundColor = new Color(0.08f, 0.08f, 0.12f, 0.94f);
-            _levelUpTitleLabel = CreateLabel(_levelUpPanel, 24f, 24f, 512f, 28f, 24, TextAnchor.MiddleCenter);
-
-            _choiceButtons.Clear();
-            for (int i = 0; i < 3; i++)
+            _enemyBuffer.Clear();
+            IReadOnlyList<EnemyHealth> enemies = EnemyHealth.ActiveEnemies;
+            for (int i = 0; i < enemies.Count; i++)
             {
-                int choiceIndex = i;
-                Button button = new Button(() =>
+                EnemyHealth enemy = enemies[i];
+                if (enemy == null || !enemy.IsAlive)
                 {
-                    if (_playerLevelSystem != null)
-                    {
-                        _playerLevelSystem.ApplyChoice(choiceIndex);
-                    }
-                });
+                    continue;
+                }
 
-                button.style.position = Position.Absolute;
-                button.style.left = 24f;
-                button.style.top = 72f + (84f * i);
-                button.style.width = 512f;
-                button.style.height = 68f;
-                button.style.whiteSpace = WhiteSpace.Normal;
-                button.style.unityTextAlign = TextAnchor.MiddleLeft;
-                button.style.fontSize = 18f;
-                button.style.backgroundColor = new Color(0.14f, 0.16f, 0.24f, 0.96f);
-                button.style.color = Color.white;
-                _levelUpPanel.Add(button);
-                _choiceButtons.Add(button);
+                _enemyBuffer.Add(enemy);
+                if (_trackedEnemies.Add(enemy))
+                {
+                    enemy.OnDamagedDetailed += HandleEnemyDamaged;
+                    enemy.OnDeath += HandleEnemyDeath;
+                    CreateArrow(enemy);
+                }
             }
 
-            _levelUpPanel.style.display = DisplayStyle.None;
+            var removed = new List<EnemyHealth>();
+            foreach (EnemyHealth enemy in _trackedEnemies)
+            {
+                if (!_enemyBuffer.Contains(enemy))
+                {
+                    removed.Add(enemy);
+                }
+            }
+
+            for (int i = 0; i < removed.Count; i++)
+            {
+                RemoveEnemy(removed[i]);
+            }
         }
 
-        private void CreateBar(VisualElement parent, out VisualElement fill, out Label label, bool centered)
+        private void ClearEnemies()
+        {
+            var enemies = new List<EnemyHealth>(_trackedEnemies);
+            for (int i = 0; i < enemies.Count; i++)
+            {
+                RemoveEnemy(enemies[i]);
+            }
+
+            for (int i = _floatingTexts.Count - 1; i >= 0; i--)
+            {
+                _floatingTexts[i].Label.RemoveFromHierarchy();
+                _floatingTexts.RemoveAt(i);
+            }
+        }
+
+        private void RemoveEnemy(EnemyHealth enemy)
+        {
+            if (enemy != null)
+            {
+                enemy.OnDamagedDetailed -= HandleEnemyDamaged;
+                enemy.OnDeath -= HandleEnemyDeath;
+            }
+
+            _trackedEnemies.Remove(enemy);
+
+            if (enemy != null && _arrowLabels.TryGetValue(enemy, out Label label))
+            {
+                label.RemoveFromHierarchy();
+                _arrowLabels.Remove(enemy);
+            }
+
+            if (_bossEnemy == enemy)
+            {
+                _bossEnemy = null;
+            }
+        }
+
+        private void ResolveBossEnemy()
+        {
+            if (_bossEnemy != null && _bossEnemy.IsAlive && _bossEnemy.IsBoss)
+            {
+                return;
+            }
+
+            _bossEnemy = null;
+            foreach (EnemyHealth enemy in _trackedEnemies)
+            {
+                if (enemy != null && enemy.IsAlive && enemy.IsBoss)
+                {
+                    _bossEnemy = enemy;
+                    return;
+                }
+            }
+        }
+
+        private void CreateArrow(EnemyHealth enemy)
+        {
+            Label label = Text(_worldRoot, 0f, 0f, 48f, 24f, 24, TextAnchor.MiddleCenter);
+            label.style.color = new Color(1f, 0.94f, 0.5f);
+            label.style.unityFontStyleAndWeight = FontStyle.Bold;
+            label.text = Arrow(enemy.SwipeDirection);
+            _arrowLabels[enemy] = label;
+        }
+
+        private void HandleEnemyDamaged(EnemyHealth enemy, float damageAmount, object source)
+        {
+            if (enemy == null)
+            {
+                return;
+            }
+
+            SpawnFloatingText(enemy, $"-{Mathf.RoundToInt(damageAmount)}", Color.white, 0f);
+            if (source is GangshinController)
+            {
+                SpawnFloatingText(enemy, "정화", new Color(1f, 0.76f, 0.32f), 24f);
+            }
+
+            if (enemy == _bossEnemy)
+            {
+                RefreshBoss();
+            }
+        }
+
+        private void HandleEnemyDeath(EnemyHealth enemy)
+        {
+            RemoveEnemy(enemy);
+            RefreshBoss();
+        }
+
+        private void SpawnFloatingText(EnemyHealth enemy, string text, Color color, float offsetY)
+        {
+            Label label = Text(_worldRoot, 0f, 0f, 120f, 24f, 20, TextAnchor.MiddleCenter);
+            label.text = text;
+            label.style.color = color;
+            label.style.unityFontStyleAndWeight = FontStyle.Bold;
+            _floatingTexts.Add(new FloatingText
+            {
+                Enemy = enemy,
+                Label = label,
+                TimeLeft = 0.8f,
+                OffsetY = offsetY
+            });
+        }
+
+        private void UpdateWorldElements(float deltaTime)
+        {
+            Camera camera = Camera.main;
+            if (camera == null)
+            {
+                return;
+            }
+
+            foreach (KeyValuePair<EnemyHealth, Label> pair in _arrowLabels)
+            {
+                PositionAtEnemy(pair.Key, pair.Value, camera, 1.6f, -24f);
+            }
+
+            for (int i = _floatingTexts.Count - 1; i >= 0; i--)
+            {
+                FloatingText floatingText = _floatingTexts[i];
+                floatingText.TimeLeft -= deltaTime;
+                floatingText.OffsetY += deltaTime * 34f;
+                if (floatingText.TimeLeft <= 0f || floatingText.Enemy == null)
+                {
+                    floatingText.Label.RemoveFromHierarchy();
+                    _floatingTexts.RemoveAt(i);
+                    continue;
+                }
+
+                PositionAtEnemy(floatingText.Enemy, floatingText.Label, camera, 1.2f, floatingText.OffsetY);
+                Color color = floatingText.Label.resolvedStyle.color;
+                color.a = Mathf.Clamp01(floatingText.TimeLeft / 0.8f);
+                floatingText.Label.style.color = color;
+            }
+        }
+
+        private void HandlePlayerHealthChanged(float current, float max)
+        {
+            RefreshHealth();
+        }
+
+        private void HandleGangshinGaugeChanged(float current, float max)
+        {
+            RefreshGangshin();
+        }
+
+        private void HandleGangshinStateChanged(GangshinState state)
+        {
+            RefreshGangshin();
+        }
+
+        private void HandleExperienceChanged(int level, float current, float threshold)
+        {
+            RefreshExperience();
+        }
+
+        private void HandleLevelSelectionOpened(int level, IReadOnlyList<SkillData> choices)
+        {
+            RefreshLevelUp();
+        }
+
+        private void HandleLevelSelectionClosed(int level)
+        {
+            RefreshLevelUp();
+        }
+
+        private void HandleWaveStarted(int waveNumber, WaveDefinition wave)
+        {
+            RefreshWave();
+        }
+
+        private void HandleWaveEnded(int waveNumber, WaveEndReason endReason)
+        {
+            RefreshWave();
+        }
+
+        private void HandleRemainingEnemyCountChanged(int waveNumber, int remainingEnemyCount)
+        {
+            RefreshWave();
+        }
+
+        private static void PositionAtEnemy(EnemyHealth enemy, Label label, Camera camera, float worldYOffset, float screenYOffset)
+        {
+            if (enemy == null || label == null || !enemy.IsAlive)
+            {
+                label.style.display = DisplayStyle.None;
+                return;
+            }
+
+            Vector3 screenPoint = camera.WorldToScreenPoint(enemy.transform.position + Vector3.up * worldYOffset);
+            if (screenPoint.z <= 0f)
+            {
+                label.style.display = DisplayStyle.None;
+                return;
+            }
+
+            label.style.display = DisplayStyle.Flex;
+            label.style.left = screenPoint.x - 60f;
+            label.style.top = Screen.height - screenPoint.y - screenYOffset;
+        }
+
+        private static string Arrow(SwipeDirection direction)
+        {
+            switch (direction)
+            {
+                case SwipeDirection.Up:
+                    return "↑";
+                case SwipeDirection.Down:
+                    return "↓";
+                case SwipeDirection.Left:
+                    return "←";
+                case SwipeDirection.Right:
+                    return "→";
+                default:
+                    return "•";
+            }
+        }
+
+        private static VisualElement Panel(VisualElement parent, float left, float top, float width, float height)
+        {
+            VisualElement panel = Box(parent);
+            panel.style.left = left;
+            panel.style.top = top;
+            panel.style.width = width;
+            panel.style.height = height;
+            panel.style.backgroundColor = new Color(0f, 0f, 0f, 0.35f);
+            return panel;
+        }
+
+        private static VisualElement Box(VisualElement parent)
+        {
+            var element = new VisualElement();
+            element.style.position = Position.Absolute;
+            parent.Add(element);
+            return element;
+        }
+
+        private static Label Text(VisualElement parent, float left, float top, float width, float height, int fontSize, TextAnchor anchor)
+        {
+            var label = new Label();
+            label.style.position = Position.Absolute;
+            label.style.left = left;
+            label.style.top = top;
+            label.style.width = width;
+            label.style.height = height;
+            label.style.color = Color.white;
+            label.style.fontSize = fontSize;
+            label.style.unityTextAlign = anchor;
+            label.style.whiteSpace = WhiteSpace.Normal;
+            parent.Add(label);
+            return label;
+        }
+
+        private static VisualElement Bar(VisualElement parent, out Label label, bool centered)
         {
             var barRoot = new VisualElement();
             barRoot.style.position = Position.Absolute;
@@ -460,96 +725,43 @@ namespace Mukseon.Gameplay.UI
             barRoot.style.backgroundColor = new Color(0f, 0f, 0f, 0.65f);
             parent.Add(barRoot);
 
-            fill = new VisualElement();
+            var fill = new VisualElement();
             fill.style.height = Length.Percent(100f);
             fill.style.width = Length.Percent(100f);
             fill.style.backgroundColor = new Color(0.82f, 0.22f, 0.22f);
             barRoot.Add(fill);
 
-            label = new Label();
-            label.style.position = Position.Absolute;
-            label.style.left = 8f;
+            label = Text(barRoot, 8f, 0f, 300f, 20f, 16, centered ? TextAnchor.MiddleCenter : TextAnchor.MiddleLeft);
             label.style.right = 8f;
-            label.style.top = 0f;
-            label.style.bottom = 0f;
-            label.style.color = Color.white;
-            label.style.fontSize = 16f;
-            label.style.unityTextAlign = centered ? TextAnchor.MiddleCenter : TextAnchor.MiddleLeft;
-            label.style.whiteSpace = WhiteSpace.Normal;
-            barRoot.Add(label);
+            return fill;
         }
 
-        private static VisualElement CreatePanel(VisualElement parent, float left, float top, float width, float height)
+        private static void Stretch(VisualElement element)
         {
-            var panel = CreateBox(parent, "panel");
-            panel.style.left = left;
-            panel.style.top = top;
-            panel.style.width = width;
-            panel.style.height = height;
-            panel.style.backgroundColor = new Color(0f, 0f, 0f, 0.35f);
-            return panel;
+            element.style.left = 0f;
+            element.style.top = 0f;
+            element.style.right = 0f;
+            element.style.bottom = 0f;
         }
 
-        private static VisualElement CreateBox(VisualElement parent, string name)
+        private static void Fill(VisualElement fill, float normalized)
         {
-            var element = new VisualElement
-            {
-                name = name
-            };
-            element.style.position = Position.Absolute;
-            parent.Add(element);
-            return element;
-        }
-
-        private static Label CreateLabel(
-            VisualElement parent,
-            float left,
-            float top,
-            float width,
-            float height,
-            int fontSize,
-            TextAnchor alignment)
-        {
-            var label = new Label();
-            label.style.position = Position.Absolute;
-            label.style.left = left;
-            label.style.top = top;
-            label.style.width = width;
-            label.style.height = height;
-            label.style.color = Color.white;
-            label.style.fontSize = fontSize;
-            label.style.unityTextAlign = alignment;
-            label.style.whiteSpace = WhiteSpace.Normal;
-            parent.Add(label);
-            return label;
-        }
-
-        private static void SetFillWidth(VisualElement fill, float normalized)
-        {
-            if (fill == null)
-            {
-                return;
-            }
-
             fill.style.width = Length.Percent(Mathf.Clamp01(normalized) * 100f);
         }
 
-        private static void DisableLegacyPresenter<T>() where T : Behaviour
+        private static void DisableLegacy<T>() where T : Behaviour
         {
-            T presenter = FindSceneObject<T>();
-            if (presenter != null && presenter.enabled)
+            T target = FindSceneObject<T>();
+            if (target != null)
             {
-                presenter.enabled = false;
+                target.enabled = false;
             }
         }
 
-        private static T FindSceneObject<T>() where T : Object
+        private void HandleAllWavesCompleted()
         {
-#if UNITY_2023_1_OR_NEWER
-            return FindFirstObjectByType<T>(FindObjectsInactive.Include);
-#else
-            return FindObjectOfType<T>();
-#endif
+            _waveLabel.text = "All Waves Cleared";
+            _remainingLabel.text = "Remaining: 0";
         }
     }
 }
