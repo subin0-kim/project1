@@ -81,16 +81,15 @@ namespace Mukseon.Tests.EditMode
         [Test]
         public void RiseFromGround_MovesEnemyUpward()
         {
-            _enemyGo.transform.position = new Vector3(3f, 0f, 0f);
+            // SetUp에서 (0,0,0)에 생성되므로 _spawnPosition = (0,0,0).
+            // 목표: (0, 10, 0) 방향으로 위쪽 이동
             _enemyHealth.SetMoveSpeed(5f);
 
             _mover.SetMovePattern(EnemyMovePattern.RiseFromGround);
-            // OnEnable에서 _spawnPosition 캐시
-            _mover.SendMessage("OnEnable");
             _mover.Tick(DeltaTime);
 
             Assert.That(_enemyGo.transform.position.y, Is.GreaterThan(0f));
-            Assert.That(_enemyGo.transform.position.x, Is.EqualTo(3f).Within(0.001f));
+            Assert.That(_enemyGo.transform.position.x, Is.EqualTo(0f).Within(0.001f));
         }
 
         [Test]

@@ -56,7 +56,12 @@ namespace Mukseon.Gameplay.Combat
 
         internal void Tick(float deltaTime)
         {
-            if (!_enemyHealth.IsAlive)
+            if (_enemyHealth == null)
+            {
+                _enemyHealth = GetComponent<EnemyHealth>();
+            }
+
+            if (_enemyHealth == null || !_enemyHealth.IsAlive)
             {
                 return;
             }
