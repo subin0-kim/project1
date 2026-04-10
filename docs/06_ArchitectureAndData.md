@@ -11,7 +11,7 @@
 
 ## 6.2 주요 데이터 구조 (Data Structure - Scriptable Objects)
 게임 데이터는 하드코딩하지 않고 Scriptable Object(SO)로 관리하여 유지비용을 줄입니다.
-- **EnemyData (적 스테이터스):
+- EnemyData (적 스테이터스):
   - 변수: `id`, `maxHp`, `moveSpeed`, `soulDropCount`, `soulDropAmount`, `swipeDirection`
 - **SkillData (11개 스킬 시스템)**:
   - 변수: `SkillName`, `Description`, `MaxLevel`, `Icon`, `BaseDamage`, `Cooldown`
@@ -32,10 +32,10 @@
 모든 적 캐릭터는 StateMachine + Behavior Component 분리 구조로 구현합니다.
 
 * 전체 구조:
-   * EnemyBase (추상 클래스, MonoBehaviour)
-      ├── StateMachine : 상태 관리 (Spawn → Move → Action → Dead)
-      ├── MovementBehavior : 이동 전략 (요괴마다 교체 가능한 컴포넌트)
-      └── ActionBehavior : 행동 전략 (공격, 폭발 등 고유 행동)
+   * EnemyBase (추상 클래스, MonoBehaviour)  
+      ├── StateMachine : 상태 관리 (Spawn → Move → Action → Dead)  
+      ├── MovementBehavior : 이동 전략 (요괴마다 교체 가능한 컴포넌트)  
+      └── ActionBehavior : 행동 전략 (공격, 폭발 등 고유 행동)  
 
 * StateMachine:
    * 순수 C# 클래스 (MonoBehaviour 아님)
