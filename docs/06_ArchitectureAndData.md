@@ -11,8 +11,8 @@
 
 ## 6.2 주요 데이터 구조 (Data Structure - Scriptable Objects)
 게임 데이터는 하드코딩하지 않고 Scriptable Object(SO)로 관리하여 유지비용을 줄입니다.
-- **MonsterData (몬스터 스탯)**:
-  - 변수: `MonsterName`, `MaxHP`, `MoveSpeed`, `PatternType`, `DropSoulAmount`, `Prefab`
+- **EnemyData (적 스테이터스):
+  - 변수: `id`, `maxHp`, `moveSpeed`, `soulDropCount`, `soulDropAmount`, `swipeDirection`
 - **SkillData (11개 스킬 시스템)**:
   - 변수: `SkillName`, `Description`, `MaxLevel`, `Icon`, `BaseDamage`, `Cooldown`
 - **CharacterData (무당/박수 스탯)**:
@@ -26,3 +26,36 @@
   - `TotalSouls` (누적 영혼)
   - `UpgradeLevels` (Dictionary 형태, 예: `{"MaxHP": 3, "MagnetRadius": 1}`)
   - `UnlockedCharacters` (무당 기본 활성화, 박수 구매 여부 등)
+ 
+## 6.4 적 AI 아키텍처 (Enemy AI Architecture)
+
+모든 적 캐릭터는 StateMachine + Behavior Component 분리 구조로 구현합니다.
+
+* 전체 구조:
+   * EnemyBase (추상 클래스, MonoBehaviour)
+      ├── StateMachine : 상태 관리 (Spawn → Move → Action → Dead)
+      ├── MovementBehavior : 이동 전략 (요괴마다 교체 가능한 컴포넌트)
+      └── ActionBehavior : 행동 전략 (공격, 폭발 등 고유 행동)
+
+* StateMachine:
+   * 순수 C# 클래스 (MonoBehaviour 아님)
+   * IState 인터페이스: Enter() / Execute() / Exit()
+   * 상태 목록: SpawnState → MoveState ↔ ActionState / Any → DeadState
+   * EnemyBase.ManualUpdate()에서 ExecuteCurrentState() 호출 (Update() 직접 사용 금지)
+
+* MovementBehavior 종류 및 요괴 매핑:
+   * DirectChase : 창귀, 두억시니, 도깨비불 (플레이어를 향해 직선 이동)
+   * KeepDistance : 매구 (일정 거리 유지 후 원거리 공격)
+   * ScreenEdgeStay : 어둑시니 (화면 가장자리에서 머무름)
+   * VerticalDrop : 그슨새 (화면 위에서 수직 낙하, 이벤트성)
+   * StaticSpawn : 목귀 (이동 없음, 장애물로 소환)
+
+* 다수 적 처리 원칙:
+   * Separation Steering 적용 — 주변 적과의 반발 벡터로 겹침 방지
+   * ApplySeparationForce() 호출 주기는 EnemyManager에서 0.1~0.2초 간격으로 제어 (매 프레임 금지)
+   * EnemyManager가 ManualUpdate() 호출을 관리하여 모든 적이 동시에 연산하지 않도록 프레임 분산
+
+* 주의사항:
+   * NavMesh 사용 금지 — 열린 공간이므로 벡터 연산으로 처리
+   * 플레이어는 Vector3.zero 고정으로 상수 취급
+   * 오브젝트 풀링 필수 (6.1 원칙 준수) — Instantiate/Destroy 사용 금지
