@@ -17,6 +17,6 @@ MonoBehaviour:
   _enemyPrefab: {fileID: 0}
   _swipeDirection: 0
   _maxHealth: 30
-  _moveSpeed: 5
+  _moveSpeed: 1
   _soulDropCount: 1
   _experiencePerOrb: 10
