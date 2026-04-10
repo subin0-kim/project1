@@ -25,6 +25,9 @@ namespace Mukseon.Gameplay.Combat
         [SerializeField]
         private Transform _playerTarget;
 
+        [SerializeField, Min(0.1f)]
+        private float _riseHeight = 10f;
+
         private EnemyHealth _enemyHealth;
         private Vector3 _spawnPosition;
 
@@ -41,7 +44,7 @@ namespace Mukseon.Gameplay.Combat
 
             if (_playerTarget == null)
             {
-                PlayerHealth playerHealth = FindObjectOfType<PlayerHealth>();
+                PlayerHealth playerHealth = FindAnyObjectByType<PlayerHealth>();
                 if (playerHealth != null)
                 {
                     _playerTarget = playerHealth.transform;
@@ -109,7 +112,7 @@ namespace Mukseon.Gameplay.Combat
         /// <summary>스폰 위치에서 위쪽으로 솟아오름 (목귀)</summary>
         private void MoveRiseFromGround(float step)
         {
-            Vector3 target = new Vector3(_spawnPosition.x, _spawnPosition.y + 10f, _spawnPosition.z);
+            Vector3 target = new Vector3(_spawnPosition.x, _spawnPosition.y + _riseHeight, _spawnPosition.z);
             transform.position = Vector3.MoveTowards(transform.position, target, step);
         }
 
