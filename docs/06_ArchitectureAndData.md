@@ -32,10 +32,10 @@
 모든 적 캐릭터는 StateMachine + Behavior Component 분리 구조로 구현합니다.
 
 * 전체 구조:
-   * EnemyBase (추상 클래스, MonoBehaviour)  
-      ├── StateMachine : 상태 관리 (Spawn → Move → Action → Dead)  
-      ├── MovementBehavior : 이동 전략 (요괴마다 교체 가능한 컴포넌트)  
-      └── ActionBehavior : 행동 전략 (공격, 폭발 등 고유 행동)  
+   * EnemyBase (추상 클래스, MonoBehaviour)
+      └── StateMachine : 상태 관리 (Spawn → Move → Action → Dead)
+   * 각 요괴는 EnemyBase를 상속하여 UpdateMovement()와 OnTriggerAction()을 직접 구현
+   * 예: Changgwi : EnemyBase, Dueoksini : EnemyBase
 
 * StateMachine:
    * 순수 C# 클래스 (MonoBehaviour 아님)
@@ -43,12 +43,12 @@
    * 상태 목록: SpawnState → MoveState ↔ ActionState / Any → DeadState
    * EnemyBase.ManualUpdate()에서 ExecuteCurrentState() 호출 (Update() 직접 사용 금지)
 
-* MovementBehavior 종류 및 요괴 매핑:
-   * DirectChase : 창귀, 두억시니, 도깨비불 (플레이어를 향해 직선 이동)
-   * KeepDistance : 매구 (일정 거리 유지 후 원거리 공격)
-   * ScreenEdgeStay : 어둑시니 (화면 가장자리에서 머무름)
-   * VerticalDrop : 그슨새 (화면 위에서 수직 낙하, 이벤트성)
-   * StaticSpawn : 목귀 (이동 없음, 장애물로 소환)
+* 요괴별 이동 패턴 (UpdateMovement() 구현 내용):
+   * DirectChase : 창귀, 두억시니, 도깨비불 — Vector3.zero(플레이어)를 향해 직선 이동
+   * KeepDistance : 매구 — 일정 거리 유지 후 원거리 공격
+   * ScreenEdgeStay : 어둑시니 — 화면 가장자리에서 머무름
+   * VerticalDrop : 그슨새 — 화면 위에서 수직 낙하, 이벤트성
+   * StaticSpawn : 목귀 — 이동 없음, 장애물로 소환
 
 * 다수 적 처리 원칙:
    * Separation Steering 적용 — 주변 적과의 반발 벡터로 겹침 방지
