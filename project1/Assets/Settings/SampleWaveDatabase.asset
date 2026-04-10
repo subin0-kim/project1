@@ -88,3 +88,13 @@ MonoBehaviour:
       _enemyPrefab: {fileID: 1475677598667535634, guid: dd3d8ac0cb439f64bbbaa2bbe5d1ccc0, type: 3}
       _count: 5
       _moveSpeed: 1.4
+  - _waveName: Wave 4 - Dureoksini
+    _durationSeconds: 0
+    _spawnIntervalSeconds: 0.1
+    _maxAliveEnemies: 1
+    _enemies:
+    - _enemyType: Boss
+      _monsterData: {fileID: 11400000, guid: 29fa4d2c3fd292642baaf7f072b8e86e, type: 2}
+      _enemyPrefab: {fileID: 1475677598667535634, guid: 0892b944d90654243b825a22b54ccad7, type: 3}
+      _count: 1
+      _moveSpeed: 0.7
