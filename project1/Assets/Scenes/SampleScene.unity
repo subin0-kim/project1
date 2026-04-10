@@ -136,6 +136,7 @@ GameObject:
   - component: {fileID: 187285036}
   - component: {fileID: 187285035}
   - component: {fileID: 187285034}
+  - component: {fileID: 187285038}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -337,6 +338,21 @@ MonoBehaviour:
   m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.Stats.PlayerStatSystem
   _characterData: {fileID: 11400000, guid: 1e2bc5133718e524ca66b76fada5e98b, type: 2}
   _initialStats: {fileID: 11400000, guid: a916fc540523e704dbb15d407ab587f7, type: 2}
+--- !u!114 &187285038
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 187285028}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 24b8dfe57ccf4364cabd6e4fd54a825f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.Combat.PlayerHealth
+  _playerStatSystem: {fileID: 0}
+  _fallbackMaxHealth: 100
+  _showDebugLogs: 0
 --- !u!1 &289712652
 GameObject:
   m_ObjectHideFlags: 0
