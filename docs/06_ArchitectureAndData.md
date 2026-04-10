@@ -32,7 +32,7 @@
 모든 적 캐릭터는 StateMachine + Behavior Component 분리 구조로 구현합니다.
 
 * 전체 구조:
-   * EnemyBase (추상 클래스, MonoBehaviour)
+   * EnemyBase (추상 클래스, MonoBehaviour)  
       └── StateMachine : 상태 관리 (Spawn → Move → Action → Dead)
    * 각 요괴는 EnemyBase를 상속하여 UpdateMovement()와 OnTriggerAction()을 직접 구현
    * 예: Changgwi : EnemyBase, Dueoksini : EnemyBase
