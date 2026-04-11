@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using Mukseon.Core.Pool;
+using UnityEngine;
 
 namespace Mukseon.Gameplay.Progression
 {
@@ -17,8 +18,14 @@ namespace Mukseon.Gameplay.Progression
         [SerializeField, Min(0.1f)]
         private float _attractAcceleration = 12f;
 
+        private float _initialAttractSpeed;
         private Vector3 _scatterVelocity;
         private bool _isAttracting;
+
+        private void Awake()
+        {
+            _initialAttractSpeed = _attractSpeed;
+        }
 
         private void OnEnable()
         {
@@ -26,6 +33,7 @@ namespace Mukseon.Gameplay.Progression
             float randomY = Random.Range(-1f, 1f);
             Vector3 direction = new Vector3(randomX, randomY, 0f).normalized;
             _scatterVelocity = direction * _scatterSpeed;
+            _attractSpeed = _initialAttractSpeed;
             _isAttracting = false;
         }
 
@@ -59,7 +67,16 @@ namespace Mukseon.Gameplay.Progression
             if (distance <= collector.CollectRadius)
             {
                 collector.Collect(_experienceAmount);
-                Destroy(gameObject);
+
+                if (PoolManager.Instance != null)
+                {
+                    PoolManager.Instance.Release(gameObject);
+                }
+                else
+                {
+                    Destroy(gameObject);
+                }
+
                 return;
             }
 

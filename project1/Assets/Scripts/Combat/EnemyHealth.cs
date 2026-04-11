@@ -165,6 +165,25 @@ namespace Mukseon.Gameplay.Combat
             _moveSpeed = Mathf.Max(0f, moveSpeed);
         }
 
+        /// <summary>
+        /// 풀에서 꺼낸 직후 호출. 체력과 콜라이더를 초기 상태로 복원한다.
+        /// 풀 관리 대상은 스스로 Destroy하지 않도록 _destroyOnDeath를 false로 강제한다.
+        /// </summary>
+        public void PrepareForReuse()
+        {
+            _destroyOnDeath = false;
+            ResetHealth();
+
+            if (_disableCollidersOnDeath)
+            {
+                Collider2D[] colliders = GetComponentsInChildren<Collider2D>(true);
+                for (int i = 0; i < colliders.Length; i++)
+                {
+                    colliders[i].enabled = true;
+                }
+            }
+        }
+
         public void ApplyMonsterData(MonsterData monsterData = null)
         {
             if (monsterData != null)

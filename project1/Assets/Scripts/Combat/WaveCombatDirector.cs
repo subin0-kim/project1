@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Mukseon.Core.Pool;
 using Mukseon.Gameplay.Progression;
 using UnityEngine;
 
@@ -314,13 +315,14 @@ namespace Mukseon.Gameplay.Combat
                 }
 
                 Transform spawnPoint = ResolveSpawnPoint();
-                EnemyHealth spawnedEnemy = Instantiate(
-                    runtimeEntry.Entry.EnemyPrefab,
-                    spawnPoint.position,
-                    spawnPoint.rotation);
+                GameObject spawnedObject = PoolManager.Instance != null
+                    ? PoolManager.Instance.Get(runtimeEntry.Entry.EnemyPrefab.gameObject, spawnPoint.position, spawnPoint.rotation)
+                    : Instantiate(runtimeEntry.Entry.EnemyPrefab.gameObject, spawnPoint.position, spawnPoint.rotation);
+                EnemyHealth spawnedEnemy = spawnedObject.GetComponent<EnemyHealth>();
 
                 spawnedEnemy.ApplyMonsterData(runtimeEntry.Entry.MonsterData);
                 spawnedEnemy.SetMoveSpeed(runtimeEntry.Entry.MoveSpeed);
+                spawnedEnemy.PrepareForReuse();
                 EnemySoulDropper soulDropper = spawnedEnemy.GetComponent<EnemySoulDropper>();
                 if (soulDropper != null)
                 {
@@ -416,6 +418,12 @@ namespace Mukseon.Gameplay.Combat
 
             enemyHealth.OnDeath -= HandleSpawnedEnemyDeath;
             _aliveEnemies.Remove(enemyHealth);
+
+            if (PoolManager.Instance != null)
+            {
+                PoolManager.Instance.Release(enemyHealth.gameObject);
+            }
+
             NotifyRemainingEnemyCountChanged();
         }
 
@@ -470,7 +478,14 @@ namespace Mukseon.Gameplay.Combat
 
                 if (despawnObjects)
                 {
-                    Destroy(enemy.gameObject);
+                    if (PoolManager.Instance != null)
+                    {
+                        PoolManager.Instance.Release(enemy.gameObject);
+                    }
+                    else
+                    {
+                        Destroy(enemy.gameObject);
+                    }
                 }
             }
 
