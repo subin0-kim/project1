@@ -14,77 +14,65 @@ MonoBehaviour:
   m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.Combat.WaveDatabase
   _waves:
   - _waveName: Wave 1
-    _durationSeconds: 0
+    _durationSeconds: 10
     _spawnIntervalSeconds: 0.8
     _maxAliveEnemies: 4
     _enemies:
     - _enemyType: Up
-      _monsterData: {fileID: 11400000, guid: 77661a277270a784b8c5751d1df4503e, type: 2}
-      _enemyPrefab: {fileID: 3535088139439741544, guid: 9f359b9056e17c241bc9c9c0ecd3976f, type: 3}
+      _monsterData: {fileID: 11400000, guid: bc008bf35e65f1d41b750b636986fa06, type: 2}
+      _enemyPrefab: {fileID: 52844640168237935, guid: 9f359b9056e17c241bc9c9c0ecd3976f, type: 3}
       _count: 3
-      _moveSpeed: 1
     - _enemyType: Down
-      _monsterData: {fileID: 11400000, guid: 77661a277270a784b8c5751d1df4503e, type: 2}
-      _enemyPrefab: {fileID: 4234627494100266546, guid: 3a2f29f76b24fba49872c3e11ed4e499, type: 3}
+      _monsterData: {fileID: 11400000, guid: 27ef1c9766fcc7244b4821648c563a62, type: 2}
+      _enemyPrefab: {fileID: 2545896923121435668, guid: 3a2f29f76b24fba49872c3e11ed4e499, type: 3}
       _count: 3
-      _moveSpeed: 1
     - _enemyType: Left
-      _monsterData: {fileID: 11400000, guid: 0c9e73336ec6803409b3e8030695eca2, type: 2}
-      _enemyPrefab: {fileID: 4368540737326870438, guid: 4d75fb8dd84b9fb40bbaace1f8a21592, type: 3}
+      _monsterData: {fileID: 11400000, guid: 3d4a6f59bb35f774ea50122fb46a0ead, type: 2}
+      _enemyPrefab: {fileID: -5499408724535198967, guid: 4d75fb8dd84b9fb40bbaace1f8a21592, type: 3}
       _count: 3
-      _moveSpeed: 1
     - _enemyType: Right
-      _monsterData: {fileID: 11400000, guid: 89dfd2a29b064fa47a88cabf39d5d41b, type: 2}
-      _enemyPrefab: {fileID: 1475677598667535634, guid: dd3d8ac0cb439f64bbbaa2bbe5d1ccc0, type: 3}
+      _monsterData: {fileID: 11400000, guid: d422d982a99058744bf52309794d43a8, type: 2}
+      _enemyPrefab: {fileID: 7100080186195669722, guid: dd3d8ac0cb439f64bbbaa2bbe5d1ccc0, type: 3}
       _count: 3
-      _moveSpeed: 1
   - _waveName: Wave 2
     _durationSeconds: 35
     _spawnIntervalSeconds: 0.6
     _maxAliveEnemies: 5
     _enemies:
     - _enemyType: Up
-      _monsterData: {fileID: 11400000, guid: 77661a277270a784b8c5751d1df4503e, type: 2}
-      _enemyPrefab: {fileID: 3535088139439741544, guid: 9f359b9056e17c241bc9c9c0ecd3976f, type: 3}
+      _monsterData: {fileID: 11400000, guid: bc008bf35e65f1d41b750b636986fa06, type: 2}
+      _enemyPrefab: {fileID: 52844640168237935, guid: 9f359b9056e17c241bc9c9c0ecd3976f, type: 3}
       _count: 4
-      _moveSpeed: 1.2
     - _enemyType: Down
-      _monsterData: {fileID: 11400000, guid: 77661a277270a784b8c5751d1df4503e, type: 2}
-      _enemyPrefab: {fileID: 4234627494100266546, guid: 3a2f29f76b24fba49872c3e11ed4e499, type: 3}
+      _monsterData: {fileID: 11400000, guid: 27ef1c9766fcc7244b4821648c563a62, type: 2}
+      _enemyPrefab: {fileID: 2545896923121435668, guid: 3a2f29f76b24fba49872c3e11ed4e499, type: 3}
       _count: 4
-      _moveSpeed: 1.2
     - _enemyType: Left
-      _monsterData: {fileID: 11400000, guid: 0c9e73336ec6803409b3e8030695eca2, type: 2}
-      _enemyPrefab: {fileID: 4368540737326870438, guid: 4d75fb8dd84b9fb40bbaace1f8a21592, type: 3}
+      _monsterData: {fileID: 11400000, guid: 3d4a6f59bb35f774ea50122fb46a0ead, type: 2}
+      _enemyPrefab: {fileID: -5499408724535198967, guid: 4d75fb8dd84b9fb40bbaace1f8a21592, type: 3}
       _count: 4
-      _moveSpeed: 1.2
     - _enemyType: Right
-      _monsterData: {fileID: 11400000, guid: 89dfd2a29b064fa47a88cabf39d5d41b, type: 2}
-      _enemyPrefab: {fileID: 1475677598667535634, guid: dd3d8ac0cb439f64bbbaa2bbe5d1ccc0, type: 3}
+      _monsterData: {fileID: 11400000, guid: d422d982a99058744bf52309794d43a8, type: 2}
+      _enemyPrefab: {fileID: 7100080186195669722, guid: dd3d8ac0cb439f64bbbaa2bbe5d1ccc0, type: 3}
       _count: 4
-      _moveSpeed: 1.2
   - _waveName: Wave 3
     _durationSeconds: 50
     _spawnIntervalSeconds: 0.45
     _maxAliveEnemies: 6
     _enemies:
     - _enemyType: Up
-      _monsterData: {fileID: 11400000, guid: 77661a277270a784b8c5751d1df4503e, type: 2}
-      _enemyPrefab: {fileID: 3535088139439741544, guid: 9f359b9056e17c241bc9c9c0ecd3976f, type: 3}
+      _monsterData: {fileID: 11400000, guid: bc008bf35e65f1d41b750b636986fa06, type: 2}
+      _enemyPrefab: {fileID: 52844640168237935, guid: 9f359b9056e17c241bc9c9c0ecd3976f, type: 3}
       _count: 5
-      _moveSpeed: 1.4
     - _enemyType: Down
-      _monsterData: {fileID: 11400000, guid: 77661a277270a784b8c5751d1df4503e, type: 2}
-      _enemyPrefab: {fileID: 4234627494100266546, guid: 3a2f29f76b24fba49872c3e11ed4e499, type: 3}
+      _monsterData: {fileID: 11400000, guid: 27ef1c9766fcc7244b4821648c563a62, type: 2}
+      _enemyPrefab: {fileID: 2545896923121435668, guid: 3a2f29f76b24fba49872c3e11ed4e499, type: 3}
       _count: 5
-      _moveSpeed: 1.4
     - _enemyType: Left
-      _monsterData: {fileID: 11400000, guid: 0c9e73336ec6803409b3e8030695eca2, type: 2}
-      _enemyPrefab: {fileID: 4368540737326870438, guid: 4d75fb8dd84b9fb40bbaace1f8a21592, type: 3}
+      _monsterData: {fileID: 11400000, guid: 3d4a6f59bb35f774ea50122fb46a0ead, type: 2}
+      _enemyPrefab: {fileID: -5499408724535198967, guid: 4d75fb8dd84b9fb40bbaace1f8a21592, type: 3}
       _count: 5
-      _moveSpeed: 1.4
     - _enemyType: Right
-      _monsterData: {fileID: 11400000, guid: 89dfd2a29b064fa47a88cabf39d5d41b, type: 2}
-      _enemyPrefab: {fileID: 1475677598667535634, guid: dd3d8ac0cb439f64bbbaa2bbe5d1ccc0, type: 3}
+      _monsterData: {fileID: 11400000, guid: d422d982a99058744bf52309794d43a8, type: 2}
+      _enemyPrefab: {fileID: 7100080186195669722, guid: dd3d8ac0cb439f64bbbaa2bbe5d1ccc0, type: 3}
       _count: 5
-      _moveSpeed: 1.4

@@ -11,8 +11,6 @@ GameObject:
   - component: {fileID: 378510379056922843}
   - component: {fileID: 2472191227068787534}
   - component: {fileID: 2516619304126768434}
-  - component: {fileID: 4368540737326870438}
-  - component: {fileID: 4829204163632401306}
   - component: {fileID: -2689105966324861327}
   - component: {fileID: -5499408724535198967}
   m_Layer: 0
@@ -142,41 +140,6 @@ BoxCollider2D:
   m_AutoTiling: 0
   m_Size: {x: 1, y: 1}
   m_EdgeRadius: 0
---- !u!114 &4368540737326870438
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6848363840087502861}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2c6d5a7ef7a14cf0b98f6d9381d7a201, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.Combat.EnemyHealth
-  _maxHealth: 10
-  _destroyOnDeath: 1
-  _disableCollidersOnDeath: 1
-  _swipeDirection: 3
-  _monsterData: {fileID: 0}
-  _moveSpeed: 1
---- !u!114 &4829204163632401306
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6848363840087502861}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e2e066fa006faf148bc84276686aeb42, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.Progression.EnemySoulDropper
-  _soulOrbPrefab: {fileID: 2654722044290273375, guid: 100c6736884f69344849b68ede8dffdd, type: 3}
-  _dropCount: 1
-  _experiencePerOrb: 1
-  _dropRadius: 0.25
-  _monsterData: {fileID: 0}
 --- !u!50 &-2689105966324861327
 Rigidbody2D:
   serializedVersion: 5
@@ -216,9 +179,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: eed1dbc3c67cb8240a6b9fad9c7fb9b8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.Combat.ChanggwiEnemy
-  _data: {fileID: 11400000, guid: 468353e4ce4207349b2ea0a71bdfc92b, type: 2}
+  _data: {fileID: 11400000, guid: 3d4a6f59bb35f774ea50122fb46a0ead, type: 2}
   _separationRadius: 1
   _separationForce: 5
+  _disableCollidersOnDeath: 1
   _contactRange: 0.5
   _contactDamage: 10
   _damageCooldown: 1

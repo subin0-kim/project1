@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dad141cadcb6cef41a0c485253bfb68b, type: 3}
+  m_Name: DummyData_Right
+  m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.Combat.EnemyData
+  _monsterId: enemy.changgwi
+  _displayName: "\uCC3D\uADC0"
+  _enemyPrefab: {fileID: 7100080186195669722, guid: dd3d8ac0cb439f64bbbaa2bbe5d1ccc0, type: 3}
+  _swipeDirection: 4
+  _maxHealth: 30
+  _moveSpeed: 5
+  _soulDropCount: 1
+  _experiencePerOrb: 10
+  _soulOrbPrefab: {fileID: 0}
+  _dropRadius: 0.3

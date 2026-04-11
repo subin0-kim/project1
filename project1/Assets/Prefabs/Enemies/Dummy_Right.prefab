@@ -11,8 +11,8 @@ GameObject:
   - component: {fileID: 3959199663175582621}
   - component: {fileID: 5588491822506949314}
   - component: {fileID: 3405704310338003416}
-  - component: {fileID: 1475677598667535634}
-  - component: {fileID: 1831119107564088829}
+  - component: {fileID: 8407380345924555325}
+  - component: {fileID: 7100080186195669722}
   m_Layer: 0
   m_Name: Dummy_Right
   m_TagString: Untagged
@@ -131,8 +131,8 @@ BoxCollider2D:
   m_Offset: {x: 0, y: 0}
   m_SpriteTilingProperty:
     border: {x: 0, y: 0, z: 0, w: 0}
-    pivot: {x: 0.5, y: 0.5}
-    oldSize: {x: 0.7109375, y: 1}
+    pivot: {x: 0.5, y: 0}
+    oldSize: {x: 0.274359, y: 0.36410257}
     newSize: {x: 1, y: 1}
     adaptiveTilingThreshold: 0.5
     drawMode: 0
@@ -140,7 +140,34 @@ BoxCollider2D:
   m_AutoTiling: 0
   m_Size: {x: 1, y: 1}
   m_EdgeRadius: 0
---- !u!114 &1475677598667535634
+--- !u!50 &8407380345924555325
+Rigidbody2D:
+  serializedVersion: 5
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5516339678559892061}
+  m_BodyType: 0
+  m_Simulated: 1
+  m_UseFullKinematicContacts: 0
+  m_UseAutoMass: 0
+  m_Mass: 1
+  m_LinearDamping: 0
+  m_AngularDamping: 0.05
+  m_GravityScale: 1
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_Interpolate: 0
+  m_SleepingMode: 1
+  m_CollisionDetection: 0
+  m_Constraints: 0
+--- !u!114 &7100080186195669722
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -149,29 +176,13 @@ MonoBehaviour:
   m_GameObject: {fileID: 5516339678559892061}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2c6d5a7ef7a14cf0b98f6d9381d7a201, type: 3}
+  m_Script: {fileID: 11500000, guid: eed1dbc3c67cb8240a6b9fad9c7fb9b8, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.Combat.EnemyHealth
-  _maxHealth: 10
-  _destroyOnDeath: 1
+  m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.Combat.ChanggwiEnemy
+  _data: {fileID: 11400000, guid: d422d982a99058744bf52309794d43a8, type: 2}
+  _separationRadius: 1
+  _separationForce: 5
   _disableCollidersOnDeath: 1
-  _swipeDirection: 4
-  _monsterData: {fileID: 0}
-  _moveSpeed: 1
---- !u!114 &1831119107564088829
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5516339678559892061}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e2e066fa006faf148bc84276686aeb42, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.Progression.EnemySoulDropper
-  _soulOrbPrefab: {fileID: 2654722044290273375, guid: 100c6736884f69344849b68ede8dffdd, type: 3}
-  _dropCount: 1
-  _experiencePerOrb: 1
-  _dropRadius: 0.25
-  _monsterData: {fileID: 0}
+  _contactRange: 0.5
+  _contactDamage: 10
+  _damageCooldown: 1
