@@ -87,7 +87,7 @@ namespace Mukseon.Gameplay.Combat
                 _inputDetector.OnActivationRequested += HandleActivationRequested;
             }
 
-            EnemyHealth.AnyEnemyDied += HandleAnyEnemyDied;
+            EnemyBase.AnyEnemyDied += HandleAnyEnemyDied;
         }
 
         private void OnDisable()
@@ -97,7 +97,7 @@ namespace Mukseon.Gameplay.Combat
                 _inputDetector.OnActivationRequested -= HandleActivationRequested;
             }
 
-            EnemyHealth.AnyEnemyDied -= HandleAnyEnemyDied;
+            EnemyBase.AnyEnemyDied -= HandleAnyEnemyDied;
             ExitActiveEffectsIfNeeded();
         }
 
@@ -139,7 +139,7 @@ namespace Mukseon.Gameplay.Combat
             return true;
         }
 
-        private void HandleAnyEnemyDied(EnemyHealth enemyHealth)
+        private void HandleAnyEnemyDied(EnemyBase enemyHealth)
         {
             AddGauge(_gaugePerKill);
         }
@@ -209,16 +209,16 @@ namespace Mukseon.Gameplay.Combat
                 return;
             }
 
-            var activeEnemies = EnemyHealth.ActiveEnemies;
+            var activeEnemies = EnemyBase.ActiveEnemies;
             for (int i = activeEnemies.Count - 1; i >= 0; i--)
             {
-                EnemyHealth enemy = activeEnemies[i];
+                EnemyBase enemy = activeEnemies[i];
                 if (enemy == null || !enemy.IsAlive)
                 {
                     continue;
                 }
 
-                enemy.ApplyDamage(_activationPulseDamage, this);
+                enemy.TakeDamage(_activationPulseDamage);
             }
         }
 

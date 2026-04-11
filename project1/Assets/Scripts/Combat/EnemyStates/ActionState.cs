@@ -18,6 +18,7 @@ namespace Mukseon.Gameplay.Combat
         public void Execute()
         {
             _enemy.ExecuteOnTriggerAction();
+            _stateMachine.ChangeState(_moveState);
         }
 
         public void Exit() { }

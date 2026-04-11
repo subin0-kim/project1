@@ -33,6 +33,8 @@ namespace Mukseon.Gameplay.Combat
         /// </summary>
         protected override void UpdateMovement()
         {
+            if (_playerHealth == null) return;
+
             Vector2 toPlayer = (Vector2)Vector3.zero - (Vector2)transform.position;
             float distanceToPlayer = toPlayer.magnitude;
 
@@ -44,10 +46,10 @@ namespace Mukseon.Gameplay.Combat
             }
 
             Vector2 chaseDir = toPlayer.normalized;
-            Vector2 separation = ComputeSeparation(ActiveEnemies);
+            Vector2 separation = ComputeSeparation();
             Vector2 finalDir = (chaseDir + separation).normalized;
 
-            _rigidbody.velocity = finalDir * _data.MoveSpeed;
+            _rigidbody.linearVelocity = finalDir * _data.MoveSpeed;
         }
 
         /// <summary>
@@ -59,8 +61,6 @@ namespace Mukseon.Gameplay.Combat
 
             if (_playerHealth != null && _playerHealth.IsAlive)
                 _playerHealth.TakeDamage(_contactDamage, this);
-
-            _stateMachine.ChangeState(_moveState);
         }
     }
 }

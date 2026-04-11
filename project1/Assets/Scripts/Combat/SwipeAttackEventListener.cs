@@ -31,7 +31,7 @@ namespace Mukseon.Gameplay.Combat
         [SerializeField]
         private bool _showDebugLogs = true;
 
-        private readonly List<EnemyHealth> _targetBuffer = new List<EnemyHealth>(16);
+        private readonly List<EnemyBase> _targetBuffer = new List<EnemyBase>(16);
 
         private void Awake()
         {
@@ -102,7 +102,7 @@ namespace Mukseon.Gameplay.Combat
             int selectedCount = SwipeAttackTargeting.SelectNearestTargets(
                 _attackOrigin.position,
                 swipeDirection,
-                EnemyHealth.ActiveEnemies,
+                EnemyBase.ActiveEnemies,
                 Mathf.Max(1, ResolveTargetsPerAttack() + _bonusTargets),
                 _targetBuffer);
 
@@ -113,8 +113,7 @@ namespace Mukseon.Gameplay.Combat
 
             for (int i = 0; i < selectedCount; i++)
             {
-                EnemyHealth enemyHealth = _targetBuffer[i];
-                enemyHealth.ApplyDamage(damage, this);
+                _targetBuffer[i].TakeDamage(damage);
             }
 
             return selectedCount;

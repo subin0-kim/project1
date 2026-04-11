@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Mukseon.Core.Input;
+using Mukseon.Gameplay.Progression;
 using UnityEngine;
 
 namespace Mukseon.Gameplay.Combat
@@ -11,6 +12,7 @@ namespace Mukseon.Gameplay.Combat
     {
         private static readonly List<EnemyBase> _activeEnemies = new List<EnemyBase>();
         public static IReadOnlyList<EnemyBase> ActiveEnemies => _activeEnemies;
+        public static event Action<EnemyBase> AnyEnemyDied;
 
         [SerializeField]
         protected EnemyData _data;
@@ -20,6 +22,9 @@ namespace Mukseon.Gameplay.Combat
 
         [SerializeField, Min(0f)]
         private float _separationForce = 5f;
+
+        [SerializeField]
+        private bool _disableCollidersOnDeath = true;
 
         protected float _currentHp;
         protected bool _isDead;
@@ -32,8 +37,11 @@ namespace Mukseon.Gameplay.Combat
         protected ActionState _actionState;
         protected DeadState _deadState;
 
-        public event Action OnDeath;
+        public event Action<EnemyBase> OnDeath;
         public event Action OnDamaged;
+
+        public bool IsAlive => !_isDead;
+        public virtual SwipeDirection SwipeDirection => _data != null ? _data.SwipeDirection : SwipeDirection.None;
 
         /// <summary>
         /// 스폰 연출 시간(초). 0이면 즉시 MoveState로 전환.
@@ -64,6 +72,11 @@ namespace Mukseon.Gameplay.Combat
         protected virtual void OnDisable()
         {
             _activeEnemies.Remove(this);
+        }
+
+        public void SetData(EnemyData data)
+        {
+            _data = data;
         }
 
         public void Initialize()
@@ -102,51 +115,72 @@ namespace Mukseon.Gameplay.Combat
                 Die();
         }
 
-        public void Die()
+        public void Kill(bool countAsKill = true)
+        {
+            if (_isDead) return;
+            _currentHp = 0f;
+            Die(countAsKill);
+        }
+
+        public void Die(bool countAsKill = true)
         {
             if (_isDead)
                 return;
 
             _isDead = true;
+
+            if (_disableCollidersOnDeath)
+            {
+                Collider2D[] colliders = GetComponentsInChildren<Collider2D>(true);
+                for (int i = 0; i < colliders.Length; i++)
+                    colliders[i].enabled = false;
+            }
+
             _stateMachine.ChangeState(_deadState);
-            OnDeath?.Invoke();
-            // TODO: ObjectPool.Return(this)
-        }
+            DropSouls();
+            OnDeath?.Invoke(this);
 
-        public SwipeDirection GetSwipeDirection()
-        {
-            return _data != null ? _data.SwipeDirection : SwipeDirection.None;
-        }
+            if (countAsKill)
+                AnyEnemyDied?.Invoke(this);
 
-        /// <summary>
-        /// 주변 적과의 반발 벡터를 계산합니다. (EnemyManager 또는 UpdateMovement에서 호출)
-        /// </summary>
-        public void ApplySeparationForce(IReadOnlyList<EnemyBase> neighbors)
-        {
-            Vector2 sep = ComputeSeparation(neighbors);
-            if (sep != Vector2.zero)
-                _rigidbody.AddForce(sep.normalized * _separationForce, ForceMode2D.Force);
+            gameObject.SetActive(false); // TODO: ObjectPool.Return(this)로 교체
         }
 
         /// <summary>
         /// 반발 벡터만 반환합니다. UpdateMovement()에서 이동 벡터와 합산할 때 사용합니다.
         /// </summary>
-        protected Vector2 ComputeSeparation(IReadOnlyList<EnemyBase> neighbors)
+        protected Vector2 ComputeSeparation()
         {
             Vector2 separation = Vector2.zero;
-            for (int i = 0; i < neighbors.Count; i++)
+            Collider2D[] neighbors = Physics2D.OverlapCircleAll(transform.position, _separationRadius);
+            for (int i = 0; i < neighbors.Length; i++)
             {
-                EnemyBase neighbor = neighbors[i];
+                EnemyBase neighbor = neighbors[i].GetComponent<EnemyBase>();
                 if (neighbor == null || neighbor == this)
                     continue;
 
                 Vector2 diff = (Vector2)(transform.position - neighbor.transform.position);
-                float distance = diff.magnitude;
-                if (distance > 0f && distance < _separationRadius)
-                    separation += diff / distance;
+                float sqrDistance = diff.sqrMagnitude;
+                if (sqrDistance > 0f)
+                    separation += diff / Mathf.Sqrt(sqrDistance);
             }
 
             return separation;
+        }
+
+        private void DropSouls()
+        {
+            if (_data == null || _data.SoulOrbPrefab == null)
+                return;
+
+            int count = _data.SoulDropCount;
+            for (int i = 0; i < count; i++)
+            {
+                Vector2 randomOffset = UnityEngine.Random.insideUnitCircle * _data.DropRadius;
+                Vector3 spawnPosition = transform.position + new Vector3(randomOffset.x, randomOffset.y, 0f);
+                SoulOrb orb = Instantiate(_data.SoulOrbPrefab, spawnPosition, Quaternion.identity);
+                orb.SetExperienceAmount(_data.ExperiencePerOrb);
+            }
         }
 
         // State 클래스에서 protected 추상 메서드에 접근하기 위한 internal 브리지

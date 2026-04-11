@@ -8,16 +8,16 @@ namespace Mukseon.Gameplay.Combat
     {
         private struct Candidate
         {
-            public EnemyHealth Enemy;
+            public EnemyBase Enemy;
             public float SqrDistance;
         }
 
         public static int SelectNearestTargets(
             Vector2 origin,
             SwipeDirection swipeDirection,
-            IReadOnlyList<EnemyHealth> enemies,
+            IReadOnlyList<EnemyBase> enemies,
             int maxTargets,
-            List<EnemyHealth> output)
+            List<EnemyBase> output)
         {
             output.Clear();
 
@@ -30,7 +30,7 @@ namespace Mukseon.Gameplay.Combat
 
             for (int i = 0; i < enemies.Count; i++)
             {
-                EnemyHealth enemy = enemies[i];
+                EnemyBase enemy = enemies[i];
                 if (enemy == null || !enemy.IsAlive || enemy.SwipeDirection != swipeDirection)
                 {
                     continue;

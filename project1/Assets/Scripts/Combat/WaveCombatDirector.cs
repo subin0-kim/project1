@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using Mukseon.Gameplay.Progression;
 using UnityEngine;
 
 namespace Mukseon.Gameplay.Combat
@@ -49,8 +48,8 @@ namespace Mukseon.Gameplay.Combat
         private bool _showDebugLogs;
 
         private readonly List<SpawnRuntimeEntry> _spawnRuntime = new List<SpawnRuntimeEntry>();
-        private readonly HashSet<EnemyHealth> _aliveEnemies = new HashSet<EnemyHealth>();
-        private readonly List<EnemyHealth> _cleanupBuffer = new List<EnemyHealth>(64);
+        private readonly HashSet<EnemyBase> _aliveEnemies = new HashSet<EnemyBase>();
+        private readonly List<EnemyBase> _cleanupBuffer = new List<EnemyBase>(64);
 
         private int _currentWaveIndex = -1;
         private int _remainingToSpawn;
@@ -314,17 +313,15 @@ namespace Mukseon.Gameplay.Combat
                 }
 
                 Transform spawnPoint = ResolveSpawnPoint();
-                EnemyHealth spawnedEnemy = Instantiate(
+                EnemyBase spawnedEnemy = Instantiate(
                     runtimeEntry.Entry.EnemyPrefab,
                     spawnPoint.position,
                     spawnPoint.rotation);
 
-                spawnedEnemy.ApplyMonsterData(runtimeEntry.Entry.MonsterData);
-                spawnedEnemy.SetMoveSpeed(runtimeEntry.Entry.MoveSpeed);
-                EnemySoulDropper soulDropper = spawnedEnemy.GetComponent<EnemySoulDropper>();
-                if (soulDropper != null)
+                if (runtimeEntry.Entry.MonsterData != null)
                 {
-                    soulDropper.ApplyMonsterData(runtimeEntry.Entry.MonsterData);
+                    spawnedEnemy.SetData(runtimeEntry.Entry.MonsterData);
+                    spawnedEnemy.Initialize();
                 }
 
                 spawnedEnemy.OnDeath += HandleSpawnedEnemyDeath;
@@ -407,15 +404,15 @@ namespace Mukseon.Gameplay.Combat
             return Mathf.Max(1, currentWave.MaxAliveEnemies);
         }
 
-        private void HandleSpawnedEnemyDeath(EnemyHealth enemyHealth)
+        private void HandleSpawnedEnemyDeath(EnemyBase enemy)
         {
-            if (enemyHealth == null)
+            if (enemy == null)
             {
                 return;
             }
 
-            enemyHealth.OnDeath -= HandleSpawnedEnemyDeath;
-            _aliveEnemies.Remove(enemyHealth);
+            enemy.OnDeath -= HandleSpawnedEnemyDeath;
+            _aliveEnemies.Remove(enemy);
             NotifyRemainingEnemyCountChanged();
         }
 
@@ -453,14 +450,14 @@ namespace Mukseon.Gameplay.Combat
         private void CleanupAliveEnemies(bool despawnObjects)
         {
             _cleanupBuffer.Clear();
-            foreach (EnemyHealth enemy in _aliveEnemies)
+            foreach (EnemyBase enemy in _aliveEnemies)
             {
                 _cleanupBuffer.Add(enemy);
             }
 
             for (int i = 0; i < _cleanupBuffer.Count; i++)
             {
-                EnemyHealth enemy = _cleanupBuffer[i];
+                EnemyBase enemy = _cleanupBuffer[i];
                 if (enemy == null)
                 {
                     continue;

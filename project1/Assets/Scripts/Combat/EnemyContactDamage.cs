@@ -3,7 +3,6 @@ using UnityEngine;
 namespace Mukseon.Gameplay.Combat
 {
     [DisallowMultipleComponent]
-    [RequireComponent(typeof(EnemyHealth))]
     public class EnemyContactDamage : MonoBehaviour
     {
         [SerializeField, Min(0.1f)]
@@ -12,16 +11,16 @@ namespace Mukseon.Gameplay.Combat
         [SerializeField]
         private bool _destroyOnContact = true;
 
-        private EnemyHealth _enemyHealth;
+        private EnemyBase _enemy;
 
         private void Awake()
         {
-            _enemyHealth = GetComponent<EnemyHealth>();
+            _enemy = GetComponent<EnemyBase>();
         }
 
         private void OnTriggerEnter2D(Collider2D other)
         {
-            if (_enemyHealth != null && !_enemyHealth.IsAlive)
+            if (_enemy != null && !_enemy.IsAlive)
             {
                 return;
             }
@@ -37,11 +36,11 @@ namespace Mukseon.Gameplay.Combat
                 return;
             }
 
-            playerHealth.TakeDamage(_contactDamage, _enemyHealth);
+            playerHealth.TakeDamage(_contactDamage, _enemy);
 
-            if (_destroyOnContact && _enemyHealth != null && _enemyHealth.IsAlive)
+            if (_destroyOnContact && _enemy != null && _enemy.IsAlive)
             {
-                _enemyHealth.Kill(countAsKill: false);
+                _enemy.Kill(countAsKill: false);
             }
         }
     }

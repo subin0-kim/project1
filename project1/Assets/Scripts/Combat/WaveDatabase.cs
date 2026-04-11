@@ -14,19 +14,15 @@ namespace Mukseon.Gameplay.Combat
         private EnemyData _monsterData;
 
         [SerializeField]
-        private EnemyHealth _enemyPrefab;
+        private EnemyBase _enemyPrefab;
 
         [SerializeField, Min(1)]
         private int _count = 1;
 
-        [SerializeField, Min(0f)]
-        private float _moveSpeed = 1f;
-
         public string EnemyType => string.IsNullOrWhiteSpace(_enemyType) ? "Default" : _enemyType;
         public EnemyData MonsterData => _monsterData;
-        public EnemyHealth EnemyPrefab => _monsterData != null && _monsterData.EnemyPrefab != null ? _monsterData.EnemyPrefab : _enemyPrefab;
+        public EnemyBase EnemyPrefab => _monsterData != null && _monsterData.EnemyPrefab != null ? _monsterData.EnemyPrefab : _enemyPrefab;
         public int Count => Mathf.Max(0, _count);
-        public float MoveSpeed => _monsterData != null ? _monsterData.MoveSpeed : Mathf.Max(0f, _moveSpeed);
 
         public bool IsValid(out string reason)
         {

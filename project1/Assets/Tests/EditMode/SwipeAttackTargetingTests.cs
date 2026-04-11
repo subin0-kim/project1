@@ -8,19 +8,27 @@ namespace Mukseon.Tests.EditMode
 {
     public class SwipeAttackTargetingTests
     {
+        private class TestEnemy : EnemyBase
+        {
+            public SwipeDirection ForcedSwipeDirection;
+            public override SwipeDirection SwipeDirection => ForcedSwipeDirection;
+            protected override void UpdateMovement() { }
+            protected override void OnTriggerAction() { }
+        }
+
         [Test]
         public void SelectNearestTargets_FiltersByDirection_AndReturnsClosestOne()
         {
             var root = new GameObject("Root");
-            var output = new List<EnemyHealth>();
+            var output = new List<EnemyBase>();
 
             try
             {
-                EnemyHealth upNear = CreateEnemy("Dummy_Up_Near", new Vector3(0f, 1f, 0f), root.transform, SwipeDirection.Up);
-                EnemyHealth upFar = CreateEnemy("Dummy_Up_Far", new Vector3(0f, 5f, 0f), root.transform, SwipeDirection.Up);
-                EnemyHealth left = CreateEnemy("Dummy_Left", new Vector3(-0.5f, 0f, 0f), root.transform, SwipeDirection.Left);
+                TestEnemy upNear = CreateEnemy("Dummy_Up_Near", new Vector3(0f, 1f, 0f), root.transform, SwipeDirection.Up);
+                TestEnemy upFar = CreateEnemy("Dummy_Up_Far", new Vector3(0f, 5f, 0f), root.transform, SwipeDirection.Up);
+                TestEnemy left = CreateEnemy("Dummy_Left", new Vector3(-0.5f, 0f, 0f), root.transform, SwipeDirection.Left);
 
-                EnemyHealth[] enemies = { upNear, upFar, left };
+                EnemyBase[] enemies = { upNear, upFar, left };
 
                 int selectedCount = SwipeAttackTargeting.SelectNearestTargets(
                     Vector2.zero,
@@ -42,15 +50,15 @@ namespace Mukseon.Tests.EditMode
         public void SelectNearestTargets_ReturnsClosestNTargets_WithSameDirection()
         {
             var root = new GameObject("Root");
-            var output = new List<EnemyHealth>();
+            var output = new List<EnemyBase>();
 
             try
             {
-                EnemyHealth upNear = CreateEnemy("Dummy_Up_1", new Vector3(0f, 1f, 0f), root.transform, SwipeDirection.Up);
-                EnemyHealth upMid = CreateEnemy("Dummy_Up_2", new Vector3(0f, 2f, 0f), root.transform, SwipeDirection.Up);
-                EnemyHealth upFar = CreateEnemy("Dummy_Up_3", new Vector3(0f, 3f, 0f), root.transform, SwipeDirection.Up);
+                TestEnemy upNear = CreateEnemy("Dummy_Up_1", new Vector3(0f, 1f, 0f), root.transform, SwipeDirection.Up);
+                TestEnemy upMid = CreateEnemy("Dummy_Up_2", new Vector3(0f, 2f, 0f), root.transform, SwipeDirection.Up);
+                TestEnemy upFar = CreateEnemy("Dummy_Up_3", new Vector3(0f, 3f, 0f), root.transform, SwipeDirection.Up);
 
-                EnemyHealth[] enemies = { upFar, upMid, upNear };
+                EnemyBase[] enemies = { upFar, upMid, upNear };
 
                 int selectedCount = SwipeAttackTargeting.SelectNearestTargets(
                     Vector2.zero,
@@ -69,16 +77,16 @@ namespace Mukseon.Tests.EditMode
             }
         }
 
-        private static EnemyHealth CreateEnemy(string name, Vector3 position, Transform parent, SwipeDirection swipeDirection)
+        private static TestEnemy CreateEnemy(string name, Vector3 position, Transform parent, SwipeDirection swipeDirection)
         {
             var enemyObject = new GameObject(name);
             enemyObject.transform.SetParent(parent);
             enemyObject.transform.position = position;
+            enemyObject.AddComponent<Rigidbody2D>();
 
-            var enemyHealth = enemyObject.AddComponent<EnemyHealth>();
-            enemyHealth.SetSwipeDirection(swipeDirection);
-            enemyHealth.ResetHealth();
-            return enemyHealth;
+            var enemy = enemyObject.AddComponent<TestEnemy>();
+            enemy.ForcedSwipeDirection = swipeDirection;
+            return enemy;
         }
     }
 }
