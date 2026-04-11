@@ -29,6 +29,8 @@ namespace Mukseon.Gameplay.Combat
         [SerializeField, Min(0f)]
         private float _moveSpeed = 1f;
 
+        private Collider2D[] _colliders;
+
         public float MaxHealth => _maxHealth;
         public float CurrentHealth { get; private set; }
         public bool IsAlive { get; private set; }
@@ -64,6 +66,7 @@ namespace Mukseon.Gameplay.Combat
                 _swipeDirection = InferSwipeDirectionFromName(gameObject.name);
             }
 
+            _colliders = GetComponentsInChildren<Collider2D>(true);
             ResetHealth();
         }
 
@@ -131,10 +134,9 @@ namespace Mukseon.Gameplay.Combat
 
             if (_disableCollidersOnDeath)
             {
-                Collider2D[] colliders = GetComponentsInChildren<Collider2D>(true);
-                for (int i = 0; i < colliders.Length; i++)
+                for (int i = 0; i < _colliders.Length; i++)
                 {
-                    colliders[i].enabled = false;
+                    _colliders[i].enabled = false;
                 }
             }
 
@@ -176,10 +178,9 @@ namespace Mukseon.Gameplay.Combat
 
             if (_disableCollidersOnDeath)
             {
-                Collider2D[] colliders = GetComponentsInChildren<Collider2D>(true);
-                for (int i = 0; i < colliders.Length; i++)
+                for (int i = 0; i < _colliders.Length; i++)
                 {
-                    colliders[i].enabled = true;
+                    _colliders[i].enabled = true;
                 }
             }
         }

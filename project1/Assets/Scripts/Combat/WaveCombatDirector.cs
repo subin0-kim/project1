@@ -315,14 +315,27 @@ namespace Mukseon.Gameplay.Combat
                 }
 
                 Transform spawnPoint = ResolveSpawnPoint();
-                GameObject spawnedObject = PoolManager.Instance != null
-                    ? PoolManager.Instance.Get(runtimeEntry.Entry.EnemyPrefab.gameObject, spawnPoint.position, spawnPoint.rotation)
-                    : Instantiate(runtimeEntry.Entry.EnemyPrefab.gameObject, spawnPoint.position, spawnPoint.rotation);
-                EnemyHealth spawnedEnemy = spawnedObject.GetComponent<EnemyHealth>();
+                GameObject prefabGO = runtimeEntry.Entry.EnemyPrefab.gameObject;
+                GameObject spawnedObject;
+                EnemyHealth spawnedEnemy;
 
-                spawnedEnemy.ApplyMonsterData(runtimeEntry.Entry.MonsterData);
-                spawnedEnemy.SetMoveSpeed(runtimeEntry.Entry.MoveSpeed);
-                spawnedEnemy.PrepareForReuse();
+                if (PoolManager.Instance != null)
+                {
+                    spawnedObject = PoolManager.Instance.GetInactive(prefabGO, spawnPoint.position, spawnPoint.rotation);
+                    spawnedEnemy = spawnedObject.GetComponent<EnemyHealth>();
+                    spawnedEnemy.ApplyMonsterData(runtimeEntry.Entry.MonsterData);
+                    spawnedEnemy.SetMoveSpeed(runtimeEntry.Entry.MoveSpeed);
+                    spawnedEnemy.PrepareForReuse();
+                    spawnedObject.SetActive(true);
+                }
+                else
+                {
+                    spawnedObject = Instantiate(prefabGO, spawnPoint.position, spawnPoint.rotation);
+                    spawnedEnemy = spawnedObject.GetComponent<EnemyHealth>();
+                    spawnedEnemy.ApplyMonsterData(runtimeEntry.Entry.MonsterData);
+                    spawnedEnemy.SetMoveSpeed(runtimeEntry.Entry.MoveSpeed);
+                }
+
                 EnemySoulDropper soulDropper = spawnedEnemy.GetComponent<EnemySoulDropper>();
                 if (soulDropper != null)
                 {
@@ -422,6 +435,10 @@ namespace Mukseon.Gameplay.Combat
             if (PoolManager.Instance != null)
             {
                 PoolManager.Instance.Release(enemyHealth.gameObject);
+            }
+            else
+            {
+                Destroy(enemyHealth.gameObject);
             }
 
             NotifyRemainingEnemyCountChanged();

@@ -56,22 +56,26 @@ namespace Mukseon.Core.Pool
 
         /// <summary>
         /// 풀에서 오브젝트를 꺼내 지정 위치/회전으로 배치한다.
-        /// 풀이 없으면 자동 생성된다.
-        /// </summary>
-        /// <summary>
-        /// 풀에서 오브젝트를 꺼내 지정 위치/회전으로 배치한다.
         /// 위치 설정 후 SetActive(true)를 호출하므로, OnEnable에서 올바른 위치를 읽을 수 있다.
         /// 풀이 없으면 자동 생성된다.
         /// </summary>
         public GameObject Get(GameObject prefab, Vector3 position, Quaternion rotation)
         {
+            GameObject obj = GetInactive(prefab, position, rotation);
+            obj.SetActive(true);
+            return obj;
+        }
+
+        /// <summary>
+        /// 풀에서 오브젝트를 비활성 상태로 꺼내 지정 위치/회전으로 배치한다.
+        /// SetActive(true)는 호출하지 않으므로, 호출자가 직접 활성화해야 한다.
+        /// PrepareForReuse 등을 OnEnable 이전에 처리할 때 사용한다.
+        /// </summary>
+        public GameObject GetInactive(GameObject prefab, Vector3 position, Quaternion rotation)
+        {
             ObjectPool<GameObject> pool = GetOrCreatePool(prefab);
-            // actionOnGet을 null로 설정했으므로 pool.Get()은 비활성 상태로 반환된다.
-            // 위치를 먼저 잡은 뒤 SetActive(true)로 활성화해야
-            // OnEnable에서 transform.position을 읽는 컴포넌트(EnemyMover 등)가 올바른 값을 얻는다.
             GameObject obj = pool.Get();
             obj.transform.SetPositionAndRotation(position, rotation);
-            obj.SetActive(true);
             return obj;
         }
 
@@ -121,14 +125,18 @@ namespace Mukseon.Core.Pool
                 createFunc: () =>
                 {
                     // 생성 즉시 비활성화: Get() 호출자가 위치 설정 후 직접 활성화한다.
-                    GameObject obj = Instantiate(prefab);
+                    GameObject obj = Instantiate(prefab, transform);
                     obj.SetActive(false);
                     _instanceToPrefabId[obj.GetInstanceID()] = prefabId;
                     return obj;
                 },
                 actionOnGet: null,                          // 활성화는 Get() 래퍼에서 위치 설정 후 처리
                 actionOnRelease: obj => obj.SetActive(false),
-                actionOnDestroy: Destroy,
+                actionOnDestroy: obj =>
+                {
+                    _instanceToPrefabId.Remove(obj.GetInstanceID());
+                    Destroy(obj);
+                },
                 collectionCheck: false,
                 defaultCapacity: initialSize,
                 maxSize: maxSize
