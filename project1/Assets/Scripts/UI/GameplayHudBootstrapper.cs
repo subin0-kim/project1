@@ -57,6 +57,9 @@ namespace Mukseon.Gameplay.UI
         private readonly Dictionary<EnemyHealth, Label> _arrowLabels = new Dictionary<EnemyHealth, Label>();
         private readonly List<FloatingText> _floatingTexts = new List<FloatingText>();
         private readonly List<EnemyHealth> _enemyBuffer = new List<EnemyHealth>(64);
+        private readonly List<EnemyHealth> _removedEnemyBuffer = new List<EnemyHealth>(64);
+        private float _resolveRetryTimer;
+        private Camera _cachedCamera;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void EnsureHudBootstrapper()
@@ -64,12 +67,10 @@ namespace Mukseon.Gameplay.UI
             GameplayHudBootstrapper existing = FindBootstrapper();
             if (existing != null)
             {
-                existing.HandleSceneLoaded();
                 return;
             }
 
             GameObject root = new GameObject(RootObjectName);
-            DontDestroyOnLoad(root);
             root.AddComponent<GameplayHudBootstrapper>();
         }
 
@@ -113,13 +114,21 @@ namespace Mukseon.Gameplay.UI
 
         private void Update()
         {
-            if (_playerHealth == null || _gangshinController == null || _playerLevelSystem == null || _waveCombatDirector == null)
+            _resolveRetryTimer -= Time.unscaledDeltaTime;
+            if (_resolveRetryTimer <= 0f && NeedsRuntimeReferenceRefresh())
             {
+                _resolveRetryTimer = 0.5f;
                 TryResolveSources();
             }
 
             SyncEnemies();
-            RefreshHud();
+
+            if (_gangshinController != null &&
+                (_gangshinController.CurrentState == GangshinState.Active || _gangshinController.CurrentState == GangshinState.Cooldown))
+            {
+                RefreshGangshin();
+            }
+
             UpdateWorldElements(Time.unscaledDeltaTime);
         }
 
@@ -137,6 +146,8 @@ namespace Mukseon.Gameplay.UI
             _playerLevelSystem = null;
             _waveCombatDirector = null;
             _bossEnemy = null;
+            _cachedCamera = Camera.main;
+            _resolveRetryTimer = 0f;
             EnsureUi();
             TryResolveSources();
         }
@@ -221,6 +232,11 @@ namespace Mukseon.Gameplay.UI
 
         private void TryResolveSources()
         {
+            if (_cachedCamera == null)
+            {
+                _cachedCamera = Camera.main;
+            }
+
             if (_playerHealth == null)
             {
                 _playerHealth = FindSceneObject<PlayerHealth>();
@@ -228,6 +244,7 @@ namespace Mukseon.Gameplay.UI
                 {
                     _playerHealth.OnHealthChanged += HandlePlayerHealthChanged;
                     DisableLegacy<PlayerHealthHudPresenter>();
+                    RefreshHealth();
                 }
             }
 
@@ -239,6 +256,7 @@ namespace Mukseon.Gameplay.UI
                     _gangshinController.OnGaugeChanged += HandleGangshinGaugeChanged;
                     _gangshinController.OnStateChanged += HandleGangshinStateChanged;
                     DisableLegacy<GangshinHudPresenter>();
+                    RefreshGangshin();
                 }
             }
 
@@ -251,6 +269,8 @@ namespace Mukseon.Gameplay.UI
                     _playerLevelSystem.OnLevelSelectionOpened += HandleLevelSelectionOpened;
                     _playerLevelSystem.OnLevelSelectionClosed += HandleLevelSelectionClosed;
                     DisableLegacy<LevelUpPanelPresenter>();
+                    RefreshExperience();
+                    RefreshLevelUp();
                 }
             }
 
@@ -264,8 +284,18 @@ namespace Mukseon.Gameplay.UI
                     _waveCombatDirector.OnRemainingEnemyCountChanged += HandleRemainingEnemyCountChanged;
                     _waveCombatDirector.OnAllWavesCompleted += HandleAllWavesCompleted;
                     DisableLegacy<WaveHudPresenter>();
+                    RefreshWave();
                 }
             }
+        }
+
+        private bool NeedsRuntimeReferenceRefresh()
+        {
+            return _cachedCamera == null ||
+                   _playerHealth == null ||
+                   _gangshinController == null ||
+                   _playerLevelSystem == null ||
+                   _waveCombatDirector == null;
         }
 
         private void UnsubscribeAll()
@@ -443,30 +473,40 @@ namespace Mukseon.Gameplay.UI
                     enemy.OnDamagedDetailed += HandleEnemyDamaged;
                     enemy.OnDeath += HandleEnemyDeath;
                     CreateArrow(enemy);
+                    if (enemy.IsBoss)
+                    {
+                        _bossEnemy = enemy;
+                        RefreshBoss();
+                    }
                 }
             }
 
-            var removed = new List<EnemyHealth>();
+            _removedEnemyBuffer.Clear();
             foreach (EnemyHealth enemy in _trackedEnemies)
             {
                 if (!_enemyBuffer.Contains(enemy))
                 {
-                    removed.Add(enemy);
+                    _removedEnemyBuffer.Add(enemy);
                 }
             }
 
-            for (int i = 0; i < removed.Count; i++)
+            for (int i = 0; i < _removedEnemyBuffer.Count; i++)
             {
-                RemoveEnemy(removed[i]);
+                RemoveEnemy(_removedEnemyBuffer[i]);
             }
         }
 
         private void ClearEnemies()
         {
-            var enemies = new List<EnemyHealth>(_trackedEnemies);
-            for (int i = 0; i < enemies.Count; i++)
+            _removedEnemyBuffer.Clear();
+            foreach (EnemyHealth enemy in _trackedEnemies)
             {
-                RemoveEnemy(enemies[i]);
+                _removedEnemyBuffer.Add(enemy);
+            }
+
+            for (int i = 0; i < _removedEnemyBuffer.Count; i++)
+            {
+                RemoveEnemy(_removedEnemyBuffer[i]);
             }
 
             for (int i = _floatingTexts.Count - 1; i >= 0; i--)
@@ -567,7 +607,7 @@ namespace Mukseon.Gameplay.UI
 
         private void UpdateWorldElements(float deltaTime)
         {
-            Camera camera = Camera.main;
+            Camera camera = _cachedCamera;
             if (camera == null)
             {
                 return;
