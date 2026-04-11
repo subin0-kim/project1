@@ -18,7 +18,7 @@ namespace Mukseon.Gameplay.Combat
         protected EnemyData _data;
 
         [SerializeField, Min(0f)]
-        private float _separationRadius = 1f;
+        private float _separationRadius = 0.5f;
 
         [SerializeField, Min(0f)]
         private float _separationForce = 5f;
@@ -53,6 +53,7 @@ namespace Mukseon.Gameplay.Combat
         {
             _rigidbody = GetComponent<Rigidbody2D>();
             _rigidbody.gravityScale = 0f;
+            _rigidbody.constraints = RigidbodyConstraints2D.FreezeRotation;
             _stateMachine = new StateMachine();
 
             _moveState = new MoveState(this);

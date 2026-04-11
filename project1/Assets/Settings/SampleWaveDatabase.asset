@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.Combat.WaveDatabase
   _waves:
   - _waveName: Wave 1
-    _durationSeconds: 10
+    _durationSeconds: 30
     _spawnIntervalSeconds: 0.8
     _maxAliveEnemies: 4
     _enemies:

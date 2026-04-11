@@ -16,9 +16,9 @@ MonoBehaviour:
   _displayName: "\uCC3D\uADC0"
   _enemyPrefab: {fileID: 7100080186195669722, guid: dd3d8ac0cb439f64bbbaa2bbe5d1ccc0, type: 3}
   _swipeDirection: 4
-  _maxHealth: 30
+  _maxHealth: 1
   _moveSpeed: 5
   _soulDropCount: 1
   _experiencePerOrb: 10
-  _soulOrbPrefab: {fileID: 0}
+  _soulOrbPrefab: {fileID: 2654722044290273375, guid: 100c6736884f69344849b68ede8dffdd, type: 3}
   _dropRadius: 0.3

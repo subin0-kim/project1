@@ -124,7 +124,7 @@ BoxCollider2D:
   m_CallbackLayers:
     serializedVersion: 2
     m_Bits: 4294967295
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_UsedByEffector: 0
   m_CompositeOperation: 0
   m_CompositeOrder: 0
@@ -180,7 +180,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.Combat.ChanggwiEnemy
   _data: {fileID: 11400000, guid: 27ef1c9766fcc7244b4821648c563a62, type: 2}
-  _separationRadius: 1
+  _separationRadius: 0.2
   _separationForce: 5
   _disableCollidersOnDeath: 1
   _contactRange: 0.5
