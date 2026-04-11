@@ -35,6 +35,8 @@ namespace Mukseon.Gameplay.Combat
         public float MoveSpeed => Mathf.Max(0f, _moveSpeed);
         public static IReadOnlyList<EnemyHealth> ActiveEnemies => _activeEnemies;
         public MonsterData MonsterData => _monsterData;
+        public string DisplayName => _monsterData != null ? _monsterData.DisplayName : gameObject.name;
+        public bool IsBoss => _monsterData != null && _monsterData.IsBoss;
         public SwipeDirection SwipeDirection
         {
             get
@@ -49,6 +51,7 @@ namespace Mukseon.Gameplay.Combat
         }
 
         public event Action<float, float> OnDamaged;
+        public event Action<EnemyHealth, float, object> OnDamagedDetailed;
         public event Action OnDied;
         public event Action<EnemyHealth> OnDeath;
 
@@ -92,7 +95,9 @@ namespace Mukseon.Gameplay.Combat
 
             float previousHealth = CurrentHealth;
             CurrentHealth = Mathf.Max(0f, CurrentHealth - amount);
-            OnDamaged?.Invoke(CurrentHealth, previousHealth - CurrentHealth);
+            float actualDamage = previousHealth - CurrentHealth;
+            OnDamaged?.Invoke(CurrentHealth, actualDamage);
+            OnDamagedDetailed?.Invoke(this, actualDamage, source);
 
             if (CurrentHealth <= 0f)
             {
