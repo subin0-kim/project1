@@ -1,4 +1,5 @@
-﻿using Mukseon.Gameplay.Combat;
+﻿using Mukseon.Core.Pool;
+using Mukseon.Gameplay.Combat;
 using UnityEngine;
 
 namespace Mukseon.Gameplay.Progression
@@ -59,7 +60,9 @@ namespace Mukseon.Gameplay.Progression
                 Vector2 randomOffset = Random.insideUnitCircle * _dropRadius;
                 Vector3 spawnPosition = transform.position + new Vector3(randomOffset.x, randomOffset.y, 0f);
 
-                SoulOrb orb = Instantiate(_soulOrbPrefab, spawnPosition, Quaternion.identity);
+                SoulOrb orb = PoolManager.Instance != null
+                    ? PoolManager.Instance.Get(_soulOrbPrefab.gameObject, spawnPosition, Quaternion.identity).GetComponent<SoulOrb>()
+                    : Instantiate(_soulOrbPrefab, spawnPosition, Quaternion.identity);
                 orb.SetExperienceAmount(Mathf.Max(1, _experiencePerOrb));
             }
         }
