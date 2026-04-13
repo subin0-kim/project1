@@ -5,7 +5,7 @@ namespace Mukseon.Gameplay.VFX
 {
     /// <summary>
     /// ObjectPool과 연동되는 파티클 이펙트 컴포넌트.
-    /// OnEnable 시 자동 재생하고, 파티클이 모두 종료되면 풀에 반환합니다.
+    /// OnEnable 시 자동 재생하고, 파티클이 종료되면 콜백을 통해 풀에 반환합니다.
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(ParticleSystem))]
@@ -17,10 +17,9 @@ namespace Mukseon.Gameplay.VFX
         {
             _ps = GetComponent<ParticleSystem>();
 
-            // 풀에서 재사용될 때 자동으로 Stop On Awake 방지
             var main = _ps.main;
             main.playOnAwake = false;
-            main.stopAction = ParticleSystemStopAction.None;
+            main.stopAction = ParticleSystemStopAction.Callback;
         }
 
         private void OnEnable()
@@ -28,12 +27,9 @@ namespace Mukseon.Gameplay.VFX
             _ps.Play(true);
         }
 
-        private void Update()
+        private void OnParticleSystemStopped()
         {
-            if (!_ps.IsAlive(true))
-            {
-                ReturnToPool();
-            }
+            ReturnToPool();
         }
 
         private void ReturnToPool()
@@ -44,7 +40,7 @@ namespace Mukseon.Gameplay.VFX
             }
             else
             {
-                gameObject.SetActive(false);
+                Destroy(gameObject);
             }
         }
     }

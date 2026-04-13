@@ -87,6 +87,7 @@ namespace Mukseon.Gameplay.VFX
         {
             if (_camera == null)
             {
+                Debug.LogWarning("[SwipeTrailEffect] Camera가 없어 ScreenToWorld 변환에 실패했습니다.");
                 return Vector3.zero;
             }
 

@@ -38,6 +38,11 @@ namespace Mukseon.Gameplay.VFX
         private void Awake()
         {
             _playerLevelSystem = GetComponent<PlayerLevelSystem>();
+            if (_playerLevelSystem == null)
+            {
+                Debug.LogWarning("[PlayerVFXController] PlayerLevelSystem 컴포넌트를 찾을 수 없습니다. 스킬 VFX가 작동하지 않습니다.");
+            }
+
             UpdateBarrierVisual();
         }
 
@@ -78,6 +83,7 @@ namespace Mukseon.Gameplay.VFX
                     _inkExplosionOnKillActive = true;
                     break;
                 case LevelUpSkillEffectType.BarrierRadiusExpand:
+                    // 매 선택 시 skill.Value만큼 고정 확장 (nextLevel 무관)
                     _barrierRadius += skill.Value;
                     UpdateBarrierVisual();
                     break;
@@ -138,7 +144,20 @@ namespace Mukseon.Gameplay.VFX
             if (visible)
             {
                 float diameter = _barrierRadius * 2f;
-                _barrierRenderer.transform.localScale = new Vector3(diameter, diameter, 1f);
+
+                // 부모 스케일과 스프라이트 크기를 보정하여 월드 유닛과 일치시킴
+                Vector3 lossyScale = _barrierRenderer.transform.parent != null
+                    ? _barrierRenderer.transform.parent.lossyScale
+                    : Vector3.one;
+
+                float spriteWorldSize = 1f;
+                if (_barrierRenderer.sprite != null)
+                {
+                    spriteWorldSize = _barrierRenderer.sprite.bounds.size.x;
+                }
+
+                float scale = diameter / (spriteWorldSize * lossyScale.x);
+                _barrierRenderer.transform.localScale = new Vector3(scale, scale, 1f);
             }
         }
     }
