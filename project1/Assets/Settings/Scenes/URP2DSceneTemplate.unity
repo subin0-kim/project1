@@ -301,8 +301,6 @@ GameObject:
   m_Component:
   - component: {fileID: 1206948807}
   - component: {fileID: 1206948806}
-  - component: {fileID: 1206948805}
-  - component: {fileID: 1206948808}
   m_Layer: 0
   m_Name: WaveSystem
   m_TagString: Untagged
@@ -310,26 +308,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &1206948805
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1206948804}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6965654d90364db18ffe6d96fa22ff8a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.Combat.WaveHudPresenter
-  _waveCombatDirector: {fileID: 1206948806}
-  _waveLabelFormat: Wave {0}
-  _remainingLabelFormat: 'Remaining: {0}'
-  _completedLabel: All Waves Cleared
-  _renderWithOnGui: 1
-  _screenOffset: {x: 16, y: 16}
-  _fontSize: 20
-  _fontColor: {r: 1, g: 1, b: 1, a: 1}
 --- !u!114 &1206948806
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -368,27 +346,6 @@ Transform:
   - {fileID: 12279058}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1206948808
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1206948804}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2e1d2e5b9672af04e8c7ae8d2e194b60, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.Combat.GangshinHudPresenter
-  _gangshinController: {fileID: 0}
-  _gaugePosition: {x: 16, y: 72}
-  _gaugeSize: {x: 260, y: 20}
-  _gaugeBackgroundColor: {r: 0, g: 0, b: 0, a: 0.55}
-  _gaugeFillColor: {r: 0.95, g: 0.8, b: 0.2, a: 0.95}
-  _readyFillColor: {r: 1, g: 0.35, b: 0.2, a: 0.95}
-  _activeOverlayColor: {r: 0.85, g: 0.2, b: 0.2, a: 0.14}
-  _cooldownOverlayColor: {r: 0.2, g: 0.35, b: 0.7, a: 0.08}
-  _fontSize: 18
 --- !u!1 &1232560973
 GameObject:
   m_ObjectHideFlags: 0
@@ -589,7 +546,6 @@ GameObject:
   - component: {fileID: 2090177690}
   - component: {fileID: 2090177689}
   - component: {fileID: 2090177688}
-  - component: {fileID: 2090177687}
   - component: {fileID: 2090177692}
   - component: {fileID: 2090177691}
   m_Layer: 0
@@ -730,21 +686,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &2090177687
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2090177681}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d0e4aa71c5060b64c9edea0e25fc3960, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.Progression.LevelUpPanelPresenter
-  _playerLevelSystem: {fileID: 0}
-  _showExperienceHud: 1
-  _hudPosition: {x: 12, y: 260}
 --- !u!114 &2090177688
 MonoBehaviour:
   m_ObjectHideFlags: 0

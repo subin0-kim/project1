@@ -329,7 +329,6 @@ namespace Mukseon.Gameplay.UI
                 if (_playerHealth != null)
                 {
                     _playerHealth.OnHealthChanged += HandlePlayerHealthChanged;
-                    DisableLegacy<PlayerHealthHudPresenter>();
                     RefreshHealth();
                 }
             }
@@ -341,7 +340,6 @@ namespace Mukseon.Gameplay.UI
                 {
                     _gangshinController.OnGaugeChanged += HandleGangshinGaugeChanged;
                     _gangshinController.OnStateChanged += HandleGangshinStateChanged;
-                    DisableLegacy<GangshinHudPresenter>();
                     RefreshGangshin();
                 }
             }
@@ -354,7 +352,6 @@ namespace Mukseon.Gameplay.UI
                     _playerLevelSystem.OnExperienceChanged += HandleExperienceChanged;
                     _playerLevelSystem.OnLevelSelectionOpened += HandleLevelSelectionOpened;
                     _playerLevelSystem.OnLevelSelectionClosed += HandleLevelSelectionClosed;
-                    DisableLegacy<LevelUpPanelPresenter>();
                     RefreshExperience();
                     RefreshLevelUp();
                 }
@@ -369,7 +366,6 @@ namespace Mukseon.Gameplay.UI
                     _waveCombatDirector.OnWaveEnded += HandleWaveEnded;
                     _waveCombatDirector.OnRemainingEnemyCountChanged += HandleRemainingEnemyCountChanged;
                     _waveCombatDirector.OnAllWavesCompleted += HandleAllWavesCompleted;
-                    DisableLegacy<WaveHudPresenter>();
                     RefreshWave();
                 }
             }
@@ -891,15 +887,6 @@ namespace Mukseon.Gameplay.UI
         private static void Fill(VisualElement fill, float normalized)
         {
             fill.style.width = Length.Percent(Mathf.Clamp01(normalized) * 100f);
-        }
-
-        private static void DisableLegacy<T>() where T : Behaviour
-        {
-            T target = FindSceneObject<T>();
-            if (target != null)
-            {
-                target.enabled = false;
-            }
         }
 
         private void HandleAllWavesCompleted()
