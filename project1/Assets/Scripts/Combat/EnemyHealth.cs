@@ -10,6 +10,7 @@ namespace Mukseon.Gameplay.Combat
     {
         private static readonly List<EnemyHealth> _activeEnemies = new List<EnemyHealth>();
         public static event Action<EnemyHealth> AnyEnemyDied;
+        public static event Action<EnemyHealth, float> AnyEnemyDamaged;
 
         [SerializeField, Min(1f)]
         private float _maxHealth = 10f;
@@ -101,6 +102,7 @@ namespace Mukseon.Gameplay.Combat
             float actualDamage = previousHealth - CurrentHealth;
             OnDamaged?.Invoke(CurrentHealth, actualDamage);
             OnDamagedDetailed?.Invoke(this, actualDamage, source);
+            AnyEnemyDamaged?.Invoke(this, actualDamage);
 
             if (CurrentHealth <= 0f)
             {
