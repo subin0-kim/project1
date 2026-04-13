@@ -321,6 +321,10 @@ namespace Mukseon.Gameplay.UI
             if (_cachedCamera == null)
             {
                 _cachedCamera = Camera.main;
+                if (_cachedCamera == null)
+                {
+                    Debug.LogWarning("[GameplayHudBootstrapper] Camera.main을 찾을 수 없습니다. 월드 UI 위치 계산이 비활성화됩니다.");
+                }
             }
 
             if (_playerHealth == null)
@@ -330,6 +334,10 @@ namespace Mukseon.Gameplay.UI
                 {
                     _playerHealth.OnHealthChanged += HandlePlayerHealthChanged;
                     RefreshHealth();
+                }
+                else
+                {
+                    Debug.LogWarning("[GameplayHudBootstrapper] PlayerHealth를 찾을 수 없습니다. 체력 HUD가 표시되지 않습니다.");
                 }
             }
 
@@ -341,6 +349,10 @@ namespace Mukseon.Gameplay.UI
                     _gangshinController.OnGaugeChanged += HandleGangshinGaugeChanged;
                     _gangshinController.OnStateChanged += HandleGangshinStateChanged;
                     RefreshGangshin();
+                }
+                else
+                {
+                    Debug.LogWarning("[GameplayHudBootstrapper] GangshinController를 찾을 수 없습니다. 강신 게이지 HUD가 표시되지 않습니다.");
                 }
             }
 
@@ -355,6 +367,10 @@ namespace Mukseon.Gameplay.UI
                     RefreshExperience();
                     RefreshLevelUp();
                 }
+                else
+                {
+                    Debug.LogWarning("[GameplayHudBootstrapper] PlayerLevelSystem을 찾을 수 없습니다. 경험치 HUD 및 레벨업 패널이 표시되지 않습니다.");
+                }
             }
 
             if (_waveCombatDirector == null)
@@ -367,6 +383,10 @@ namespace Mukseon.Gameplay.UI
                     _waveCombatDirector.OnRemainingEnemyCountChanged += HandleRemainingEnemyCountChanged;
                     _waveCombatDirector.OnAllWavesCompleted += HandleAllWavesCompleted;
                     RefreshWave();
+                }
+                else
+                {
+                    Debug.LogWarning("[GameplayHudBootstrapper] WaveCombatDirector를 찾을 수 없습니다. 웨이브 HUD가 표시되지 않습니다.");
                 }
             }
         }
