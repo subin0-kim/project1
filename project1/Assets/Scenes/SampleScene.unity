@@ -135,7 +135,6 @@ GameObject:
   - component: {fileID: 187285037}
   - component: {fileID: 187285036}
   - component: {fileID: 187285035}
-  - component: {fileID: 187285034}
   - component: {fileID: 187285038}
   - component: {fileID: 187285039}
   m_Layer: 0
@@ -277,21 +276,6 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
---- !u!114 &187285034
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 187285028}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d0e4aa71c5060b64c9edea0e25fc3960, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.Progression.LevelUpPanelPresenter
-  _playerLevelSystem: {fileID: 0}
-  _showExperienceHud: 1
-  _hudPosition: {x: 12, y: 260}
 --- !u!114 &187285035
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1115,7 +1099,6 @@ GameObject:
   m_Component:
   - component: {fileID: 1453966978}
   - component: {fileID: 1453966977}
-  - component: {fileID: 1453966976}
   m_Layer: 0
   m_Name: WaveSystem
   m_TagString: Untagged
@@ -1123,26 +1106,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &1453966976
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1453966975}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6965654d90364db18ffe6d96fa22ff8a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.Combat.WaveHudPresenter
-  _waveCombatDirector: {fileID: 1453966977}
-  _waveLabelFormat: Wave {0}
-  _remainingLabelFormat: 'Remaining: {0}'
-  _completedLabel: All Waves Cleared
-  _renderWithOnGui: 1
-  _screenOffset: {x: 16, y: 16}
-  _fontSize: 20
-  _fontColor: {r: 1, g: 1, b: 1, a: 1}
 --- !u!114 &1453966977
 MonoBehaviour:
   m_ObjectHideFlags: 0
