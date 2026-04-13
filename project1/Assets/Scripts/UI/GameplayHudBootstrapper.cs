@@ -239,7 +239,9 @@ namespace Mukseon.Gameplay.UI
             cardsContainer.style.position = Position.Absolute;
             cardsContainer.style.left = 16f;
             cardsContainer.style.right = 16f;
-            cardsContainer.style.top = 56f;
+            // titleY(14) + titleHeight(30) + gap(12) = 56
+            const float cardsTop = 14f + 30f + 12f;
+            cardsContainer.style.top = cardsTop;
             cardsContainer.style.bottom = 16f;
             cardsContainer.style.flexDirection = FlexDirection.Column;
             cardsContainer.style.justifyContent = Justify.SpaceBetween;
@@ -522,7 +524,7 @@ namespace Mukseon.Gameplay.UI
                 return;
             }
 
-            _levelUpTitle.text = $"{Strings.LevelUpTitle}  (Lv.{_playerLevelSystem.CurrentLevel})";
+            _levelUpTitle.text = $"{Strings.LevelUpTitle} (Lv.{_playerLevelSystem.CurrentLevel})";
             IReadOnlyList<SkillData> choices = _playerLevelSystem.CurrentChoices;
             for (int i = 0; i < _cardSlots.Count; i++)
             {

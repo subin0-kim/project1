@@ -12,9 +12,9 @@ namespace Mukseon.Gameplay.Progression
         StatFlat = 0,
         StatPercent = 1,
         BonusTargets = 2,
-        PickupRadius = 3,
+        PickupRadius = 3,         // 혼불 당기기 (자력) — docs 3.3 기준 공용 스킬 7종 중 하나
 
-        // 공용 스킬 (6종)
+        // 공용 스킬 (6종) — PickupRadius 포함 시 7종, 클래스 전용 4종과 합산하면 총 11종
         SummonDokkaebiOrb = 10,   // 도깨비불 소환
         InkExplosionOnKill = 11,  // 먹물 폭발 (적 처치 시 광역)
         BarrierRadiusExpand = 12, // 결계 확장
@@ -268,11 +268,8 @@ namespace Mukseon.Gameplay.Progression
                     }
                     break;
                 default:
-                    if (OnSkillEffectPending != null)
-                    {
-                        OnSkillEffectPending.Invoke(definition, GetSkillLevel(definition.SkillId) + 1);
-                    }
-                    else
+                    OnSkillEffectPending?.Invoke(definition, GetSkillLevel(definition.SkillId) + 1);
+                    if (OnSkillEffectPending == null)
                     {
                         Debug.LogWarning($"[PlayerLevelSystem] ApplySkillEffect: 처리되지 않은 스킬 타입 {definition.EffectType} ('{definition.SkillId}'). switch 케이스를 추가하거나 OnSkillEffectPending 구독을 확인하세요.");
                     }
