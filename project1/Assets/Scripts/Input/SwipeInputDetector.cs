@@ -13,6 +13,13 @@ namespace Mukseon.Core.Input
 
         public event Action<SwipeDirection> OnSwipeDetected;
 
+        /// <summary>터치/마우스 버튼이 눌린 순간 발생. 스크린 좌표를 전달합니다.</summary>
+        public event Action<Vector2> OnSwipeBegan;
+        /// <summary>터치/마우스가 이동 중인 매 프레임 발생. 스크린 좌표를 전달합니다.</summary>
+        public event Action<Vector2> OnSwipeMoved;
+        /// <summary>터치/마우스 버튼이 떼어진 순간 발생. 스크린 좌표를 전달합니다.</summary>
+        public event Action<Vector2> OnSwipeEnded;
+
         private Vector2 _startPosition;
         private bool _isTrackingSwipe;
 
@@ -43,11 +50,19 @@ namespace Mukseon.Core.Input
                 case TouchPhase.Began:
                     _startPosition = touch.position;
                     _isTrackingSwipe = true;
+                    OnSwipeBegan?.Invoke(touch.position);
+                    break;
+                case TouchPhase.Moved:
+                    if (_isTrackingSwipe)
+                    {
+                        OnSwipeMoved?.Invoke(touch.position);
+                    }
                     break;
                 case TouchPhase.Canceled:
                 case TouchPhase.Ended:
                     if (_isTrackingSwipe)
                     {
+                        OnSwipeEnded?.Invoke(touch.position);
                         HandleSwipe(_startPosition, touch.position);
                     }
 
@@ -63,10 +78,17 @@ namespace Mukseon.Core.Input
             {
                 _startPosition = UnityEngine.Input.mousePosition;
                 _isTrackingSwipe = true;
+                OnSwipeBegan?.Invoke(_startPosition);
+            }
+
+            if (_isTrackingSwipe && UnityEngine.Input.GetMouseButton(0))
+            {
+                OnSwipeMoved?.Invoke(UnityEngine.Input.mousePosition);
             }
 
             if (UnityEngine.Input.GetMouseButtonUp(0) && _isTrackingSwipe)
             {
+                OnSwipeEnded?.Invoke(UnityEngine.Input.mousePosition);
                 HandleSwipe(_startPosition, UnityEngine.Input.mousePosition);
                 _isTrackingSwipe = false;
             }

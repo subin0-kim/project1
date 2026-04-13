@@ -319,7 +319,8 @@ namespace Mukseon.Gameplay.Progression
                 return;
             }
 
-            _timeScaleBeforePause = Time.timeScale;
+            // 히트스톱 중(0.05 등)에 레벨업하면 느린 값이 저장되므로, 최소 1f로 보정
+            _timeScaleBeforePause = Mathf.Max(Time.timeScale, 1f);
             Time.timeScale = 0f;
         }
 
