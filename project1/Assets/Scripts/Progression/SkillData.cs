@@ -27,6 +27,9 @@ namespace Mukseon.Gameplay.Progression
         [SerializeField, Min(1)]
         private int _maxLevel = 5;
 
+        [SerializeField]
+        private Sprite _icon;
+
         public string SkillId => string.IsNullOrWhiteSpace(_skillId) ? name : _skillId;
         public string DisplayName => string.IsNullOrWhiteSpace(_displayName) ? name : _displayName;
         public string Description => _description;
@@ -34,6 +37,7 @@ namespace Mukseon.Gameplay.Progression
         public StatType StatType => _statType;
         public float Value => _value;
         public int MaxLevel => Mathf.Max(1, _maxLevel);
+        public Sprite Icon => _icon;
 
         public bool IsValid(out string reason)
         {
