@@ -14,7 +14,7 @@ namespace Mukseon.Gameplay.Progression
         BonusTargets = 2,
         PickupRadius = 3,
 
-        // 공용 스킬 (7종)
+        // 공용 스킬 (6종)
         SummonDokkaebiOrb = 10,   // 도깨비불 소환
         InkExplosionOnKill = 11,  // 먹물 폭발 (적 처치 시 광역)
         BarrierRadiusExpand = 12, // 결계 확장
@@ -70,8 +70,10 @@ namespace Mukseon.Gameplay.Progression
         /// <summary>
         /// 해당 시스템이 아직 구현되지 않은 스킬 효과 타입이 선택되었을 때 발생합니다.
         /// 각 전담 시스템(DokkaebiOrb, InkExplosion 등)이 이 이벤트를 구독하여 효과를 처리합니다.
+        /// 두 번째 인자는 적용될 스킬의 다음 레벨 번호입니다. 구독자가 레벨 시스템을 직접 조회할 경우
+        /// 레벨 증가 전 시점이므로 off-by-one이 발생할 수 있어 명시적으로 전달합니다.
         /// </summary>
-        public event Action<SkillData> OnSkillEffectPending;
+        public event Action<SkillData, int> OnSkillEffectPending;
 
         public int CurrentLevel => _progressionModel != null ? _progressionModel.Level : 1;
         public float CurrentExperience => _progressionModel != null ? _progressionModel.CurrentExperience : 0f;
@@ -265,17 +267,15 @@ namespace Mukseon.Gameplay.Progression
                         _soulCollector.AddPickupRadius(definition.Value);
                     }
                     break;
-                case LevelUpSkillEffectType.SummonDokkaebiOrb:
-                case LevelUpSkillEffectType.InkExplosionOnKill:
-                case LevelUpSkillEffectType.BarrierRadiusExpand:
-                case LevelUpSkillEffectType.KnockbackShield:
-                case LevelUpSkillEffectType.HealthRegen:
-                case LevelUpSkillEffectType.InkTrailSlow:
-                case LevelUpSkillEffectType.FanAttackBuff:
-                case LevelUpSkillEffectType.SwordAttackBuff:
-                case LevelUpSkillEffectType.SalPulliKummuBuff:
-                case LevelUpSkillEffectType.PaCheonJingBuff:
-                    OnSkillEffectPending?.Invoke(definition);
+                default:
+                    if (OnSkillEffectPending != null)
+                    {
+                        OnSkillEffectPending.Invoke(definition, GetSkillLevel(definition.SkillId) + 1);
+                    }
+                    else
+                    {
+                        Debug.LogWarning($"[PlayerLevelSystem] ApplySkillEffect: 처리되지 않은 스킬 타입 {definition.EffectType} ('{definition.SkillId}'). switch 케이스를 추가하거나 OnSkillEffectPending 구독을 확인하세요.");
+                    }
                     break;
             }
         }

@@ -19,6 +19,22 @@ namespace Mukseon.Gameplay.UI
             public float OffsetY;
         }
 
+        private readonly struct CardSlot
+        {
+            public readonly Button Button;
+            public readonly VisualElement Icon;
+            public readonly Label NameLabel;
+            public readonly Label DescLabel;
+
+            public CardSlot(Button button, VisualElement icon, Label nameLabel, Label descLabel)
+                => (Button, Icon, NameLabel, DescLabel) = (button, icon, nameLabel, descLabel);
+        }
+
+        private static class Strings
+        {
+            public const string LevelUpTitle = "레벨 업! 스킬을 선택하세요";
+        }
+
         private const string RootObjectName = "GameplayHudRuntime";
 
         private PlayerHealth _playerHealth;
@@ -49,12 +65,10 @@ namespace Mukseon.Gameplay.UI
         private VisualElement _bossRoot;
         private VisualElement _bossFill;
         private Label _bossLabel;
+        private VisualElement _levelUpContainer;
         private VisualElement _levelUpPanel;
         private Label _levelUpTitle;
-        private readonly List<Button> _choiceButtons = new List<Button>(3);
-        private readonly List<VisualElement> _cardIconElements = new List<VisualElement>(3);
-        private readonly List<Label> _cardNameLabels = new List<Label>(3);
-        private readonly List<Label> _cardDescLabels = new List<Label>(3);
+        private readonly List<CardSlot> _cardSlots = new List<CardSlot>(3);
 
         private readonly HashSet<EnemyHealth> _trackedEnemies = new HashSet<EnemyHealth>();
         private readonly Dictionary<EnemyHealth, Label> _arrowLabels = new Dictionary<EnemyHealth, Label>();
@@ -204,10 +218,32 @@ namespace Mukseon.Gameplay.UI
 
             const float panelW = 580f;
             const float panelH = 440f;
-            _levelUpPanel = Panel(_root, (1920f - panelW) * 0.5f, (1080f - panelH) * 0.5f, panelW, panelH);
+
+            _levelUpContainer = new VisualElement();
+            _levelUpContainer.style.position = Position.Absolute;
+            Stretch(_levelUpContainer);
+            _levelUpContainer.style.justifyContent = Justify.Center;
+            _levelUpContainer.style.alignItems = Align.Center;
+            _levelUpContainer.style.display = DisplayStyle.None;
+            _root.Add(_levelUpContainer);
+
+            _levelUpPanel = new VisualElement();
+            _levelUpPanel.style.width = panelW;
+            _levelUpPanel.style.height = panelH;
             _levelUpPanel.style.backgroundColor = new Color(0.06f, 0.06f, 0.10f, 0.96f);
+            _levelUpContainer.Add(_levelUpPanel);
+
             _levelUpTitle = Text(_levelUpPanel, 16f, 14f, panelW - 32f, 30f, 22, TextAnchor.MiddleCenter);
-            _levelUpPanel.style.display = DisplayStyle.None;
+
+            VisualElement cardsContainer = new VisualElement();
+            cardsContainer.style.position = Position.Absolute;
+            cardsContainer.style.left = 16f;
+            cardsContainer.style.right = 16f;
+            cardsContainer.style.top = 56f;
+            cardsContainer.style.bottom = 16f;
+            cardsContainer.style.flexDirection = FlexDirection.Column;
+            cardsContainer.style.justifyContent = Justify.SpaceBetween;
+            _levelUpPanel.Add(cardsContainer);
 
             for (int i = 0; i < 3; i++)
             {
@@ -221,10 +257,6 @@ namespace Mukseon.Gameplay.UI
                 });
 
                 card.text = string.Empty;
-                card.style.position = Position.Absolute;
-                card.style.left = 16f;
-                card.style.top = 56f + (116f * i);
-                card.style.width = panelW - 32f;
                 card.style.height = 108f;
                 card.style.backgroundColor = new Color(0.12f, 0.14f, 0.22f, 0.98f);
                 card.style.color = Color.white;
@@ -236,8 +268,7 @@ namespace Mukseon.Gameplay.UI
                 card.style.borderTopRightRadius = 6f;
                 card.style.borderBottomLeftRadius = 6f;
                 card.style.borderBottomRightRadius = 6f;
-                _levelUpPanel.Add(card);
-                _choiceButtons.Add(card);
+                cardsContainer.Add(card);
 
                 // 스킬 아이콘
                 VisualElement icon = new VisualElement();
@@ -252,7 +283,6 @@ namespace Mukseon.Gameplay.UI
                 icon.style.borderBottomLeftRadius = 4f;
                 icon.style.borderBottomRightRadius = 4f;
                 card.Add(icon);
-                _cardIconElements.Add(icon);
 
                 // 스킬 이름 + 레벨
                 Label nameLabel = new Label();
@@ -266,7 +296,6 @@ namespace Mukseon.Gameplay.UI
                 nameLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
                 nameLabel.style.unityTextAlign = TextAnchor.MiddleLeft;
                 card.Add(nameLabel);
-                _cardNameLabels.Add(nameLabel);
 
                 // 스킬 설명
                 Label descLabel = new Label();
@@ -280,7 +309,8 @@ namespace Mukseon.Gameplay.UI
                 descLabel.style.unityTextAlign = TextAnchor.UpperLeft;
                 descLabel.style.whiteSpace = WhiteSpace.Normal;
                 card.Add(descLabel);
-                _cardDescLabels.Add(descLabel);
+
+                _cardSlots.Add(new CardSlot(card, icon, nameLabel, descLabel));
             }
         }
 
@@ -486,18 +516,19 @@ namespace Mukseon.Gameplay.UI
         private void RefreshLevelUp()
         {
             bool visible = _playerLevelSystem != null && _playerLevelSystem.IsSelectionOpen && _playerLevelSystem.CurrentChoices.Count > 0;
-            _levelUpPanel.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
+            _levelUpContainer.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
             if (!visible)
             {
                 return;
             }
 
-            _levelUpTitle.text = $"레벨 업! 스킬을 선택하세요  (Lv.{_playerLevelSystem.CurrentLevel})";
+            _levelUpTitle.text = $"{Strings.LevelUpTitle}  (Lv.{_playerLevelSystem.CurrentLevel})";
             IReadOnlyList<SkillData> choices = _playerLevelSystem.CurrentChoices;
-            for (int i = 0; i < _choiceButtons.Count; i++)
+            for (int i = 0; i < _cardSlots.Count; i++)
             {
+                CardSlot slot = _cardSlots[i];
                 bool hasChoice = i < choices.Count;
-                _choiceButtons[i].style.display = hasChoice ? DisplayStyle.Flex : DisplayStyle.None;
+                slot.Button.style.display = hasChoice ? DisplayStyle.Flex : DisplayStyle.None;
                 if (!hasChoice)
                 {
                     continue;
@@ -510,19 +541,19 @@ namespace Mukseon.Gameplay.UI
                 // 아이콘
                 if (choice.Icon != null)
                 {
-                    _cardIconElements[i].style.backgroundImage = new StyleBackground(choice.Icon);
+                    slot.Icon.style.backgroundImage = new StyleBackground(choice.Icon);
                 }
                 else
                 {
-                    _cardIconElements[i].style.backgroundImage = StyleKeyword.None;
+                    slot.Icon.style.backgroundImage = StyleKeyword.None;
                 }
 
                 // 이름 + 레벨
                 string levelText = currentLevel > 0 ? $"  Lv.{currentLevel} → {nextLevel}" : $"  Lv.{nextLevel}";
-                _cardNameLabels[i].text = choice.DisplayName + levelText;
+                slot.NameLabel.text = choice.DisplayName + levelText;
 
                 // 설명
-                _cardDescLabels[i].text = choice.Description;
+                slot.DescLabel.text = choice.Description;
             }
         }
 
