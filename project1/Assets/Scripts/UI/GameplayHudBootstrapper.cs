@@ -19,6 +19,22 @@ namespace Mukseon.Gameplay.UI
             public float OffsetY;
         }
 
+        private readonly struct CardSlot
+        {
+            public readonly Button Button;
+            public readonly VisualElement Icon;
+            public readonly Label NameLabel;
+            public readonly Label DescLabel;
+
+            public CardSlot(Button button, VisualElement icon, Label nameLabel, Label descLabel)
+                => (Button, Icon, NameLabel, DescLabel) = (button, icon, nameLabel, descLabel);
+        }
+
+        private static class Strings
+        {
+            public const string LevelUpTitle = "레벨 업! 스킬을 선택하세요";
+        }
+
         private const string RootObjectName = "GameplayHudRuntime";
 
         private PlayerHealth _playerHealth;
@@ -49,9 +65,10 @@ namespace Mukseon.Gameplay.UI
         private VisualElement _bossRoot;
         private VisualElement _bossFill;
         private Label _bossLabel;
+        private VisualElement _levelUpContainer;
         private VisualElement _levelUpPanel;
         private Label _levelUpTitle;
-        private readonly List<Button> _choiceButtons = new List<Button>(3);
+        private readonly List<CardSlot> _cardSlots = new List<CardSlot>(3);
 
         private readonly HashSet<EnemyHealth> _trackedEnemies = new HashSet<EnemyHealth>();
         private readonly Dictionary<EnemyHealth, Label> _arrowLabels = new Dictionary<EnemyHealth, Label>();
@@ -199,15 +216,41 @@ namespace Mukseon.Gameplay.UI
             _bossFill.style.backgroundColor = new Color(0.88f, 0.12f, 0.12f);
             _bossRoot.style.display = DisplayStyle.None;
 
-            _levelUpPanel = Panel(_root, 680f, 360f, 560f, 360f);
-            _levelUpPanel.style.backgroundColor = new Color(0.08f, 0.08f, 0.12f, 0.94f);
-            _levelUpTitle = Text(_levelUpPanel, 24f, 24f, 512f, 28f, 24, TextAnchor.MiddleCenter);
-            _levelUpPanel.style.display = DisplayStyle.None;
+            const float panelW = 580f;
+            const float panelH = 440f;
+
+            _levelUpContainer = new VisualElement();
+            _levelUpContainer.style.position = Position.Absolute;
+            Stretch(_levelUpContainer);
+            _levelUpContainer.style.justifyContent = Justify.Center;
+            _levelUpContainer.style.alignItems = Align.Center;
+            _levelUpContainer.style.display = DisplayStyle.None;
+            _root.Add(_levelUpContainer);
+
+            _levelUpPanel = new VisualElement();
+            _levelUpPanel.style.width = panelW;
+            _levelUpPanel.style.height = panelH;
+            _levelUpPanel.style.backgroundColor = new Color(0.06f, 0.06f, 0.10f, 0.96f);
+            _levelUpContainer.Add(_levelUpPanel);
+
+            _levelUpTitle = Text(_levelUpPanel, 16f, 14f, panelW - 32f, 30f, 22, TextAnchor.MiddleCenter);
+
+            VisualElement cardsContainer = new VisualElement();
+            cardsContainer.style.position = Position.Absolute;
+            cardsContainer.style.left = 16f;
+            cardsContainer.style.right = 16f;
+            // titleY(14) + titleHeight(30) + gap(12) = 56
+            const float cardsTop = 14f + 30f + 12f;
+            cardsContainer.style.top = cardsTop;
+            cardsContainer.style.bottom = 16f;
+            cardsContainer.style.flexDirection = FlexDirection.Column;
+            cardsContainer.style.justifyContent = Justify.SpaceBetween;
+            _levelUpPanel.Add(cardsContainer);
 
             for (int i = 0; i < 3; i++)
             {
                 int choiceIndex = i;
-                Button button = new Button(() =>
+                Button card = new Button(() =>
                 {
                     if (_playerLevelSystem != null)
                     {
@@ -215,18 +258,61 @@ namespace Mukseon.Gameplay.UI
                     }
                 });
 
-                button.style.position = Position.Absolute;
-                button.style.left = 24f;
-                button.style.top = 72f + (84f * i);
-                button.style.width = 512f;
-                button.style.height = 68f;
-                button.style.whiteSpace = WhiteSpace.Normal;
-                button.style.unityTextAlign = TextAnchor.MiddleLeft;
-                button.style.fontSize = 18f;
-                button.style.backgroundColor = new Color(0.14f, 0.16f, 0.24f, 0.96f);
-                button.style.color = Color.white;
-                _levelUpPanel.Add(button);
-                _choiceButtons.Add(button);
+                card.text = string.Empty;
+                card.style.height = 108f;
+                card.style.backgroundColor = new Color(0.12f, 0.14f, 0.22f, 0.98f);
+                card.style.color = Color.white;
+                card.style.paddingTop = 0f;
+                card.style.paddingBottom = 0f;
+                card.style.paddingLeft = 0f;
+                card.style.paddingRight = 0f;
+                card.style.borderTopLeftRadius = 6f;
+                card.style.borderTopRightRadius = 6f;
+                card.style.borderBottomLeftRadius = 6f;
+                card.style.borderBottomRightRadius = 6f;
+                cardsContainer.Add(card);
+
+                // 스킬 아이콘
+                VisualElement icon = new VisualElement();
+                icon.style.position = Position.Absolute;
+                icon.style.left = 14f;
+                icon.style.top = 14f;
+                icon.style.width = 80f;
+                icon.style.height = 80f;
+                icon.style.backgroundColor = new Color(0.20f, 0.22f, 0.32f, 1f);
+                icon.style.borderTopLeftRadius = 4f;
+                icon.style.borderTopRightRadius = 4f;
+                icon.style.borderBottomLeftRadius = 4f;
+                icon.style.borderBottomRightRadius = 4f;
+                card.Add(icon);
+
+                // 스킬 이름 + 레벨
+                Label nameLabel = new Label();
+                nameLabel.style.position = Position.Absolute;
+                nameLabel.style.left = 108f;
+                nameLabel.style.top = 10f;
+                nameLabel.style.width = 418f;
+                nameLabel.style.height = 28f;
+                nameLabel.style.color = Color.white;
+                nameLabel.style.fontSize = 19f;
+                nameLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
+                nameLabel.style.unityTextAlign = TextAnchor.MiddleLeft;
+                card.Add(nameLabel);
+
+                // 스킬 설명
+                Label descLabel = new Label();
+                descLabel.style.position = Position.Absolute;
+                descLabel.style.left = 108f;
+                descLabel.style.top = 44f;
+                descLabel.style.width = 418f;
+                descLabel.style.height = 56f;
+                descLabel.style.color = new Color(0.78f, 0.78f, 0.84f, 1f);
+                descLabel.style.fontSize = 13f;
+                descLabel.style.unityTextAlign = TextAnchor.UpperLeft;
+                descLabel.style.whiteSpace = WhiteSpace.Normal;
+                card.Add(descLabel);
+
+                _cardSlots.Add(new CardSlot(card, icon, nameLabel, descLabel));
             }
         }
 
@@ -432,26 +518,44 @@ namespace Mukseon.Gameplay.UI
         private void RefreshLevelUp()
         {
             bool visible = _playerLevelSystem != null && _playerLevelSystem.IsSelectionOpen && _playerLevelSystem.CurrentChoices.Count > 0;
-            _levelUpPanel.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
+            _levelUpContainer.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
             if (!visible)
             {
                 return;
             }
 
-            _levelUpTitle.text = $"Level {_playerLevelSystem.CurrentLevel} - choose a skill";
+            _levelUpTitle.text = $"{Strings.LevelUpTitle} (Lv.{_playerLevelSystem.CurrentLevel})";
             IReadOnlyList<SkillData> choices = _playerLevelSystem.CurrentChoices;
-            for (int i = 0; i < _choiceButtons.Count; i++)
+            for (int i = 0; i < _cardSlots.Count; i++)
             {
+                CardSlot slot = _cardSlots[i];
                 bool hasChoice = i < choices.Count;
-                _choiceButtons[i].style.display = hasChoice ? DisplayStyle.Flex : DisplayStyle.None;
+                slot.Button.style.display = hasChoice ? DisplayStyle.Flex : DisplayStyle.None;
                 if (!hasChoice)
                 {
                     continue;
                 }
 
                 SkillData choice = choices[i];
-                int nextLevel = _playerLevelSystem.GetSkillLevel(choice.SkillId) + 1;
-                _choiceButtons[i].text = $"{choice.DisplayName} Lv.{nextLevel}\n{choice.Description}";
+                int currentLevel = _playerLevelSystem.GetSkillLevel(choice.SkillId);
+                int nextLevel = currentLevel + 1;
+
+                // 아이콘
+                if (choice.Icon != null)
+                {
+                    slot.Icon.style.backgroundImage = new StyleBackground(choice.Icon);
+                }
+                else
+                {
+                    slot.Icon.style.backgroundImage = StyleKeyword.None;
+                }
+
+                // 이름 + 레벨
+                string levelText = currentLevel > 0 ? $"  Lv.{currentLevel} → {nextLevel}" : $"  Lv.{nextLevel}";
+                slot.NameLabel.text = choice.DisplayName + levelText;
+
+                // 설명
+                slot.DescLabel.text = choice.Description;
             }
         }
 
