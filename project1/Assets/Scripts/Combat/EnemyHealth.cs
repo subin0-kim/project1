@@ -82,6 +82,7 @@ namespace Mukseon.Gameplay.Combat
         private void Awake()
         {
             _attackSequence = GetComponent<EnemyAttackSequence>();
+            _attackSequenceCached = true;
             ApplyMonsterData();
 
             if (_attackSequence == null && _swipeDirection == SwipeDirection.None)
