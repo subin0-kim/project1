@@ -954,8 +954,9 @@ namespace Mukseon.Gameplay.UI
                 : new Vector2(screenPoint.x, Screen.height - screenPoint.y);
 
             label.style.display = DisplayStyle.Flex;
-            label.style.left = panelPos.x - 60f;
+            label.style.left = panelPos.x;
             label.style.top = panelPos.y - screenYOffset;
+            label.style.translate = new Translate(Length.Percent(-50f), 0f);
         }
 
         private static void PositionSequenceHud(EnemyHealth enemy, SequenceHud hud, Camera camera, IPanel panel)
@@ -983,8 +984,9 @@ namespace Mukseon.Gameplay.UI
                 : new Vector2(screenPoint.x, Screen.height - screenPoint.y);
 
             container.style.display = DisplayStyle.Flex;
-            container.style.left = panelPos.x - 60f;
+            container.style.left = panelPos.x;
             container.style.top = panelPos.y - 24f;
+            container.style.translate = new Translate(Length.Percent(-50f), 0f);
         }
 
         private static string Arrow(SwipeDirection direction)

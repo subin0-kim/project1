@@ -114,12 +114,13 @@ namespace Mukseon.Gameplay.Combat
             for (int i = 0; i < selectedCount; i++)
             {
                 EnemyHealth enemyHealth = _targetBuffer[i];
-                float actualDamage = enemyHealth.AttackSequence != null ? 1f : damage;
+                EnemyAttackSequence attackSequence = enemyHealth.AttackSequence;
+                float actualDamage = attackSequence != null ? 1f : damage;
                 enemyHealth.ApplyDamage(actualDamage, this);
 
-                if (enemyHealth.IsAlive && enemyHealth.AttackSequence != null)
+                if (enemyHealth.IsAlive && attackSequence != null)
                 {
-                    enemyHealth.AttackSequence.Advance();
+                    attackSequence.Advance();
                 }
             }
 

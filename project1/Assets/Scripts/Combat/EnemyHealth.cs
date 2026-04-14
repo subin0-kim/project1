@@ -32,6 +32,7 @@ namespace Mukseon.Gameplay.Combat
 
         private Collider2D[] _colliders;
         private EnemyAttackSequence _attackSequence;
+        private bool _attackSequenceCached;
 
         public float MaxHealth => _maxHealth;
         public float CurrentHealth { get; private set; }
@@ -45,9 +46,10 @@ namespace Mukseon.Gameplay.Combat
         {
             get
             {
-                if (_attackSequence == null)
+                if (!_attackSequenceCached)
                 {
                     _attackSequence = GetComponent<EnemyAttackSequence>();
+                    _attackSequenceCached = true;
                 }
 
                 return _attackSequence;
@@ -197,7 +199,15 @@ namespace Mukseon.Gameplay.Combat
         {
             _destroyOnDeath = false;
             ResetHealth();
-            _attackSequence?.ResetSequence();
+
+            if (_attackSequence != null && _monsterData != null && _monsterData.RandomizeSequence)
+            {
+                _attackSequence.SetSequence(EnemyAttackSequence.GenerateRandomSequence((int)_maxHealth));
+            }
+            else
+            {
+                _attackSequence?.ResetSequence();
+            }
 
             if (_disableCollidersOnDeath)
             {

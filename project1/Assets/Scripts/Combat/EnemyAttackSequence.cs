@@ -64,6 +64,9 @@ namespace Mukseon.Gameplay.Combat
             _currentIndex = 0;
         }
 
+        /// <summary>
+        /// 랜덤 시퀀스를 생성한다. 연속으로 같은 방향이 나올 수 있으며, 이는 의도된 동작이다.
+        /// </summary>
         public static SwipeDirection[] GenerateRandomSequence(int length)
         {
             length = Mathf.Max(1, length);
