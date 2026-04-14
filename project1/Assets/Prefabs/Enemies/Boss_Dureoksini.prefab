@@ -14,6 +14,7 @@ GameObject:
   - component: {fileID: 1475677598667535634}
   - component: {fileID: 1831119107564088829}
   - component: {fileID: 110446678007002424}
+  - component: {fileID: 6676783505557286248}
   m_Layer: 0
   m_Name: Boss_Dureoksini
   m_TagString: Untagged
@@ -157,7 +158,7 @@ MonoBehaviour:
   _destroyOnDeath: 1
   _disableCollidersOnDeath: 1
   _swipeDirection: 4
-  _monsterData: {fileID: 0}
+  _monsterData: {fileID: 11400000, guid: 29fa4d2c3fd292642baaf7f072b8e86e, type: 2}
   _moveSpeed: 1
 --- !u!114 &1831119107564088829
 MonoBehaviour:
@@ -191,3 +192,16 @@ MonoBehaviour:
   _movePattern: 0
   _playerTarget: {fileID: 0}
   _riseHeight: 10
+--- !u!114 &6676783505557286248
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5516339678559892061}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 719023c2dc6a5b94a960b5d8fd7d8fae, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.Combat.EnemyAttackSequence
+  _sequence: 

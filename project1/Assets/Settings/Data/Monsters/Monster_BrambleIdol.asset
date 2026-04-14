@@ -15,8 +15,9 @@ MonoBehaviour:
   _monsterId: monster.bramble_idol
   _displayName: Bramble Idol
   _enemyPrefab: {fileID: 1475677598667535634, guid: dd3d8ac0cb439f64bbbaa2bbe5d1ccc0, type: 3}
-  _swipeDirection: 4
-  _maxHealth: 40
+  _swipeDirectionSequence:
+  _randomizeSequence: 1
+  _maxHealth: 5
   _moveSpeed: 0.85
   _soulDropCount: 3
   _experiencePerOrb: 2

@@ -31,6 +31,8 @@ namespace Mukseon.Gameplay.Combat
         private float _moveSpeed = 1f;
 
         private Collider2D[] _colliders;
+        private EnemyAttackSequence _attackSequence;
+        private bool _attackSequenceCached;
 
         public float MaxHealth => _maxHealth;
         public float CurrentHealth { get; private set; }
@@ -40,10 +42,29 @@ namespace Mukseon.Gameplay.Combat
         public MonsterData MonsterData => _monsterData;
         public string DisplayName => _monsterData != null ? _monsterData.DisplayName : gameObject.name;
         public bool IsBoss => _monsterData != null && _monsterData.IsBoss;
+        public EnemyAttackSequence AttackSequence
+        {
+            get
+            {
+                if (!_attackSequenceCached)
+                {
+                    _attackSequence = GetComponent<EnemyAttackSequence>();
+                    _attackSequenceCached = true;
+                }
+
+                return _attackSequence;
+            }
+        }
+
         public SwipeDirection SwipeDirection
         {
             get
             {
+                if (AttackSequence != null)
+                {
+                    return _attackSequence.CurrentDirection;
+                }
+
                 if (_swipeDirection == SwipeDirection.None)
                 {
                     _swipeDirection = InferSwipeDirectionFromName(gameObject.name);
@@ -60,9 +81,11 @@ namespace Mukseon.Gameplay.Combat
 
         private void Awake()
         {
+            _attackSequence = GetComponent<EnemyAttackSequence>();
+            _attackSequenceCached = true;
             ApplyMonsterData();
 
-            if (_swipeDirection == SwipeDirection.None)
+            if (_attackSequence == null && _swipeDirection == SwipeDirection.None)
             {
                 _swipeDirection = InferSwipeDirectionFromName(gameObject.name);
             }
@@ -178,6 +201,15 @@ namespace Mukseon.Gameplay.Combat
             _destroyOnDeath = false;
             ResetHealth();
 
+            if (_attackSequence != null && _monsterData != null && _monsterData.RandomizeSequence)
+            {
+                _attackSequence.SetSequence(EnemyAttackSequence.GenerateRandomSequence((int)_maxHealth));
+            }
+            else
+            {
+                _attackSequence?.ResetSequence();
+            }
+
             if (_disableCollidersOnDeath)
             {
                 for (int i = 0; i < _colliders.Length; i++)
@@ -207,9 +239,17 @@ namespace Mukseon.Gameplay.Combat
 
             _maxHealth = _monsterData.MaxHealth;
             _moveSpeed = _monsterData.MoveSpeed;
-            if (_monsterData.SwipeDirection != SwipeDirection.None)
+
+            if (_attackSequence != null)
             {
-                _swipeDirection = _monsterData.SwipeDirection;
+                if (_monsterData.RandomizeSequence)
+                {
+                    _attackSequence.SetSequence(EnemyAttackSequence.GenerateRandomSequence((int)_maxHealth));
+                }
+                else if (_monsterData.SwipeDirectionSequence != null && _monsterData.SwipeDirectionSequence.Length > 0)
+                {
+                    _attackSequence.SetSequence(_monsterData.SwipeDirectionSequence);
+                }
             }
         }
 

@@ -16,8 +16,9 @@ MonoBehaviour:
   _displayName: Dureoksini
   _isBoss: 1
   _enemyPrefab: {fileID: 1475677598667535634, guid: 0892b944d90654243b825a22b54ccad7, type: 3}
-  _swipeDirection: 4
-  _maxHealth: 300
+  _swipeDirectionSequence:
+  _randomizeSequence: 1
+  _maxHealth: 20
   _moveSpeed: 0.7
   _soulDropCount: 8
   _experiencePerOrb: 5

@@ -14,6 +14,7 @@ GameObject:
   - component: {fileID: 4234627494100266546}
   - component: {fileID: 2488382620803013241}
   - component: {fileID: 707632565690213840}
+  - component: {fileID: 902457377154407016}
   m_Layer: 0
   m_Name: Dummy_Down
   m_TagString: Untagged
@@ -153,7 +154,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2c6d5a7ef7a14cf0b98f6d9381d7a201, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.Combat.EnemyHealth
-  _maxHealth: 10
+  _maxHealth: 3
   _destroyOnDeath: 1
   _disableCollidersOnDeath: 1
   _swipeDirection: 2
@@ -190,3 +191,17 @@ MonoBehaviour:
   m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.Combat.EnemyMover
   _movePattern: 0
   _playerTarget: {fileID: 0}
+  _riseHeight: 10
+--- !u!114 &902457377154407016
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6892844264584007441}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 719023c2dc6a5b94a960b5d8fd7d8fae, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.Combat.EnemyAttackSequence
+  _sequence: 020000000300000004000000

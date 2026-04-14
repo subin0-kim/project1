@@ -19,7 +19,10 @@ namespace Mukseon.Gameplay.Combat
         private EnemyHealth _enemyPrefab;
 
         [SerializeField]
-        private SwipeDirection _swipeDirection = SwipeDirection.None;
+        private SwipeDirection[] _swipeDirectionSequence = new SwipeDirection[0];
+
+        [SerializeField]
+        private bool _randomizeSequence;
 
         [SerializeField, Min(1f)]
         private float _maxHealth = 10f;
@@ -37,7 +40,8 @@ namespace Mukseon.Gameplay.Combat
         public string DisplayName => string.IsNullOrWhiteSpace(_displayName) ? name : _displayName;
         public bool IsBoss => _isBoss;
         public EnemyHealth EnemyPrefab => _enemyPrefab;
-        public SwipeDirection SwipeDirection => _swipeDirection;
+        public SwipeDirection[] SwipeDirectionSequence => _swipeDirectionSequence;
+        public bool RandomizeSequence => _randomizeSequence;
         public float MaxHealth => Mathf.Max(1f, _maxHealth);
         public float MoveSpeed => Mathf.Max(0f, _moveSpeed);
         public int SoulDropCount => Mathf.Max(1, _soulDropCount);
