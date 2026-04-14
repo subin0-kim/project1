@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Mukseon.Core.Input;
 using Mukseon.Gameplay.Combat;
@@ -70,8 +71,17 @@ namespace Mukseon.Gameplay.UI
         private Label _levelUpTitle;
         private readonly List<CardSlot> _cardSlots = new List<CardSlot>(3);
 
+        private sealed class SequenceHud
+        {
+            public VisualElement Container;
+            public Label[] ArrowLabels = new Label[3];
+            public Label EllipsisLabel;
+            public Action<int> AdvancedHandler;
+            public Action SequenceSetHandler;
+        }
+
         private readonly HashSet<EnemyHealth> _trackedEnemies = new HashSet<EnemyHealth>();
-        private readonly Dictionary<EnemyHealth, Label> _arrowLabels = new Dictionary<EnemyHealth, Label>();
+        private readonly Dictionary<EnemyHealth, SequenceHud> _sequenceHuds = new Dictionary<EnemyHealth, SequenceHud>();
         private readonly List<FloatingText> _floatingTexts = new List<FloatingText>();
         private readonly List<EnemyHealth> _enemyBuffer = new List<EnemyHealth>(64);
         private readonly List<EnemyHealth> _removedEnemyBuffer = new List<EnemyHealth>(64);
@@ -100,7 +110,7 @@ namespace Mukseon.Gameplay.UI
 #endif
         }
 
-        private static T FindSceneObject<T>() where T : Object
+        private static T FindSceneObject<T>() where T : UnityEngine.Object
         {
 #if UNITY_2023_1_OR_NEWER
             return FindFirstObjectByType<T>(FindObjectsInactive.Include);
@@ -592,7 +602,7 @@ namespace Mukseon.Gameplay.UI
                 {
                     enemy.OnDamagedDetailed += HandleEnemyDamaged;
                     enemy.OnDeath += HandleEnemyDeath;
-                    CreateArrow(enemy);
+                    CreateSequenceHud(enemy);
                     if (enemy.IsBoss)
                     {
                         _bossEnemy = enemy;
@@ -646,10 +656,24 @@ namespace Mukseon.Gameplay.UI
 
             _trackedEnemies.Remove(enemy);
 
-            if (enemy != null && _arrowLabels.TryGetValue(enemy, out Label label))
+            if (enemy != null && _sequenceHuds.TryGetValue(enemy, out SequenceHud hud))
             {
-                label.RemoveFromHierarchy();
-                _arrowLabels.Remove(enemy);
+                EnemyAttackSequence seq = enemy.AttackSequence;
+                if (seq != null)
+                {
+                    if (hud.AdvancedHandler != null)
+                    {
+                        seq.OnAdvanced -= hud.AdvancedHandler;
+                    }
+
+                    if (hud.SequenceSetHandler != null)
+                    {
+                        seq.OnSequenceSet -= hud.SequenceSetHandler;
+                    }
+                }
+
+                hud.Container.RemoveFromHierarchy();
+                _sequenceHuds.Remove(enemy);
             }
 
             if (_bossEnemy == enemy)
@@ -676,13 +700,119 @@ namespace Mukseon.Gameplay.UI
             }
         }
 
-        private void CreateArrow(EnemyHealth enemy)
+        private void CreateSequenceHud(EnemyHealth enemy)
         {
-            Label label = Text(_worldRoot, 0f, 0f, 48f, 24f, 24, TextAnchor.MiddleCenter);
-            label.style.color = new Color(1f, 0.94f, 0.5f);
-            label.style.unityFontStyleAndWeight = FontStyle.Bold;
-            label.text = Arrow(enemy.SwipeDirection);
-            _arrowLabels[enemy] = label;
+            VisualElement container = new VisualElement();
+            container.style.position = Position.Absolute;
+            container.style.flexDirection = FlexDirection.Row;
+            container.style.alignItems = Align.Center;
+            container.style.backgroundColor = new Color(0f, 0f, 0f, 0.55f);
+            container.style.borderTopLeftRadius = 4f;
+            container.style.borderTopRightRadius = 4f;
+            container.style.borderBottomLeftRadius = 4f;
+            container.style.borderBottomRightRadius = 4f;
+            container.style.paddingLeft = 4f;
+            container.style.paddingRight = 4f;
+            _worldRoot.Add(container);
+
+            SequenceHud hud = new SequenceHud();
+            hud.Container = container;
+
+            for (int i = 0; i < 3; i++)
+            {
+                Label arrowLabel = new Label();
+                arrowLabel.style.width = 28f;
+                arrowLabel.style.height = 32f;
+                arrowLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
+                arrowLabel.style.whiteSpace = WhiteSpace.Normal;
+                container.Add(arrowLabel);
+                hud.ArrowLabels[i] = arrowLabel;
+            }
+
+            Label ellipsis = new Label();
+            ellipsis.text = "...";
+            ellipsis.style.width = 24f;
+            ellipsis.style.height = 32f;
+            ellipsis.style.color = new Color(1f, 1f, 1f, 0.5f);
+            ellipsis.style.fontSize = 16f;
+            ellipsis.style.unityTextAlign = TextAnchor.MiddleCenter;
+            container.Add(ellipsis);
+            hud.EllipsisLabel = ellipsis;
+
+            _sequenceHuds[enemy] = hud;
+
+            EnemyAttackSequence seq = enemy.AttackSequence;
+            if (seq != null)
+            {
+                hud.AdvancedHandler = _ => RefreshSequenceHud(enemy);
+                seq.OnAdvanced += hud.AdvancedHandler;
+
+                hud.SequenceSetHandler = () => RefreshSequenceHud(enemy);
+                seq.OnSequenceSet += hud.SequenceSetHandler;
+            }
+
+            RefreshSequenceHud(enemy);
+        }
+
+        private void RefreshSequenceHud(EnemyHealth enemy)
+        {
+            if (!_sequenceHuds.TryGetValue(enemy, out SequenceHud hud))
+            {
+                return;
+            }
+
+            EnemyAttackSequence seq = enemy.AttackSequence;
+
+            if (seq == null)
+            {
+                hud.ArrowLabels[0].text = Arrow(enemy.SwipeDirection);
+                hud.ArrowLabels[0].style.display = DisplayStyle.Flex;
+                hud.ArrowLabels[0].style.color = new Color(1f, 0.94f, 0.5f);
+                hud.ArrowLabels[0].style.fontSize = 24f;
+                hud.ArrowLabels[0].style.unityFontStyleAndWeight = FontStyle.Bold;
+                for (int i = 1; i < 3; i++)
+                {
+                    hud.ArrowLabels[i].style.display = DisplayStyle.None;
+                }
+
+                hud.EllipsisLabel.style.display = DisplayStyle.None;
+                return;
+            }
+
+            int currentIdx = seq.CurrentIndex;
+            int total = seq.SequenceLength;
+            int remaining = total - currentIdx;
+
+            for (int i = 0; i < 3; i++)
+            {
+                int seqIdx = currentIdx + i;
+                Label label = hud.ArrowLabels[i];
+
+                if (seqIdx < total)
+                {
+                    label.style.display = DisplayStyle.Flex;
+                    label.text = Arrow(seq.Sequence[seqIdx]);
+
+                    if (i == 0)
+                    {
+                        label.style.color = new Color(1f, 0.94f, 0.2f);
+                        label.style.fontSize = 28f;
+                        label.style.unityFontStyleAndWeight = FontStyle.Bold;
+                    }
+                    else
+                    {
+                        label.style.color = new Color(1f, 1f, 1f, 0.45f);
+                        label.style.fontSize = 20f;
+                        label.style.unityFontStyleAndWeight = FontStyle.Normal;
+                    }
+                }
+                else
+                {
+                    label.style.display = DisplayStyle.None;
+                }
+            }
+
+            hud.EllipsisLabel.style.display = remaining > 3 ? DisplayStyle.Flex : DisplayStyle.None;
         }
 
         private void HandleEnemyDamaged(EnemyHealth enemy, float damageAmount, object source)
@@ -733,9 +863,11 @@ namespace Mukseon.Gameplay.UI
                 return;
             }
 
-            foreach (KeyValuePair<EnemyHealth, Label> pair in _arrowLabels)
+            IPanel panel = _root?.panel;
+
+            foreach (KeyValuePair<EnemyHealth, SequenceHud> pair in _sequenceHuds)
             {
-                PositionAtEnemy(pair.Key, pair.Value, camera, 1.6f, -24f);
+                PositionSequenceHud(pair.Key, pair.Value, camera, panel);
             }
 
             for (int i = _floatingTexts.Count - 1; i >= 0; i--)
@@ -750,7 +882,7 @@ namespace Mukseon.Gameplay.UI
                     continue;
                 }
 
-                PositionAtEnemy(floatingText.Enemy, floatingText.Label, camera, 1.2f, floatingText.OffsetY);
+                PositionAtEnemy(floatingText.Enemy, floatingText.Label, camera, panel, 1.2f, floatingText.OffsetY);
                 Color color = floatingText.Label.resolvedStyle.color;
                 color.a = Mathf.Clamp01(floatingText.TimeLeft / 0.8f);
                 floatingText.Label.style.color = color;
@@ -802,7 +934,7 @@ namespace Mukseon.Gameplay.UI
             RefreshWave();
         }
 
-        private static void PositionAtEnemy(EnemyHealth enemy, Label label, Camera camera, float worldYOffset, float screenYOffset)
+        private static void PositionAtEnemy(EnemyHealth enemy, Label label, Camera camera, IPanel panel, float worldYOffset, float screenYOffset)
         {
             if (enemy == null || label == null || !enemy.IsAlive)
             {
@@ -817,9 +949,42 @@ namespace Mukseon.Gameplay.UI
                 return;
             }
 
+            Vector2 panelPos = panel != null
+                ? RuntimePanelUtils.ScreenToPanel(panel, new Vector2(screenPoint.x, Screen.height - screenPoint.y))
+                : new Vector2(screenPoint.x, Screen.height - screenPoint.y);
+
             label.style.display = DisplayStyle.Flex;
-            label.style.left = screenPoint.x - 60f;
-            label.style.top = Screen.height - screenPoint.y - screenYOffset;
+            label.style.left = panelPos.x - 60f;
+            label.style.top = panelPos.y - screenYOffset;
+        }
+
+        private static void PositionSequenceHud(EnemyHealth enemy, SequenceHud hud, Camera camera, IPanel panel)
+        {
+            VisualElement container = hud.Container;
+            if (enemy == null || container == null || !enemy.IsAlive)
+            {
+                if (container != null)
+                {
+                    container.style.display = DisplayStyle.None;
+                }
+
+                return;
+            }
+
+            Vector3 screenPoint = camera.WorldToScreenPoint(enemy.transform.position + Vector3.up * 1.6f);
+            if (screenPoint.z <= 0f)
+            {
+                container.style.display = DisplayStyle.None;
+                return;
+            }
+
+            Vector2 panelPos = panel != null
+                ? RuntimePanelUtils.ScreenToPanel(panel, new Vector2(screenPoint.x, Screen.height - screenPoint.y))
+                : new Vector2(screenPoint.x, Screen.height - screenPoint.y);
+
+            container.style.display = DisplayStyle.Flex;
+            container.style.left = panelPos.x - 60f;
+            container.style.top = panelPos.y - 24f;
         }
 
         private static string Arrow(SwipeDirection direction)
