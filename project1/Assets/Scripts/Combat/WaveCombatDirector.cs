@@ -32,6 +32,19 @@ namespace Mukseon.Gameplay.Combat
         [SerializeField]
         private bool _collectSpawnPointsFromChildren;
 
+        [Header("Offscreen Spawn")]
+        [Tooltip("적을 화면 바깥 랜덤 위치에서 소환할지 여부. 끄면 _spawnPoints / 자식 스폰포인트를 사용한다.")]
+        [SerializeField]
+        private bool _spawnOffscreen = true;
+
+        [Tooltip("스폰 기준 카메라. 비우면 Camera.main을 사용한다.")]
+        [SerializeField]
+        private Camera _spawnCamera;
+
+        [Tooltip("화면 가장자리에서 이만큼(월드 단위) 더 바깥에서 소환한다.")]
+        [SerializeField, Min(0f)]
+        private float _offscreenSpawnMargin = 1f;
+
         [Header("Flow")]
         [SerializeField]
         private bool _autoStartOnEnable = true;
@@ -147,7 +160,9 @@ namespace Mukseon.Gameplay.Combat
                 OnWaveEnded?.Invoke(CurrentWaveNumber, WaveEndReason.Cancelled);
             }
 
-            CleanupAliveEnemies(false);
+            // 시스템 전체 정지/비활성화 시점에는 추적을 잃은 적이 씬에 남지 않도록 실제로 디스폰한다.
+            // (보스 진입 시 의도적으로 적을 남기는 EnterBossPhase와 달리 여기서는 깨끗이 정리)
+            CleanupAliveEnemies(true);
             ResetWaveRuntime();
 
             _isWaveActive = false;
@@ -182,8 +197,19 @@ namespace Mukseon.Gameplay.Combat
             WaveDefinition currentWave = GetCurrentWave();
             if (currentWave != null && _waveElapsedSeconds >= currentWave.DurationSeconds)
             {
-                AdvanceWave();
+                // 마지막 웨이브에서 루프하지 않으면 보스 마크 전까지 현재 웨이브를 유지한다.
+                // (AdvanceWave를 매 프레임 무의미하게 호출하지 않도록 여기서 막는다.)
+                bool isLastWave = _currentWaveIndex >= GetWaveCount() - 1;
+                if (!isLastWave || _loopWaves)
+                {
+                    AdvanceWave();
+                }
             }
+        }
+
+        private int GetWaveCount()
+        {
+            return _waveDatabase != null && _waveDatabase.Waves != null ? _waveDatabase.Waves.Count : 0;
         }
 
         private void CheckTimelineMarks()
@@ -230,6 +256,9 @@ namespace Mukseon.Gameplay.Combat
             // 일반 적은 보스 시스템(#37)이 페이드아웃/즉시 제거 방식을 결정하므로
             // 여기서는 살아있는 적을 강제 정리하지 않고 스포닝만 멈춘다.
             OnBossPhaseStarted?.Invoke();
+
+            // OnAllWavesCompleted는 보스 진입과 별개로 'HUD 등의 일반 전투 구간 종료' 정리용으로 함께 발행한다.
+            // 보스 처리 자체는 OnBossPhaseStarted 구독자(#37)가 담당한다.
             OnAllWavesCompleted?.Invoke();
 
 #if UNITY_EDITOR
@@ -274,14 +303,13 @@ namespace Mukseon.Gameplay.Combat
 
             if (nextWaveIndex >= waveCount)
             {
+                // Tick()에서 마지막 웨이브는 루프 시에만 AdvanceWave를 호출하므로 여기 도달은 _loopWaves가 true인 경우뿐.
                 if (_loopWaves)
                 {
                     nextWaveIndex = 0;
                 }
                 else
                 {
-                    // 마지막 웨이브는 보스 마크 전까지 그대로 유지(스폰 지속). 전환만 멈춘다.
-                    _waveElapsedSeconds = 0f;
                     return;
                 }
             }
@@ -357,23 +385,32 @@ namespace Mukseon.Gameplay.Combat
         }
 
         /// <summary>
-        /// 1회 소환 라운드.
-        /// 1) 최소 유지 수에 미달한 종류부터 채운다.
+        /// 1회 소환 라운드. 한 라운드에서 각 종류는 최대 1마리씩만 소환된다.
+        /// 1) 최소 유지 수에 미달한 종류를 1마리씩 채운다.
         /// 2) 모든 종류가 최소 수를 충족하면 각 종류를 1마리씩 추가 소환한다(난이도 상승).
         /// 상한(maxAliveEnemies)에 도달하면 중단한다.
+        /// 순회 시작 인덱스를 매 라운드 랜덤화하여 리스트 앞쪽 종류가 상한을 독점하는 편향을 제거한다.
+        /// 따라서 최악의 경우 한 라운드에 _spawnRuntime.Count 마리까지 소환될 수 있다.
         /// </summary>
         private void RunSpawnRound(int maxAliveEnemies)
         {
-            bool anyBelowMinimum = false;
+            int count = _spawnRuntime.Count;
+            if (count <= 0)
+            {
+                return;
+            }
 
-            for (int i = 0; i < _spawnRuntime.Count; i++)
+            bool anyBelowMinimum = false;
+            int startOffset = UnityEngine.Random.Range(0, count);
+
+            for (int i = 0; i < count; i++)
             {
                 if (_aliveEnemies.Count >= maxAliveEnemies)
                 {
                     return;
                 }
 
-                SpawnRuntimeEntry runtimeEntry = _spawnRuntime[i];
+                SpawnRuntimeEntry runtimeEntry = _spawnRuntime[(startOffset + i) % count];
                 int aliveOfSpecies = GetAliveCount(runtimeEntry.SpeciesKey);
                 if (aliveOfSpecies < runtimeEntry.Entry.MinAliveCount)
                 {
@@ -387,28 +424,29 @@ namespace Mukseon.Gameplay.Combat
                 return;
             }
 
-            // 모든 종류가 최소 수를 충족 → 각 종류 1마리씩 추가 소환.
-            for (int i = 0; i < _spawnRuntime.Count; i++)
+            // 모든 종류가 최소 수를 충족 → 각 종류 1마리씩 추가 소환. 시작 인덱스를 다시 랜덤화한다.
+            startOffset = UnityEngine.Random.Range(0, count);
+            for (int i = 0; i < count; i++)
             {
                 if (_aliveEnemies.Count >= maxAliveEnemies)
                 {
                     return;
                 }
 
-                SpawnEnemy(_spawnRuntime[i]);
+                SpawnEnemy(_spawnRuntime[(startOffset + i) % count]);
             }
         }
 
         private void SpawnEnemy(SpawnRuntimeEntry runtimeEntry)
         {
-            Transform spawnPoint = ResolveSpawnPoint();
+            Vector3 spawnPosition = ResolveSpawnPosition();
             GameObject prefabGO = runtimeEntry.Entry.EnemyPrefab.gameObject;
             GameObject spawnedObject;
             EnemyHealth spawnedEnemy;
 
             if (PoolManager.Instance != null)
             {
-                spawnedObject = PoolManager.Instance.GetInactive(prefabGO, spawnPoint.position, spawnPoint.rotation);
+                spawnedObject = PoolManager.Instance.GetInactive(prefabGO, spawnPosition, Quaternion.identity);
                 spawnedEnemy = spawnedObject.GetComponent<EnemyHealth>();
                 spawnedEnemy.ApplyMonsterData(runtimeEntry.Entry.MonsterData);
                 spawnedEnemy.SetMoveSpeed(runtimeEntry.Entry.MoveSpeed);
@@ -417,7 +455,7 @@ namespace Mukseon.Gameplay.Combat
             }
             else
             {
-                spawnedObject = Instantiate(prefabGO, spawnPoint.position, spawnPoint.rotation);
+                spawnedObject = Instantiate(prefabGO, spawnPosition, Quaternion.identity);
                 spawnedEnemy = spawnedObject.GetComponent<EnemyHealth>();
                 spawnedEnemy.ApplyMonsterData(runtimeEntry.Entry.MonsterData);
                 spawnedEnemy.SetMoveSpeed(runtimeEntry.Entry.MoveSpeed);
@@ -435,6 +473,77 @@ namespace Mukseon.Gameplay.Combat
             IncrementAliveCount(runtimeEntry.SpeciesKey);
 
             NotifyRemainingEnemyCountChanged();
+        }
+
+        /// <summary>
+        /// 적 1마리의 스폰 월드 좌표를 결정한다.
+        /// 기본은 화면 바깥 랜덤 위치이며, 비활성화 시 스폰포인트(없으면 자기 위치)로 폴백한다.
+        /// </summary>
+        private Vector3 ResolveSpawnPosition()
+        {
+            if (_spawnOffscreen && TryGetOffscreenSpawnPosition(out Vector3 offscreenPosition))
+            {
+                return offscreenPosition;
+            }
+
+            Transform spawnPoint = ResolveSpawnPoint();
+            return spawnPoint != null ? spawnPoint.position : transform.position;
+        }
+
+        /// <summary>
+        /// 카메라 시야 사각형의 한 변을 랜덤 선택하고, 그 변 바깥(마진만큼)으로 좌표를 잡는다.
+        /// 직교(2D) 카메라에서만 동작하며, 실패 시 false를 반환해 스폰포인트로 폴백하게 한다.
+        /// </summary>
+        private bool TryGetOffscreenSpawnPosition(out Vector3 position)
+        {
+            position = default;
+
+            Camera camera = ResolveSpawnCamera();
+            if (camera == null || !camera.orthographic)
+            {
+                return false;
+            }
+
+            float verticalExtent = camera.orthographicSize;
+            float horizontalExtent = verticalExtent * camera.aspect;
+            float margin = Mathf.Max(0f, _offscreenSpawnMargin);
+            Vector3 center = camera.transform.position;
+
+            float offsetX;
+            float offsetY;
+            switch (UnityEngine.Random.Range(0, 4))
+            {
+                case 0: // 위쪽 바깥
+                    offsetX = UnityEngine.Random.Range(-horizontalExtent, horizontalExtent);
+                    offsetY = verticalExtent + margin;
+                    break;
+                case 1: // 아래쪽 바깥
+                    offsetX = UnityEngine.Random.Range(-horizontalExtent, horizontalExtent);
+                    offsetY = -verticalExtent - margin;
+                    break;
+                case 2: // 왼쪽 바깥
+                    offsetX = -horizontalExtent - margin;
+                    offsetY = UnityEngine.Random.Range(-verticalExtent, verticalExtent);
+                    break;
+                default: // 오른쪽 바깥
+                    offsetX = horizontalExtent + margin;
+                    offsetY = UnityEngine.Random.Range(-verticalExtent, verticalExtent);
+                    break;
+            }
+
+            // 2D 평면(z=0)에 배치. 카메라 z 오프셋은 무시한다.
+            position = new Vector3(center.x + offsetX, center.y + offsetY, 0f);
+            return true;
+        }
+
+        private Camera ResolveSpawnCamera()
+        {
+            if (_spawnCamera == null)
+            {
+                _spawnCamera = Camera.main;
+            }
+
+            return _spawnCamera;
         }
 
         private Transform ResolveSpawnPoint()

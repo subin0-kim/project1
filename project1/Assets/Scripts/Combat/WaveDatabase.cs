@@ -31,6 +31,10 @@ namespace Mukseon.Gameplay.Combat
 
         /// <summary>
         /// 동일 종류 판별 키. 같은 MonsterData(없으면 프리팹)를 공유하면 같은 종류로 본다.
+        /// fallback 우선순위: MonsterData → EnemyPrefab → EnemyType 문자열.
+        /// 주의: MonsterData·프리팹을 모두 비워두면 EnemyType 문자열(기본값 "Default")이 키가 되므로,
+        /// 그런 엔트리를 여러 개 추가하면서 EnemyType을 따로 지정하지 않으면 모두 한 종류로 묶인다.
+        /// (현재 IsValid가 MonsterData/프리팹 중 하나는 반드시 요구하므로 유효한 엔트리에서는 EnemyType 폴백까지 가지 않는다.)
         /// </summary>
         public object SpeciesKey
         {
