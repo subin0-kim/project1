@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Mukseon.Core.Pool;
 using Mukseon.Gameplay.Progression;
@@ -6,13 +6,20 @@ using UnityEngine;
 
 namespace Mukseon.Gameplay.Combat
 {
+    /// <summary>
+    /// Vampire Survivors 스타일의 타임라인 기반 연속 스포너.
+    /// 웨이브는 시간 경과로만 전환되며(클리어 조건 없음), 각 웨이브는
+    /// 적 종류별 '최소 유지 수'를 채우고, 모두 충족되면 매 간격마다 적을 1마리씩 추가 소환한다.
+    /// 지정한 분 마크에 미니 보스 이벤트를, 보스 마크에 보스 진입 이벤트를 발행한다.
+    /// 미니 보스/보스의 실제 스폰은 별도 시스템(#71/#37)이 구독하여 처리한다.
+    /// </summary>
     [DisallowMultipleComponent]
     public class WaveCombatDirector : MonoBehaviour
     {
         private sealed class SpawnRuntimeEntry
         {
             public WaveEnemySpawnEntry Entry;
-            public int Remaining;
+            public object SpeciesKey;
         }
 
         [Header("References")]
@@ -29,21 +36,25 @@ namespace Mukseon.Gameplay.Combat
         [SerializeField]
         private bool _autoStartOnEnable = true;
 
-        [SerializeField, Min(0f)]
-        private float _interWaveDelaySeconds = 1.5f;
-
+        [Tooltip("마지막 웨이브에 도달한 뒤 보스 마크 전까지 타임라인을 처음부터 반복할지 여부.")]
         [SerializeField]
         private bool _loopWaves;
 
+        [Header("Timeline Marks (minutes)")]
+        [Tooltip("미니 보스 이벤트를 발행할 분 단위 시간 마크. 예: 3, 6, 9")]
         [SerializeField]
-        private bool _despawnActiveEnemiesOnTimeExpired = true;
+        private List<float> _miniBossMinuteMarks = new List<float> { 3f, 6f, 9f };
+
+        [Tooltip("보스 진입 이벤트를 발행할 분 단위 시간 마크. 이 시점 이후 일반 스포닝 중단. 0 이하이면 보스 마크 없음.")]
+        [SerializeField, Min(0f)]
+        private float _bossMinuteMark = 10f;
 
         [Header("Fallback")]
         [SerializeField, Min(0.01f)]
         private float _defaultSpawnIntervalSeconds = 1f;
 
         [SerializeField, Min(1)]
-        private int _defaultMaxAliveEnemies = 5;
+        private int _defaultMaxAliveEnemies = 20;
 
         [Header("Debug")]
         [SerializeField]
@@ -51,28 +62,37 @@ namespace Mukseon.Gameplay.Combat
 
         private readonly List<SpawnRuntimeEntry> _spawnRuntime = new List<SpawnRuntimeEntry>();
         private readonly HashSet<EnemyHealth> _aliveEnemies = new HashSet<EnemyHealth>();
+        private readonly Dictionary<EnemyHealth, object> _enemySpeciesKey = new Dictionary<EnemyHealth, object>(64);
+        private readonly Dictionary<object, int> _aliveBySpecies = new Dictionary<object, int>(16);
         private readonly List<EnemyHealth> _cleanupBuffer = new List<EnemyHealth>(64);
+        private readonly List<bool> _miniBossMarkFired = new List<bool>();
 
         private int _currentWaveIndex = -1;
-        private int _remainingToSpawn;
-        private int _spawnRuntimeCursor;
         private int _spawnPointCursor;
+        private float _timelineElapsedSeconds;
         private float _waveElapsedSeconds;
         private float _spawnElapsedSeconds;
-        private float _nextWaveDelayRemaining;
         private bool _isRunning;
         private bool _isWaveActive;
-        private bool _isWaitingNextWave;
+        private bool _bossPhaseStarted;
 
         public int CurrentWaveNumber => _currentWaveIndex + 1;
-        public int RemainingEnemyCount => Mathf.Max(0, _remainingToSpawn + _aliveEnemies.Count);
+        public int RemainingEnemyCount => _aliveEnemies.Count;
         public bool IsWaveActive => _isWaveActive;
         public bool IsRunning => _isRunning;
+        public float TimelineElapsedSeconds => _timelineElapsedSeconds;
+        public bool IsBossPhase => _bossPhaseStarted;
 
         public event Action<int, WaveDefinition> OnWaveStarted;
         public event Action<int, WaveEndReason> OnWaveEnded;
         public event Action<int, int> OnRemainingEnemyCountChanged;
         public event Action OnAllWavesCompleted;
+
+        /// <summary>지정 분 마크 도달 시 1회 발행. 인자는 도달한 분(mark) 값. 미니 보스 시스템(#71)이 구독.</summary>
+        public event Action<float> OnMiniBossMarkReached;
+
+        /// <summary>보스 마크 도달 시 1회 발행. 일반 스포닝은 이 시점에 중단된다. 보스 시스템(#37)이 구독.</summary>
+        public event Action OnBossPhaseStarted;
 
         private void OnEnable()
         {
@@ -105,32 +125,34 @@ namespace Mukseon.Gameplay.Combat
             }
 
             StopWaves(false);
-            _isRunning = true;
-            _currentWaveIndex = -1;
-            _isWaitingNextWave = false;
-            _nextWaveDelayRemaining = 0f;
 
-            BeginNextWave();
+            _isRunning = true;
+            _bossPhaseStarted = false;
+            _timelineElapsedSeconds = 0f;
+            _currentWaveIndex = -1;
+
+            ResetMiniBossMarks();
+            BeginWave(0);
         }
 
         public void StopWaves(bool publishCancellation = true)
         {
-            if (!_isRunning && !_isWaveActive && !_isWaitingNextWave)
+            if (!_isRunning && !_isWaveActive)
             {
                 return;
             }
 
             if (publishCancellation && _isWaveActive)
             {
-                int waveNumber = CurrentWaveNumber;
-                OnWaveEnded?.Invoke(waveNumber, WaveEndReason.Cancelled);
+                OnWaveEnded?.Invoke(CurrentWaveNumber, WaveEndReason.Cancelled);
             }
 
-            ResetWaveRuntime();
             CleanupAliveEnemies(false);
+            ResetWaveRuntime();
+
             _isWaveActive = false;
-            _isWaitingNextWave = false;
             _isRunning = false;
+            _bossPhaseStarted = false;
             _currentWaveIndex = -1;
         }
 
@@ -142,20 +164,12 @@ namespace Mukseon.Gameplay.Combat
             }
 
             float step = Mathf.Max(0f, deltaTime);
+            _timelineElapsedSeconds += step;
 
-            if (_isWaitingNextWave)
-            {
-                _nextWaveDelayRemaining -= step;
-                if (_nextWaveDelayRemaining <= 0f)
-                {
-                    _isWaitingNextWave = false;
-                    BeginNextWave();
-                }
+            CheckTimelineMarks();
 
-                return;
-            }
-
-            if (!_isWaveActive)
+            // 보스 진입 후에는 일반 스포닝과 웨이브 전환을 모두 중단한다.
+            if (_bossPhaseStarted || !_isWaveActive)
             {
                 return;
             }
@@ -165,48 +179,75 @@ namespace Mukseon.Gameplay.Combat
 
             TrySpawnEnemies();
 
-            if (_remainingToSpawn <= 0 && _aliveEnemies.Count <= 0)
-            {
-                FinishCurrentWave(WaveEndReason.EnemiesCleared);
-                return;
-            }
-
             WaveDefinition currentWave = GetCurrentWave();
-            if (currentWave != null && currentWave.DurationSeconds > 0f && _waveElapsedSeconds >= currentWave.DurationSeconds)
+            if (currentWave != null && _waveElapsedSeconds >= currentWave.DurationSeconds)
             {
-                FinishCurrentWave(WaveEndReason.TimeExpired);
+                AdvanceWave();
             }
         }
 
-        private void BeginNextWave()
+        private void CheckTimelineMarks()
         {
-            if (_waveDatabase == null || _waveDatabase.Waves == null || _waveDatabase.Waves.Count == 0)
+            if (_miniBossMinuteMarks != null)
             {
-                _isRunning = false;
-                return;
+                for (int i = 0; i < _miniBossMinuteMarks.Count; i++)
+                {
+                    if (i >= _miniBossMarkFired.Count || _miniBossMarkFired[i])
+                    {
+                        continue;
+                    }
+
+                    float markMinutes = _miniBossMinuteMarks[i];
+                    if (markMinutes > 0f && _timelineElapsedSeconds >= markMinutes * 60f)
+                    {
+                        _miniBossMarkFired[i] = true;
+                        OnMiniBossMarkReached?.Invoke(markMinutes);
+
+#if UNITY_EDITOR
+                        if (_showDebugLogs)
+                        {
+                            Debug.Log($"[WaveCombatDirector] Mini-boss mark reached: {markMinutes:0.#} min");
+                        }
+#endif
+                    }
+                }
             }
 
-            int nextWaveIndex = _currentWaveIndex + 1;
-            if (nextWaveIndex >= _waveDatabase.Waves.Count)
+            if (!_bossPhaseStarted && _bossMinuteMark > 0f && _timelineElapsedSeconds >= _bossMinuteMark * 60f)
             {
-                if (_loopWaves)
-                {
-                    nextWaveIndex = 0;
-                }
-                else
-                {
-                    _isRunning = false;
-                    _isWaveActive = false;
-                    OnAllWavesCompleted?.Invoke();
-                    return;
-                }
+                EnterBossPhase();
             }
+        }
 
+        private void EnterBossPhase()
+        {
+            _bossPhaseStarted = true;
+
+            int endedWaveNumber = CurrentWaveNumber;
+            _isWaveActive = false;
+            OnWaveEnded?.Invoke(endedWaveNumber, WaveEndReason.Cancelled);
+
+            // 일반 적은 보스 시스템(#37)이 페이드아웃/즉시 제거 방식을 결정하므로
+            // 여기서는 살아있는 적을 강제 정리하지 않고 스포닝만 멈춘다.
+            OnBossPhaseStarted?.Invoke();
+            OnAllWavesCompleted?.Invoke();
+
+#if UNITY_EDITOR
+            if (_showDebugLogs)
+            {
+                Debug.Log($"[WaveCombatDirector] Boss phase started at {_bossMinuteMark:0.#} min.");
+            }
+#endif
+        }
+
+        private void BeginWave(int waveIndex)
+        {
             ResetWaveRuntime();
-            CleanupAliveEnemies(false);
 
-            _currentWaveIndex = nextWaveIndex;
+            _currentWaveIndex = waveIndex;
             _isWaveActive = true;
+            _waveElapsedSeconds = 0f;
+            _spawnElapsedSeconds = 0f;
 
             WaveDefinition currentWave = GetCurrentWave();
             BuildSpawnRuntime(currentWave);
@@ -216,14 +257,39 @@ namespace Mukseon.Gameplay.Combat
 #if UNITY_EDITOR
             if (_showDebugLogs)
             {
-                Debug.Log($"[WaveCombatDirector] Wave {CurrentWaveNumber} started. SpawnCount={_remainingToSpawn}");
+                Debug.Log($"[WaveCombatDirector] Wave {CurrentWaveNumber} started.");
             }
 #endif
+        }
 
-            if (_remainingToSpawn <= 0 && _aliveEnemies.Count <= 0)
+        private void AdvanceWave()
+        {
+            if (_waveDatabase == null || _waveDatabase.Waves == null || _waveDatabase.Waves.Count == 0)
             {
-                FinishCurrentWave(WaveEndReason.EnemiesCleared);
+                return;
             }
+
+            int waveCount = _waveDatabase.Waves.Count;
+            int nextWaveIndex = _currentWaveIndex + 1;
+
+            if (nextWaveIndex >= waveCount)
+            {
+                if (_loopWaves)
+                {
+                    nextWaveIndex = 0;
+                }
+                else
+                {
+                    // 마지막 웨이브는 보스 마크 전까지 그대로 유지(스폰 지속). 전환만 멈춘다.
+                    _waveElapsedSeconds = 0f;
+                    return;
+                }
+            }
+
+            OnWaveEnded?.Invoke(CurrentWaveNumber, WaveEndReason.TimeExpired);
+
+            // VS 스타일: 이전 웨이브의 적은 정리하지 않고 그대로 남긴 채 다음 웨이브로 전환한다.
+            BeginWave(nextWaveIndex);
         }
 
         private WaveDefinition GetCurrentWave()
@@ -244,9 +310,6 @@ namespace Mukseon.Gameplay.Combat
         private void BuildSpawnRuntime(WaveDefinition wave)
         {
             _spawnRuntime.Clear();
-            _spawnRuntimeCursor = 0;
-            _spawnPointCursor = 0;
-            _remainingToSpawn = 0;
 
             if (wave == null || wave.Enemies == null)
             {
@@ -256,7 +319,7 @@ namespace Mukseon.Gameplay.Combat
             for (int i = 0; i < wave.Enemies.Count; i++)
             {
                 WaveEnemySpawnEntry entry = wave.Enemies[i];
-                if (entry == null || entry.Count <= 0)
+                if (entry == null)
                 {
                     continue;
                 }
@@ -270,16 +333,14 @@ namespace Mukseon.Gameplay.Combat
                 _spawnRuntime.Add(new SpawnRuntimeEntry
                 {
                     Entry = entry,
-                    Remaining = entry.Count
+                    SpeciesKey = entry.SpeciesKey
                 });
-
-                _remainingToSpawn += entry.Count;
             }
         }
 
         private void TrySpawnEnemies()
         {
-            if (_spawnRuntime.Count <= 0 || _remainingToSpawn <= 0)
+            if (_spawnRuntime.Count <= 0)
             {
                 return;
             }
@@ -287,73 +348,93 @@ namespace Mukseon.Gameplay.Combat
             float spawnInterval = ResolveSpawnInterval();
             int maxAliveEnemies = ResolveMaxAliveEnemies();
 
-            while (_spawnElapsedSeconds >= spawnInterval && _remainingToSpawn > 0 && _aliveEnemies.Count < maxAliveEnemies)
+            // 간격이 경과한 횟수만큼 소환 라운드를 진행한다.
+            while (_spawnElapsedSeconds >= spawnInterval)
             {
                 _spawnElapsedSeconds -= spawnInterval;
-
-                if (!TrySpawnOneEnemy())
-                {
-                    break;
-                }
+                RunSpawnRound(maxAliveEnemies);
             }
         }
 
-        private bool TrySpawnOneEnemy()
+        /// <summary>
+        /// 1회 소환 라운드.
+        /// 1) 최소 유지 수에 미달한 종류부터 채운다.
+        /// 2) 모든 종류가 최소 수를 충족하면 각 종류를 1마리씩 추가 소환한다(난이도 상승).
+        /// 상한(maxAliveEnemies)에 도달하면 중단한다.
+        /// </summary>
+        private void RunSpawnRound(int maxAliveEnemies)
         {
-            if (_spawnRuntime.Count <= 0)
-            {
-                return false;
-            }
+            bool anyBelowMinimum = false;
 
             for (int i = 0; i < _spawnRuntime.Count; i++)
             {
-                int index = (_spawnRuntimeCursor + i) % _spawnRuntime.Count;
-                SpawnRuntimeEntry runtimeEntry = _spawnRuntime[index];
-                if (runtimeEntry.Remaining <= 0)
+                if (_aliveEnemies.Count >= maxAliveEnemies)
                 {
-                    continue;
+                    return;
                 }
 
-                Transform spawnPoint = ResolveSpawnPoint();
-                GameObject prefabGO = runtimeEntry.Entry.EnemyPrefab.gameObject;
-                GameObject spawnedObject;
-                EnemyHealth spawnedEnemy;
-
-                if (PoolManager.Instance != null)
+                SpawnRuntimeEntry runtimeEntry = _spawnRuntime[i];
+                int aliveOfSpecies = GetAliveCount(runtimeEntry.SpeciesKey);
+                if (aliveOfSpecies < runtimeEntry.Entry.MinAliveCount)
                 {
-                    spawnedObject = PoolManager.Instance.GetInactive(prefabGO, spawnPoint.position, spawnPoint.rotation);
-                    spawnedEnemy = spawnedObject.GetComponent<EnemyHealth>();
-                    spawnedEnemy.ApplyMonsterData(runtimeEntry.Entry.MonsterData);
-                    spawnedEnemy.SetMoveSpeed(runtimeEntry.Entry.MoveSpeed);
-                    spawnedEnemy.PrepareForReuse();
-                    spawnedObject.SetActive(true);
+                    anyBelowMinimum = true;
+                    SpawnEnemy(runtimeEntry);
                 }
-                else
-                {
-                    spawnedObject = Instantiate(prefabGO, spawnPoint.position, spawnPoint.rotation);
-                    spawnedEnemy = spawnedObject.GetComponent<EnemyHealth>();
-                    spawnedEnemy.ApplyMonsterData(runtimeEntry.Entry.MonsterData);
-                    spawnedEnemy.SetMoveSpeed(runtimeEntry.Entry.MoveSpeed);
-                }
-
-                EnemySoulDropper soulDropper = spawnedEnemy.GetComponent<EnemySoulDropper>();
-                if (soulDropper != null)
-                {
-                    soulDropper.ApplyMonsterData(runtimeEntry.Entry.MonsterData);
-                }
-
-                spawnedEnemy.OnDeath += HandleSpawnedEnemyDeath;
-                _aliveEnemies.Add(spawnedEnemy);
-
-                runtimeEntry.Remaining--;
-                _remainingToSpawn--;
-                _spawnRuntimeCursor = (index + 1) % _spawnRuntime.Count;
-
-                NotifyRemainingEnemyCountChanged();
-                return true;
             }
 
-            return false;
+            if (anyBelowMinimum)
+            {
+                return;
+            }
+
+            // 모든 종류가 최소 수를 충족 → 각 종류 1마리씩 추가 소환.
+            for (int i = 0; i < _spawnRuntime.Count; i++)
+            {
+                if (_aliveEnemies.Count >= maxAliveEnemies)
+                {
+                    return;
+                }
+
+                SpawnEnemy(_spawnRuntime[i]);
+            }
+        }
+
+        private void SpawnEnemy(SpawnRuntimeEntry runtimeEntry)
+        {
+            Transform spawnPoint = ResolveSpawnPoint();
+            GameObject prefabGO = runtimeEntry.Entry.EnemyPrefab.gameObject;
+            GameObject spawnedObject;
+            EnemyHealth spawnedEnemy;
+
+            if (PoolManager.Instance != null)
+            {
+                spawnedObject = PoolManager.Instance.GetInactive(prefabGO, spawnPoint.position, spawnPoint.rotation);
+                spawnedEnemy = spawnedObject.GetComponent<EnemyHealth>();
+                spawnedEnemy.ApplyMonsterData(runtimeEntry.Entry.MonsterData);
+                spawnedEnemy.SetMoveSpeed(runtimeEntry.Entry.MoveSpeed);
+                spawnedEnemy.PrepareForReuse();
+                spawnedObject.SetActive(true);
+            }
+            else
+            {
+                spawnedObject = Instantiate(prefabGO, spawnPoint.position, spawnPoint.rotation);
+                spawnedEnemy = spawnedObject.GetComponent<EnemyHealth>();
+                spawnedEnemy.ApplyMonsterData(runtimeEntry.Entry.MonsterData);
+                spawnedEnemy.SetMoveSpeed(runtimeEntry.Entry.MoveSpeed);
+            }
+
+            EnemySoulDropper soulDropper = spawnedEnemy.GetComponent<EnemySoulDropper>();
+            if (soulDropper != null)
+            {
+                soulDropper.ApplyMonsterData(runtimeEntry.Entry.MonsterData);
+            }
+
+            spawnedEnemy.OnDeath += HandleSpawnedEnemyDeath;
+            _aliveEnemies.Add(spawnedEnemy);
+            _enemySpeciesKey[spawnedEnemy] = runtimeEntry.SpeciesKey;
+            IncrementAliveCount(runtimeEntry.SpeciesKey);
+
+            NotifyRemainingEnemyCountChanged();
         }
 
         private Transform ResolveSpawnPoint()
@@ -408,7 +489,7 @@ namespace Mukseon.Gameplay.Combat
                 return Mathf.Max(0.01f, _defaultSpawnIntervalSeconds);
             }
 
-            return Mathf.Max(0.01f, currentWave.SpawnIntervalSeconds);
+            return currentWave.SpawnIntervalSeconds;
         }
 
         private int ResolveMaxAliveEnemies()
@@ -419,7 +500,7 @@ namespace Mukseon.Gameplay.Combat
                 return Mathf.Max(1, _defaultMaxAliveEnemies);
             }
 
-            return Mathf.Max(1, currentWave.MaxAliveEnemies);
+            return currentWave.MaxAliveEnemies;
         }
 
         private void HandleSpawnedEnemyDeath(EnemyHealth enemyHealth)
@@ -431,6 +512,12 @@ namespace Mukseon.Gameplay.Combat
 
             enemyHealth.OnDeath -= HandleSpawnedEnemyDeath;
             _aliveEnemies.Remove(enemyHealth);
+
+            if (_enemySpeciesKey.TryGetValue(enemyHealth, out object speciesKey))
+            {
+                _enemySpeciesKey.Remove(enemyHealth);
+                DecrementAliveCount(speciesKey);
+            }
 
             if (PoolManager.Instance != null)
             {
@@ -444,34 +531,45 @@ namespace Mukseon.Gameplay.Combat
             NotifyRemainingEnemyCountChanged();
         }
 
-        private void FinishCurrentWave(WaveEndReason endReason)
+        private int GetAliveCount(object speciesKey)
         {
-            int waveNumber = CurrentWaveNumber;
-
-            _isWaveActive = false;
-
-            if (endReason == WaveEndReason.TimeExpired && _despawnActiveEnemiesOnTimeExpired)
+            if (speciesKey == null)
             {
-                CleanupAliveEnemies(true);
-                NotifyRemainingEnemyCountChanged();
+                return 0;
             }
 
-            OnWaveEnded?.Invoke(waveNumber, endReason);
+            return _aliveBySpecies.TryGetValue(speciesKey, out int count) ? count : 0;
+        }
 
-#if UNITY_EDITOR
-            if (_showDebugLogs)
+        private void IncrementAliveCount(object speciesKey)
+        {
+            if (speciesKey == null)
             {
-                Debug.Log($"[WaveCombatDirector] Wave {waveNumber} ended. Reason={endReason}");
+                return;
             }
-#endif
 
-            _isWaitingNextWave = true;
-            _nextWaveDelayRemaining = Mathf.Max(0f, _interWaveDelaySeconds);
+            _aliveBySpecies.TryGetValue(speciesKey, out int count);
+            _aliveBySpecies[speciesKey] = count + 1;
+        }
 
-            if (_nextWaveDelayRemaining <= 0f)
+        private void DecrementAliveCount(object speciesKey)
+        {
+            if (speciesKey == null)
             {
-                _isWaitingNextWave = false;
-                BeginNextWave();
+                return;
+            }
+
+            if (_aliveBySpecies.TryGetValue(speciesKey, out int count))
+            {
+                count--;
+                if (count <= 0)
+                {
+                    _aliveBySpecies.Remove(speciesKey);
+                }
+                else
+                {
+                    _aliveBySpecies[speciesKey] = count;
+                }
             }
         }
 
@@ -507,16 +605,26 @@ namespace Mukseon.Gameplay.Combat
             }
 
             _aliveEnemies.Clear();
+            _enemySpeciesKey.Clear();
+            _aliveBySpecies.Clear();
         }
 
         private void ResetWaveRuntime()
         {
             _waveElapsedSeconds = 0f;
             _spawnElapsedSeconds = 0f;
-            _remainingToSpawn = 0;
-            _spawnRuntimeCursor = 0;
             _spawnRuntime.Clear();
             NotifyRemainingEnemyCountChanged();
+        }
+
+        private void ResetMiniBossMarks()
+        {
+            _miniBossMarkFired.Clear();
+            int count = _miniBossMinuteMarks != null ? _miniBossMinuteMarks.Count : 0;
+            for (int i = 0; i < count; i++)
+            {
+                _miniBossMarkFired.Add(false);
+            }
         }
 
         private void NotifyRemainingEnemyCountChanged()
