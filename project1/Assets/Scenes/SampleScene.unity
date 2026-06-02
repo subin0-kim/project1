@@ -1118,13 +1118,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7b7e2c7a47d44145ab1382f7783377fa, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.Combat.WaveCombatDirector
-  _waveDatabase: {fileID: 11400000, guid: 9cca3c485446fe546a4b118f88950e0a, type: 2}
+  _waveDatabase: {fileID: 11400000, guid: 761c6a7730f34dde86070de259bcccd6, type: 2}
   _spawnPoints: []
   _collectSpawnPointsFromChildren: 1
   _autoStartOnEnable: 1
-  _interWaveDelaySeconds: 1.5
   _loopWaves: 0
-  _despawnActiveEnemiesOnTimeExpired: 1
+  _miniBossMinuteMarks:
+  - 3
+  - 6
+  - 9
+  _bossMinuteMark: 10
   _defaultSpawnIntervalSeconds: 1
   _defaultMaxAliveEnemies: 5
   _showDebugLogs: 0

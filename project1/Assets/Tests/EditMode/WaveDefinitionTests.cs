@@ -8,14 +8,14 @@ namespace Mukseon.Tests.EditMode
     public class WaveDefinitionTests
     {
         [Test]
-        public void GetTotalSpawnCount_SumsOnlyValidCounts()
+        public void GetTotalMinAliveCount_SumsOnlyValidEntriesAndClampsNegatives()
         {
             var wave = new WaveDefinition();
             var entryA = new WaveEnemySpawnEntry();
             var entryB = new WaveEnemySpawnEntry();
 
-            SetPrivateField(entryA, "_count", 3);
-            SetPrivateField(entryB, "_count", -7);
+            SetPrivateField(entryA, "_minAliveCount", 3);
+            SetPrivateField(entryB, "_minAliveCount", -7);
 
             SetPrivateField(
                 wave,
@@ -27,7 +27,8 @@ namespace Mukseon.Tests.EditMode
                     entryB
                 });
 
-            Assert.That(wave.GetTotalSpawnCount(), Is.EqualTo(3));
+            // 음수는 0으로 클램프되고 null 항목은 무시되므로 3만 합산된다.
+            Assert.That(wave.GetTotalMinAliveCount(), Is.EqualTo(3));
         }
 
         private static void SetPrivateField<T>(object target, string fieldName, T value)

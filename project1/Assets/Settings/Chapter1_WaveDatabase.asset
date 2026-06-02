@@ -1,0 +1,225 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 60b18302aa41403c80db612f49a0f295, type: 3}
+  m_Name: Chapter1_WaveDatabase
+  m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.Combat.WaveDatabase
+  _waves:
+  - _waveName: 0:00-1:00 Sonakssi/AshenClaw
+    _durationSeconds: 60
+    _spawnIntervalSeconds: 3
+    _maxAliveEnemies: 8
+    _enemies:
+    - _enemyType: Sonakssi
+      _monsterData: {fileID: 11400000, guid: fb24fd5e38994de6a94055af52dc5df6, type: 2}
+      _enemyPrefab: {fileID: 0}
+      _minAliveCount: 2
+      _moveSpeed: 1.3
+    - _enemyType: AshenClaw
+      _monsterData: {fileID: 11400000, guid: 77661a277270a784b8c5751d1df4503e, type: 2}
+      _enemyPrefab: {fileID: 0}
+      _minAliveCount: 2
+      _moveSpeed: 1.2
+  - _waveName: 1:00-2:00 Sonakssi/AshenClaw (denser)
+    _durationSeconds: 60
+    _spawnIntervalSeconds: 2.5
+    _maxAliveEnemies: 10
+    _enemies:
+    - _enemyType: Sonakssi
+      _monsterData: {fileID: 11400000, guid: fb24fd5e38994de6a94055af52dc5df6, type: 2}
+      _enemyPrefab: {fileID: 0}
+      _minAliveCount: 3
+      _moveSpeed: 1.3
+    - _enemyType: AshenClaw
+      _monsterData: {fileID: 11400000, guid: 77661a277270a784b8c5751d1df4503e, type: 2}
+      _enemyPrefab: {fileID: 0}
+      _minAliveCount: 3
+      _moveSpeed: 1.2
+  - _waveName: 2:00-3:00 +Mangryang
+    _durationSeconds: 60
+    _spawnIntervalSeconds: 2
+    _maxAliveEnemies: 12
+    _enemies:
+    - _enemyType: Sonakssi
+      _monsterData: {fileID: 11400000, guid: fb24fd5e38994de6a94055af52dc5df6, type: 2}
+      _enemyPrefab: {fileID: 0}
+      _minAliveCount: 2
+      _moveSpeed: 1.3
+    - _enemyType: AshenClaw
+      _monsterData: {fileID: 11400000, guid: 77661a277270a784b8c5751d1df4503e, type: 2}
+      _enemyPrefab: {fileID: 0}
+      _minAliveCount: 2
+      _moveSpeed: 1.2
+    - _enemyType: Mangryang
+      _monsterData: {fileID: 11400000, guid: 43506e89a63343819b87c407111527e6, type: 2}
+      _enemyPrefab: {fileID: 0}
+      _minAliveCount: 2
+      _moveSpeed: 1
+  - _waveName: 3:00-4:00 Sonakssi/AshenClaw/Mangryang
+    _durationSeconds: 60
+    _spawnIntervalSeconds: 2
+    _maxAliveEnemies: 14
+    _enemies:
+    - _enemyType: Sonakssi
+      _monsterData: {fileID: 11400000, guid: fb24fd5e38994de6a94055af52dc5df6, type: 2}
+      _enemyPrefab: {fileID: 0}
+      _minAliveCount: 3
+      _moveSpeed: 1.3
+    - _enemyType: AshenClaw
+      _monsterData: {fileID: 11400000, guid: 77661a277270a784b8c5751d1df4503e, type: 2}
+      _enemyPrefab: {fileID: 0}
+      _minAliveCount: 3
+      _moveSpeed: 1.2
+    - _enemyType: Mangryang
+      _monsterData: {fileID: 11400000, guid: 43506e89a63343819b87c407111527e6, type: 2}
+      _enemyPrefab: {fileID: 0}
+      _minAliveCount: 3
+      _moveSpeed: 1
+  - _waveName: 4:00-5:00 AshenClaw/Mangryang/Sangwi
+    _durationSeconds: 60
+    _spawnIntervalSeconds: 2
+    _maxAliveEnemies: 14
+    _enemies:
+    - _enemyType: AshenClaw
+      _monsterData: {fileID: 11400000, guid: 77661a277270a784b8c5751d1df4503e, type: 2}
+      _enemyPrefab: {fileID: 0}
+      _minAliveCount: 2
+      _moveSpeed: 1.2
+    - _enemyType: Mangryang
+      _monsterData: {fileID: 11400000, guid: 43506e89a63343819b87c407111527e6, type: 2}
+      _enemyPrefab: {fileID: 0}
+      _minAliveCount: 2
+      _moveSpeed: 1
+    - _enemyType: Sangwi
+      _monsterData: {fileID: 11400000, guid: 09e5f3c235914a7a86e707991d9982ed, type: 2}
+      _enemyPrefab: {fileID: 0}
+      _minAliveCount: 2
+      _moveSpeed: 0.95
+  - _waveName: 5:00-6:00 +DuskShade(gimmick)
+    _durationSeconds: 60
+    _spawnIntervalSeconds: 1.5
+    _maxAliveEnemies: 16
+    _enemies:
+    - _enemyType: AshenClaw
+      _monsterData: {fileID: 11400000, guid: 77661a277270a784b8c5751d1df4503e, type: 2}
+      _enemyPrefab: {fileID: 0}
+      _minAliveCount: 2
+      _moveSpeed: 1.2
+    - _enemyType: Mangryang
+      _monsterData: {fileID: 11400000, guid: 43506e89a63343819b87c407111527e6, type: 2}
+      _enemyPrefab: {fileID: 0}
+      _minAliveCount: 2
+      _moveSpeed: 1
+    - _enemyType: Sangwi
+      _monsterData: {fileID: 11400000, guid: 09e5f3c235914a7a86e707991d9982ed, type: 2}
+      _enemyPrefab: {fileID: 0}
+      _minAliveCount: 2
+      _moveSpeed: 0.95
+    - _enemyType: DuskShade
+      _monsterData: {fileID: 11400000, guid: 0c9e73336ec6803409b3e8030695eca2, type: 2}
+      _enemyPrefab: {fileID: 0}
+      _minAliveCount: 2
+      _moveSpeed: 1.5
+  - _waveName: 6:00-7:00 +Dureoksini (TODO Dokkaebi-bul)
+    _durationSeconds: 60
+    _spawnIntervalSeconds: 1.5
+    _maxAliveEnemies: 16
+    _enemies:
+    - _enemyType: Mangryang
+      _monsterData: {fileID: 11400000, guid: 43506e89a63343819b87c407111527e6, type: 2}
+      _enemyPrefab: {fileID: 0}
+      _minAliveCount: 2
+      _moveSpeed: 1
+    - _enemyType: Sangwi
+      _monsterData: {fileID: 11400000, guid: 09e5f3c235914a7a86e707991d9982ed, type: 2}
+      _enemyPrefab: {fileID: 0}
+      _minAliveCount: 2
+      _moveSpeed: 0.95
+    - _enemyType: Dureoksini
+      _monsterData: {fileID: 11400000, guid: 29fa4d2c3fd292642baaf7f072b8e86e, type: 2}
+      _enemyPrefab: {fileID: 0}
+      _minAliveCount: 2
+      _moveSpeed: 0.7
+  - _waveName: 7:00-8:00 +BrambleIdol (TODO Dokkaebi-bul)
+    _durationSeconds: 60
+    _spawnIntervalSeconds: 1.5
+    _maxAliveEnemies: 18
+    _enemies:
+    - _enemyType: Sangwi
+      _monsterData: {fileID: 11400000, guid: 09e5f3c235914a7a86e707991d9982ed, type: 2}
+      _enemyPrefab: {fileID: 0}
+      _minAliveCount: 2
+      _moveSpeed: 0.95
+    - _enemyType: Dureoksini
+      _monsterData: {fileID: 11400000, guid: 29fa4d2c3fd292642baaf7f072b8e86e, type: 2}
+      _enemyPrefab: {fileID: 0}
+      _minAliveCount: 2
+      _moveSpeed: 0.7
+    - _enemyType: BrambleIdol
+      _monsterData: {fileID: 11400000, guid: 89dfd2a29b064fa47a88cabf39d5d41b, type: 2}
+      _enemyPrefab: {fileID: 0}
+      _minAliveCount: 2
+      _moveSpeed: 0.85
+  - _waveName: 8:00-9:00 Dureoksini/BrambleIdol (TODO Dokkaebi-bul, Maegu)
+    _durationSeconds: 60
+    _spawnIntervalSeconds: 1
+    _maxAliveEnemies: 18
+    _enemies:
+    - _enemyType: Dureoksini
+      _monsterData: {fileID: 11400000, guid: 29fa4d2c3fd292642baaf7f072b8e86e, type: 2}
+      _enemyPrefab: {fileID: 0}
+      _minAliveCount: 2
+      _moveSpeed: 0.7
+    - _enemyType: BrambleIdol
+      _monsterData: {fileID: 11400000, guid: 89dfd2a29b064fa47a88cabf39d5d41b, type: 2}
+      _enemyPrefab: {fileID: 0}
+      _minAliveCount: 2
+      _moveSpeed: 0.85
+  - _waveName: 9:00-10:00 All enemies (TODO Dokkaebi-bul, Maegu)
+    _durationSeconds: 60
+    _spawnIntervalSeconds: 1
+    _maxAliveEnemies: 24
+    _enemies:
+    - _enemyType: Sonakssi
+      _monsterData: {fileID: 11400000, guid: fb24fd5e38994de6a94055af52dc5df6, type: 2}
+      _enemyPrefab: {fileID: 0}
+      _minAliveCount: 1
+      _moveSpeed: 1.3
+    - _enemyType: AshenClaw
+      _monsterData: {fileID: 11400000, guid: 77661a277270a784b8c5751d1df4503e, type: 2}
+      _enemyPrefab: {fileID: 0}
+      _minAliveCount: 1
+      _moveSpeed: 1.2
+    - _enemyType: Mangryang
+      _monsterData: {fileID: 11400000, guid: 43506e89a63343819b87c407111527e6, type: 2}
+      _enemyPrefab: {fileID: 0}
+      _minAliveCount: 1
+      _moveSpeed: 1
+    - _enemyType: Sangwi
+      _monsterData: {fileID: 11400000, guid: 09e5f3c235914a7a86e707991d9982ed, type: 2}
+      _enemyPrefab: {fileID: 0}
+      _minAliveCount: 1
+      _moveSpeed: 0.95
+    - _enemyType: Dureoksini
+      _monsterData: {fileID: 11400000, guid: 29fa4d2c3fd292642baaf7f072b8e86e, type: 2}
+      _enemyPrefab: {fileID: 0}
+      _minAliveCount: 1
+      _moveSpeed: 0.7
+    - _enemyType: DuskShade
+      _monsterData: {fileID: 11400000, guid: 0c9e73336ec6803409b3e8030695eca2, type: 2}
+      _enemyPrefab: {fileID: 0}
+      _minAliveCount: 1
+      _moveSpeed: 1.5
+    - _enemyType: BrambleIdol
+      _monsterData: {fileID: 11400000, guid: 89dfd2a29b064fa47a88cabf39d5d41b, type: 2}
+      _enemyPrefab: {fileID: 0}
+      _minAliveCount: 1
+      _moveSpeed: 0.85

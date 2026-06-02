@@ -10,15 +10,15 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: dad141cadcb6cef41a0c485253bfb68b, type: 3}
-  m_Name: Monster_Dureoksini
+  m_Name: Monster_Mangryang
   m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.Combat.MonsterData
-  _monsterId: monster.dureoksini
-  _displayName: Dureoksini
+  _monsterId: monster.mangryang
+  _displayName: Mangryang
   _isBoss: 0
-  _enemyPrefab: {fileID: 1475677598667535634, guid: 0892b944d90654243b825a22b54ccad7, type: 3}
+  _enemyPrefab: {fileID: 3535088139439741544, guid: 9f359b9056e17c241bc9c9c0ecd3976f, type: 3}
   _swipeDirectionSequence:
   _randomizeSequence: 1
-  _maxHealth: 20
-  _moveSpeed: 0.7
-  _soulDropCount: 8
-  _experiencePerOrb: 5
+  _maxHealth: 6
+  _moveSpeed: 1
+  _soulDropCount: 2
+  _experiencePerOrb: 2
