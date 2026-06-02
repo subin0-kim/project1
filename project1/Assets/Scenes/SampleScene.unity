@@ -1122,9 +1122,12 @@ MonoBehaviour:
   _spawnPoints: []
   _collectSpawnPointsFromChildren: 1
   _autoStartOnEnable: 1
-  _interWaveDelaySeconds: 1.5
   _loopWaves: 0
-  _despawnActiveEnemiesOnTimeExpired: 1
+  _miniBossMinuteMarks:
+  - 3
+  - 6
+  - 9
+  _bossMinuteMark: 10
   _defaultSpawnIntervalSeconds: 1
   _defaultMaxAliveEnemies: 5
   _showDebugLogs: 0
