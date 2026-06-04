@@ -6,7 +6,7 @@ namespace Mukseon.Gameplay.Combat
 {
     /// <summary>
     /// 어둑시니의 먹물 공격 시 InkSplatter 이미지를 랜덤 배치해 화면을 가리는 오버레이.
-    /// 씬의 Canvas 하위에 배치되어야 한다.
+    /// 각 어둑시니 인스턴스가 독립적으로 소유한다. Canvas 하위에 배치되어야 한다.
     /// </summary>
     [DisallowMultipleComponent]
     public class DarknessOverlay : MonoBehaviour
@@ -15,8 +15,6 @@ namespace Mukseon.Gameplay.Combat
         private const int SplatRows = 3;
         private const int SplatCount = SplatColumns * SplatRows;
         private const float SplatBaseSize = 520f;
-
-        public static DarknessOverlay Instance { get; private set; }
 
         [SerializeField]
         private Sprite _inkSplatterSprite;
@@ -31,19 +29,11 @@ namespace Mukseon.Gameplay.Combat
         private float _targetAlpha;
         private float _fadeDuration;
         private float _fadeTimer;
-        private int _activeRequests;
         private bool _fading;
         private bool _initialized;
 
         private void Awake()
         {
-            if (Instance != null && Instance != this)
-            {
-                Destroy(gameObject);
-                return;
-            }
-
-            Instance = this;
             _canvasGroup = GetComponent<CanvasGroup>();
 
             if (_canvasGroup == null)
@@ -61,14 +51,6 @@ namespace Mukseon.Gameplay.Combat
             if (!_initialized && _inkSplatterSprite != null)
             {
                 BuildSplatters();
-            }
-        }
-
-        private void OnDestroy()
-        {
-            if (Instance == this)
-            {
-                Instance = null;
             }
         }
 
@@ -102,28 +84,19 @@ namespace Mukseon.Gameplay.Combat
 
         public void FadeIn(float duration)
         {
-            _activeRequests++;
-            if (_activeRequests == 1)
-            {
-                RandomizeSplatters();
-            }
+            RandomizeSplatters();
             BeginFade(_canvasGroup.alpha, _maxAlpha, duration);
         }
 
         public void FadeOut(float duration)
         {
-            _activeRequests = Mathf.Max(0, _activeRequests - 1);
-            if (_activeRequests == 0)
-            {
-                BeginFade(_canvasGroup.alpha, 0f, duration);
-            }
+            BeginFade(_canvasGroup.alpha, 0f, duration);
         }
 
         public void ForceHide()
         {
             _fading = false;
             _canvasGroup.alpha = 0f;
-            _activeRequests = 0;
         }
 
         private void BeginFade(float from, float to, float duration)

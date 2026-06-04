@@ -3,19 +3,18 @@ using UnityEngine.UI;
 using UnityEditor;
 using Mukseon.Gameplay.Combat;
 
+/// <summary>
+/// DarknessOverlay 프리팹을 Assets/Prefabs/Enemies/ 경로에 생성한다.
+/// 생성된 프리팹을 EodukshiniEnemy 인스펙터의 Overlay Prefab 필드에 할당하면 된다.
+/// </summary>
 public class CreateDarknessOverlay
 {
-    [MenuItem("Tools/Mukseon/Create Darkness Overlay")]
+    private const string PrefabSavePath = "Assets/Prefabs/Enemies/DarknessOverlay.prefab";
+
+    [MenuItem("Tools/Mukseon/Create Darkness Overlay Prefab")]
     public static void Execute()
     {
-        // 기존 DarknessOverlayCanvas 제거
-        GameObject existing = GameObject.Find("DarknessOverlayCanvas");
-        if (existing != null)
-        {
-            Object.DestroyImmediate(existing);
-        }
-
-        // Canvas 생성
+        // 임시 씬 오브젝트 생성
         GameObject canvasGO = new GameObject("DarknessOverlayCanvas");
         Canvas canvas = canvasGO.AddComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
@@ -23,7 +22,6 @@ public class CreateDarknessOverlay
         canvasGO.AddComponent<CanvasScaler>();
         canvasGO.AddComponent<GraphicRaycaster>();
 
-        // DarknessOverlay 오브젝트 (Canvas 하위)
         GameObject overlayGO = new GameObject("DarknessOverlay");
         overlayGO.transform.SetParent(canvasGO.transform, false);
 
@@ -36,24 +34,31 @@ public class CreateDarknessOverlay
         overlayGO.AddComponent<CanvasGroup>();
         DarknessOverlay overlay = overlayGO.AddComponent<DarknessOverlay>();
 
-        // InkSplatter 스프라이트 연결
         Sprite inkSprite = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Art/VFX/Textures/InkSplatter.png");
         if (inkSprite != null)
         {
             var so = new SerializedObject(overlay);
             so.FindProperty("_inkSplatterSprite").objectReferenceValue = inkSprite;
             so.ApplyModifiedProperties();
-            Debug.Log("[CreateDarknessOverlay] InkSplatter 스프라이트 연결 완료.");
         }
         else
         {
-            Debug.LogWarning("[CreateDarknessOverlay] InkSplatter.png를 찾지 못했습니다.");
+            Debug.LogWarning("[CreateDarknessOverlay] InkSplatter.png를 찾지 못했습니다. 프리팹 생성 후 수동으로 연결하세요.");
         }
 
-        // 씬 저장 마킹
-        UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(
-            UnityEngine.SceneManagement.SceneManager.GetActiveScene());
+        // 프리팹으로 저장 후 임시 씬 오브젝트 제거
+        GameObject prefab = PrefabUtility.SaveAsPrefabAsset(canvasGO, PrefabSavePath);
+        Object.DestroyImmediate(canvasGO);
 
-        Debug.Log("[CreateDarknessOverlay] DarknessOverlayCanvas 생성 완료.");
+        if (prefab != null)
+        {
+            Debug.Log($"[CreateDarknessOverlay] 프리팹 저장 완료: {PrefabSavePath}\n" +
+                      "EodukshiniEnemy 인스펙터의 Overlay Prefab 필드에 이 프리팹을 할당하세요.");
+            Selection.activeObject = prefab;
+        }
+        else
+        {
+            Debug.LogError("[CreateDarknessOverlay] 프리팹 저장에 실패했습니다.");
+        }
     }
 }
