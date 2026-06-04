@@ -166,10 +166,12 @@ namespace Mukseon.Gameplay.Combat
                 _rootPrefab, transform.position, Quaternion.identity);
 
             EnemyHealth rootHealth = rootObj.GetComponent<EnemyHealth>();
-            if (rootHealth != null)
+            MokgwiRoot root = rootObj.GetComponent<MokgwiRoot>();
+            if (rootHealth != null && root != null)
             {
                 rootHealth.PrepareForReuse();
                 rootHealth.OnDeath += HandleRootDied;
+                root.OnDisabled += HandleRootDisabled;
                 _spawnedRoots.Add(rootHealth);
             }
 
@@ -185,6 +187,22 @@ namespace Mukseon.Gameplay.Combat
         {
             rootHealth.OnDeath -= HandleRootDied;
             _spawnedRoots.Remove(rootHealth);
+
+            MokgwiRoot root = rootHealth.GetComponent<MokgwiRoot>();
+            if (root != null)
+                root.OnDisabled -= HandleRootDisabled;
+        }
+
+        private void HandleRootDisabled(MokgwiRoot root)
+        {
+            root.OnDisabled -= HandleRootDisabled;
+
+            EnemyHealth rootHealth = root.GetComponent<EnemyHealth>();
+            if (rootHealth != null)
+            {
+                rootHealth.OnDeath -= HandleRootDied;
+                _spawnedRoots.Remove(rootHealth);
+            }
         }
 
         private void KillSpawnedRoots()
@@ -195,6 +213,11 @@ namespace Mukseon.Gameplay.Combat
                 if (rootHealth != null && rootHealth.IsAlive)
                 {
                     rootHealth.OnDeath -= HandleRootDied;
+
+                    MokgwiRoot root = rootHealth.GetComponent<MokgwiRoot>();
+                    if (root != null)
+                        root.OnDisabled -= HandleRootDisabled;
+
                     rootHealth.Kill(countAsKill: false);
                 }
             }
@@ -244,7 +267,11 @@ namespace Mukseon.Gameplay.Combat
                 }
             }
 
-            return transform.position;
+            // 10회 시도 실패 시 — 회피 조건 없이 임의 위치 반환 (제자리 즉시 전환 방지)
+            return new Vector3(
+                Random.Range(camPos.x - halfW * 0.7f, camPos.x + halfW * 0.7f),
+                Random.Range(camPos.y - halfH * 0.7f, camPos.y + halfH * 0.7f),
+                0f);
         }
     }
 }

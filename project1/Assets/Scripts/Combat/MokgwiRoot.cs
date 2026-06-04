@@ -13,14 +13,18 @@ namespace Mukseon.Gameplay.Combat
     [RequireComponent(typeof(EnemyHealth))]
     public class MokgwiRoot : MonoBehaviour
     {
-        private static readonly SwipeDirection[] _swipeDirections =
-            (SwipeDirection[])System.Enum.GetValues(typeof(SwipeDirection));
+        // SwipeDirection.None 제외 — None이 할당되면 스와이프로 파괴 불가
+        private static readonly SwipeDirection[] _swipeDirections = System.Array.FindAll(
+            (SwipeDirection[])System.Enum.GetValues(typeof(SwipeDirection)),
+            d => d != SwipeDirection.None);
 
         /// <summary>현재 씬에 활성화된 나무뿌리 총 개수.</summary>
         public static int ActiveRootCount { get; private set; }
 
+        /// <summary>비활성화(풀 반환 포함) 직전 발행. 구독자는 이벤트 내에서 해제해야 한다.</summary>
+        public event System.Action<MokgwiRoot> OnDisabled;
+
         private EnemyHealth _enemyHealth;
-        private bool _counted;
 
         private void Awake()
         {
@@ -32,32 +36,18 @@ namespace Mukseon.Gameplay.Combat
             _enemyHealth.OnDeath += HandleDeath;
             _enemyHealth.SetSwipeDirection(_swipeDirections[Random.Range(0, _swipeDirections.Length)]);
             ActiveRootCount++;
-            _counted = true;
         }
 
         private void OnDisable()
         {
             _enemyHealth.OnDeath -= HandleDeath;
-        }
-
-        private void OnDestroy()
-        {
-            // Kill 없이 파괴되는 경우(씬 언로드 등) 카운터 보정
-            if (_counted)
-            {
-                ActiveRootCount--;
-                _counted = false;
-            }
+            ActiveRootCount--;
+            OnDisabled?.Invoke(this);
+            OnDisabled = null; // 풀 반환 후 재사용 시 이전 구독 잔존 방지
         }
 
         private void HandleDeath(EnemyHealth _)
         {
-            if (_counted)
-            {
-                ActiveRootCount--;
-                _counted = false;
-            }
-
             if (PoolManager.Instance != null)
                 PoolManager.Instance.Release(gameObject);
             else
