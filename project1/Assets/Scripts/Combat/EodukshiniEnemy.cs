@@ -44,6 +44,7 @@ namespace Mukseon.Gameplay.Combat
         private float _cooldownDuration = 3f;
 
         private EnemyHealth _enemyHealth;
+        private GameObject _overlayRoot;
         private DarknessOverlay _overlay;
         private State _state;
         private float _stateTimer;
@@ -62,7 +63,8 @@ namespace Mukseon.Gameplay.Combat
 
             if (_overlay == null && _overlayPrefab != null)
             {
-                _overlay = Instantiate(_overlayPrefab).GetComponentInChildren<DarknessOverlay>();
+                _overlayRoot = Instantiate(_overlayPrefab);
+                _overlay = _overlayRoot.GetComponentInChildren<DarknessOverlay>();
             }
 
             if (_overlay != null && _inkSplatterSprite != null)
@@ -88,9 +90,9 @@ namespace Mukseon.Gameplay.Combat
 
         private void OnDestroy()
         {
-            if (_overlay != null)
+            if (_overlayRoot != null)
             {
-                Destroy(_overlay.gameObject);
+                Destroy(_overlayRoot);
             }
         }
 
