@@ -37,6 +37,7 @@ namespace Mukseon.Gameplay.Combat
         public float MaxHealth => _maxHealth;
         public float CurrentHealth { get; private set; }
         public bool IsAlive { get; private set; }
+        public bool IsTargetable { get; set; } = true;
         public float MoveSpeed => Mathf.Max(0f, _moveSpeed);
         public static IReadOnlyList<EnemyHealth> ActiveEnemies => _activeEnemies;
         public MonsterData MonsterData => _monsterData;
@@ -115,7 +116,7 @@ namespace Mukseon.Gameplay.Combat
 
         public void ApplyDamage(float amount, object source = null)
         {
-            if (!IsAlive || amount <= 0f)
+            if (!IsAlive || !IsTargetable || amount <= 0f)
             {
                 return;
             }
@@ -199,6 +200,7 @@ namespace Mukseon.Gameplay.Combat
         public void PrepareForReuse()
         {
             _destroyOnDeath = false;
+            IsTargetable = true;
             ResetHealth();
 
             if (_attackSequence != null && _monsterData != null && _monsterData.RandomizeSequence)

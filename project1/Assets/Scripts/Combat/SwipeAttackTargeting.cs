@@ -31,7 +31,7 @@ namespace Mukseon.Gameplay.Combat
             for (int i = 0; i < enemies.Count; i++)
             {
                 EnemyHealth enemy = enemies[i];
-                if (enemy == null || !enemy.IsAlive || enemy.SwipeDirection != swipeDirection)
+                if (enemy == null || !enemy.IsAlive || !enemy.IsTargetable || enemy.SwipeDirection != swipeDirection)
                 {
                     continue;
                 }
