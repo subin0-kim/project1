@@ -10,6 +10,8 @@ namespace Mukseon.Gameplay.Combat
         VerticalDrop,
         /// <summary>목귀: 스폰 지점에서 위쪽으로 솟아오름</summary>
         RiseFromGround,
+        /// <summary>매구: 플레이어와 일정 거리를 유지하며 이동</summary>
+        KeepDistance,
     }
 
     /// <summary>
@@ -27,6 +29,9 @@ namespace Mukseon.Gameplay.Combat
 
         [SerializeField, Min(0.1f)]
         private float _riseHeight = 10f;
+
+        [SerializeField, Min(0.1f)]
+        private float _keepDistance = 5f;
 
         private EnemyHealth _enemyHealth;
         private Vector3 _spawnPosition;
@@ -86,6 +91,9 @@ namespace Mukseon.Gameplay.Combat
                 case EnemyMovePattern.RiseFromGround:
                     MoveRiseFromGround(step);
                     break;
+                case EnemyMovePattern.KeepDistance:
+                    MoveKeepDistance(step);
+                    break;
             }
         }
 
@@ -114,6 +122,28 @@ namespace Mukseon.Gameplay.Combat
         {
             Vector3 target = new Vector3(_spawnPosition.x, _spawnPosition.y + _riseHeight, _spawnPosition.z);
             transform.position = Vector3.MoveTowards(transform.position, target, step);
+        }
+
+        /// <summary>플레이어와 _keepDistance 거리를 유지하며 이동 (매구)</summary>
+        private void MoveKeepDistance(float step)
+        {
+            if (_playerTarget == null)
+            {
+                return;
+            }
+
+            Vector3 toEnemy = transform.position - _playerTarget.position;
+            float dist = toEnemy.magnitude;
+
+            if (dist > _keepDistance + 0.1f)
+            {
+                transform.position = Vector3.MoveTowards(transform.position, _playerTarget.position, step);
+            }
+            else if (dist < _keepDistance - 0.1f)
+            {
+                Vector3 awayDir = dist > 0.001f ? toEnemy.normalized : Vector3.up;
+                transform.position += awayDir * step;
+            }
         }
 
         /// <summary>외부에서 플레이어 타겟을 직접 지정할 때 사용</summary>
