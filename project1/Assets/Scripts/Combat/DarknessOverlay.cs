@@ -103,7 +103,10 @@ namespace Mukseon.Gameplay.Combat
         public void FadeIn(float duration)
         {
             _activeRequests++;
-            RandomizeSplatters();
+            if (_activeRequests == 1)
+            {
+                RandomizeSplatters();
+            }
             BeginFade(_canvasGroup.alpha, _maxAlpha, duration);
         }
 
