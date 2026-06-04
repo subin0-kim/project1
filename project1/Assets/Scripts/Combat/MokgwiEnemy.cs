@@ -6,38 +6,47 @@ namespace Mukseon.Gameplay.Combat
 {
     /// <summary>
     /// 목귀 적 컴포넌트.
-    /// 화면 내를 자유롭게 배회하며 쿨타임마다 나무뿌리 장애물을 소환한다.
-    /// 뿌리는 스와이프 공격을 흡수해 다른 적을 보호하는 동선 방해 기믹이다.
-    /// 처치 시 자신이 소환한 모든 뿌리가 함께 소멸한다.
+    /// 땅속을 이동하며 나무뿌리 장애물을 설치하는 기믹형 적.
+    /// 이동 중에는 잠복(무적·비타겟)이고, 지표에 멈출 때만 공격 가능하다.
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(EnemyHealth))]
     public class MokgwiEnemy : MonoBehaviour
     {
-        [Header("Wandering")]
-        [SerializeField, Min(0.5f)]
-        private float _playerAvoidRadius = 2f;
+        private enum State
+        {
+            EnteringScreen,    // 화면 밖 스폰 위치 → 가장자리 진입 (잠복·무적)
+            WaitingAtEdge,     // 가장자리 정지 — 공격 가능
+            MovingUnderground, // 화면 내 이동 (잠복·무적, 이동 경로에 뿌리 소환)
+            Surfaced,          // 목표 지점 정지 — 공격 가능
+        }
+
+        [Header("Movement")]
+        [SerializeField, Min(0f)]
+        private float _waitDuration = 1.5f;
 
         [SerializeField, Min(0.05f)]
-        private float _waypointReachDistance = 0.2f;
+        private float _waypointReachDistance = 0.15f;
+
+        [SerializeField, Min(0.5f)]
+        private float _playerAvoidRadius = 2f;
 
         [Header("Root Spawning")]
         [SerializeField]
         private GameObject _rootPrefab;
 
         [SerializeField, Min(0.1f)]
-        private float _rootSpawnInterval = 3f;
+        private float _rootSpawnInterval = 1f;
 
         [SerializeField, Min(1)]
         private int _maxRootsOnMap = 5;
 
-        [SerializeField, Min(0.5f)]
-        private float _minRootDistanceFromBody = 1.5f;
-
         private EnemyHealth _enemyHealth;
         private Transform _playerTarget;
-        private Vector3 _wanderTarget;
-        private float _spawnTimer;
+        private Vector3 _moveTarget;
+        private State _state;
+        private float _stateTimer;
+        private float _rootSpawnTimer;
         private readonly List<EnemyHealth> _spawnedRoots = new List<EnemyHealth>();
 
         private void Awake()
@@ -49,7 +58,6 @@ namespace Mukseon.Gameplay.Combat
         {
             _enemyHealth.OnDied += HandleDied;
             _spawnedRoots.Clear();
-            _spawnTimer = _rootSpawnInterval;
 
             if (_playerTarget == null)
             {
@@ -58,12 +66,13 @@ namespace Mukseon.Gameplay.Combat
                     _playerTarget = ph.transform;
             }
 
-            _wanderTarget = PickWanderTarget();
+            EnterState(State.EnteringScreen);
         }
 
         private void OnDisable()
         {
             _enemyHealth.OnDied -= HandleDied;
+            _enemyHealth.IsTargetable = true;
             KillSpawnedRoots();
         }
 
@@ -72,26 +81,76 @@ namespace Mukseon.Gameplay.Combat
             if (!_enemyHealth.IsAlive)
                 return;
 
-            UpdateMovement();
-            UpdateSpawnTimer();
+            _stateTimer += Time.deltaTime;
+
+            switch (_state)
+            {
+                case State.EnteringScreen:
+                    MoveToward(_moveTarget);
+                    if (Vector2.Distance(transform.position, _moveTarget) < _waypointReachDistance)
+                        EnterState(State.WaitingAtEdge);
+                    break;
+
+                case State.WaitingAtEdge:
+                    if (_stateTimer >= _waitDuration)
+                        EnterState(State.MovingUnderground);
+                    break;
+
+                case State.MovingUnderground:
+                    MoveToward(_moveTarget);
+                    UpdateRootSpawn();
+                    if (Vector2.Distance(transform.position, _moveTarget) < _waypointReachDistance)
+                        EnterState(State.Surfaced);
+                    break;
+
+                case State.Surfaced:
+                    if (_stateTimer >= _waitDuration)
+                        EnterState(State.MovingUnderground);
+                    break;
+            }
         }
 
-        private void UpdateMovement()
+        private void EnterState(State next)
+        {
+            _state = next;
+            _stateTimer = 0f;
+
+            switch (next)
+            {
+                case State.EnteringScreen:
+                    _enemyHealth.IsTargetable = false;
+                    _moveTarget = PickScreenEdgeTarget();
+                    break;
+
+                case State.WaitingAtEdge:
+                    _enemyHealth.IsTargetable = true;
+                    break;
+
+                case State.MovingUnderground:
+                    _enemyHealth.IsTargetable = false;
+                    _rootSpawnTimer = 0f; // 이동 시작 즉시 첫 뿌리 소환
+                    _moveTarget = PickInsideTarget();
+                    break;
+
+                case State.Surfaced:
+                    _enemyHealth.IsTargetable = true;
+                    break;
+            }
+        }
+
+        private void MoveToward(Vector3 target)
         {
             float step = _enemyHealth.MoveSpeed * Time.deltaTime;
-            transform.position = Vector3.MoveTowards(transform.position, _wanderTarget, step);
-
-            if (Vector2.Distance(transform.position, _wanderTarget) < _waypointReachDistance)
-                _wanderTarget = PickWanderTarget();
+            transform.position = Vector3.MoveTowards(transform.position, target, step);
         }
 
-        private void UpdateSpawnTimer()
+        private void UpdateRootSpawn()
         {
-            _spawnTimer -= Time.deltaTime;
-            if (_spawnTimer <= 0f)
+            _rootSpawnTimer -= Time.deltaTime;
+            if (_rootSpawnTimer <= 0f)
             {
                 TrySpawnRoot();
-                _spawnTimer = _rootSpawnInterval;
+                _rootSpawnTimer = _rootSpawnInterval;
             }
         }
 
@@ -103,9 +162,8 @@ namespace Mukseon.Gameplay.Combat
             if (MokgwiRoot.ActiveRootCount >= _maxRootsOnMap)
                 return;
 
-            Vector3 spawnPos = PickRootSpawnPosition();
             GameObject rootObj = PoolManager.Instance.GetInactive(
-                _rootPrefab, spawnPos, Quaternion.identity);
+                _rootPrefab, transform.position, Quaternion.identity);
 
             EnemyHealth rootHealth = rootObj.GetComponent<EnemyHealth>();
             if (rootHealth != null)
@@ -143,7 +201,27 @@ namespace Mukseon.Gameplay.Combat
             _spawnedRoots.Clear();
         }
 
-        private Vector3 PickWanderTarget()
+        private Vector3 PickScreenEdgeTarget()
+        {
+            Camera cam = Camera.main;
+            if (cam == null)
+                return transform.position;
+
+            float halfH = cam.orthographicSize;
+            float halfW = halfH * cam.aspect;
+            Vector3 camPos = cam.transform.position;
+
+            int side = Random.Range(0, 4);
+            switch (side)
+            {
+                case 0: return new Vector3(Random.Range(camPos.x - halfW * 0.8f, camPos.x + halfW * 0.8f), camPos.y + halfH * 0.85f, 0f); // 상
+                case 1: return new Vector3(Random.Range(camPos.x - halfW * 0.8f, camPos.x + halfW * 0.8f), camPos.y - halfH * 0.85f, 0f); // 하
+                case 2: return new Vector3(camPos.x - halfW * 0.85f, Random.Range(camPos.y - halfH * 0.8f, camPos.y + halfH * 0.8f), 0f); // 좌
+                default: return new Vector3(camPos.x + halfW * 0.85f, Random.Range(camPos.y - halfH * 0.8f, camPos.y + halfH * 0.8f), 0f); // 우
+            }
+        }
+
+        private Vector3 PickInsideTarget()
         {
             Camera cam = Camera.main;
             if (cam == null)
@@ -155,8 +233,8 @@ namespace Mukseon.Gameplay.Combat
 
             for (int i = 0; i < 10; i++)
             {
-                float x = Random.Range(camPos.x - halfW * 0.85f, camPos.x + halfW * 0.85f);
-                float y = Random.Range(camPos.y - halfH * 0.85f, camPos.y + halfH * 0.85f);
+                float x = Random.Range(camPos.x - halfW * 0.7f, camPos.x + halfW * 0.7f);
+                float y = Random.Range(camPos.y - halfH * 0.7f, camPos.y + halfH * 0.7f);
                 Vector3 candidate = new Vector3(x, y, 0f);
 
                 if (_playerTarget == null ||
@@ -166,34 +244,7 @@ namespace Mukseon.Gameplay.Combat
                 }
             }
 
-            // 10회 시도 실패 시 현재 위치 유지 (플레이어가 화면 대부분을 점유하는 극단적 케이스)
             return transform.position;
-        }
-
-        private Vector3 PickRootSpawnPosition()
-        {
-            Camera cam = Camera.main;
-            Vector3 fallback = transform.position +
-                (Vector3)(Random.insideUnitCircle.normalized * _minRootDistanceFromBody * 2f);
-
-            if (cam == null)
-                return fallback;
-
-            float halfH = cam.orthographicSize;
-            float halfW = halfH * cam.aspect;
-            Vector3 camPos = cam.transform.position;
-
-            for (int i = 0; i < 10; i++)
-            {
-                float x = Random.Range(camPos.x - halfW * 0.8f, camPos.x + halfW * 0.8f);
-                float y = Random.Range(camPos.y - halfH * 0.8f, camPos.y + halfH * 0.8f);
-                Vector3 candidate = new Vector3(x, y, 0f);
-
-                if (Vector2.Distance(candidate, transform.position) >= _minRootDistanceFromBody)
-                    return candidate;
-            }
-
-            return fallback;
         }
     }
 }
