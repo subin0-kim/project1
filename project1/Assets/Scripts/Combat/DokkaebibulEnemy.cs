@@ -132,6 +132,7 @@ namespace Mukseon.Gameplay.Combat
                 if (player != null && player.IsAlive)
                 {
                     player.TakeDamage(_explodeDamage, _enemyHealth);
+                    break;
                 }
             }
 

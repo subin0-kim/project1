@@ -40,10 +40,10 @@ namespace Mukseon.Gameplay.Combat
         private float _cooldownDuration = 3f;
 
         private EnemyHealth _enemyHealth;
-        private DarknessOverlay _overlay;
         private State _state;
         private float _stateTimer;
         private bool _fadeOutStarted;
+        private bool _isDarknessApplied;
         private Vector3 _edgeTarget;
 
         private void Awake()
@@ -54,21 +54,26 @@ namespace Mukseon.Gameplay.Combat
         private void OnEnable()
         {
             _enemyHealth.OnDied += HandleDied;
-            _overlay = DarknessOverlay.Instance;
 
-            if (_overlay != null && _inkSplatterSprite != null)
+            if (DarknessOverlay.Instance != null && _inkSplatterSprite != null)
             {
-                _overlay.Initialize(_inkSplatterSprite);
+                DarknessOverlay.Instance.Initialize(_inkSplatterSprite);
             }
 
             _edgeTarget = CalculateScreenEdgePosition();
             _state = State.MovingToEdge;
             _stateTimer = 0f;
+            _isDarknessApplied = false;
         }
 
         private void OnDisable()
         {
             _enemyHealth.OnDied -= HandleDied;
+            if (_isDarknessApplied)
+            {
+                DarknessOverlay.Instance?.FadeOut(_fadeOutDuration);
+                _isDarknessApplied = false;
+            }
         }
 
         private void Update()
@@ -97,7 +102,9 @@ namespace Mukseon.Gameplay.Combat
                 case State.Cooldown:
                     if (_stateTimer >= _cooldownDuration)
                     {
-                        EnterDarknessActive();
+                        _edgeTarget = CalculateScreenEdgePosition();
+                        _state = State.MovingToEdge;
+                        _stateTimer = 0f;
                     }
                     break;
             }
@@ -120,7 +127,11 @@ namespace Mukseon.Gameplay.Combat
             _state = State.DarknessActive;
             _stateTimer = 0f;
             _fadeOutStarted = false;
-            _overlay?.FadeIn(_fadeInDuration);
+            if (DarknessOverlay.Instance != null)
+            {
+                DarknessOverlay.Instance.FadeIn(_fadeInDuration);
+                _isDarknessApplied = true;
+            }
         }
 
         private void UpdateDarknessActive()
@@ -128,7 +139,11 @@ namespace Mukseon.Gameplay.Combat
             if (!_fadeOutStarted && _stateTimer >= _darknessDuration - _fadeOutDuration)
             {
                 _fadeOutStarted = true;
-                _overlay?.FadeOut(_fadeOutDuration);
+                if (_isDarknessApplied)
+                {
+                    DarknessOverlay.Instance?.FadeOut(_fadeOutDuration);
+                    _isDarknessApplied = false;
+                }
             }
 
             if (_stateTimer >= _darknessDuration)
@@ -140,8 +155,11 @@ namespace Mukseon.Gameplay.Combat
 
         private void HandleDied()
         {
-            // 처치 시 어둠 즉시 소산
-            _overlay?.FadeOut(0.3f);
+            if (_isDarknessApplied)
+            {
+                DarknessOverlay.Instance?.FadeOut(_fadeOutDuration);
+                _isDarknessApplied = false;
+            }
         }
 
         private Vector3 CalculateScreenEdgePosition()

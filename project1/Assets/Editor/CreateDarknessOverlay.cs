@@ -5,6 +5,7 @@ using Mukseon.Gameplay.Combat;
 
 public class CreateDarknessOverlay
 {
+    [MenuItem("Tools/Mukseon/Create Darkness Overlay")]
     public static void Execute()
     {
         // 기존 DarknessOverlayCanvas 제거

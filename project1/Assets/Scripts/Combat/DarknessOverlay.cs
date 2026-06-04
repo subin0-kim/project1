@@ -31,6 +31,7 @@ namespace Mukseon.Gameplay.Combat
         private float _targetAlpha;
         private float _fadeDuration;
         private float _fadeTimer;
+        private int _activeRequests;
         private bool _fading;
         private bool _initialized;
 
@@ -101,19 +102,25 @@ namespace Mukseon.Gameplay.Combat
 
         public void FadeIn(float duration)
         {
+            _activeRequests++;
             RandomizeSplatters();
             BeginFade(_canvasGroup.alpha, _maxAlpha, duration);
         }
 
         public void FadeOut(float duration)
         {
-            BeginFade(_canvasGroup.alpha, 0f, duration);
+            _activeRequests = Mathf.Max(0, _activeRequests - 1);
+            if (_activeRequests == 0)
+            {
+                BeginFade(_canvasGroup.alpha, 0f, duration);
+            }
         }
 
         public void ForceHide()
         {
             _fading = false;
             _canvasGroup.alpha = 0f;
+            _activeRequests = 0;
         }
 
         private void BeginFade(float from, float to, float duration)

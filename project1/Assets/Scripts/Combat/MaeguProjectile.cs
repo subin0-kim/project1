@@ -98,6 +98,10 @@ namespace Mukseon.Gameplay.Combat
             {
                 PoolManager.Instance.Release(gameObject);
             }
+            else
+            {
+                gameObject.SetActive(false);
+            }
         }
     }
 }

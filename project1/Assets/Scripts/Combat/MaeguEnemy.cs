@@ -86,10 +86,12 @@ namespace Mukseon.Gameplay.Combat
             obj.SetActive(true);
         }
 
+        private static readonly SwipeDirection[] _swipeDirections =
+            (SwipeDirection[])System.Enum.GetValues(typeof(SwipeDirection));
+
         private static SwipeDirection PickRandomSwipeDirection()
         {
-            // SwipeDirection: Up=1, Down=2, Left=3, Right=4
-            return (SwipeDirection)Random.Range(1, 5);
+            return _swipeDirections[Random.Range(0, _swipeDirections.Length)];
         }
     }
 }
