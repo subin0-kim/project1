@@ -22,7 +22,7 @@ namespace Mukseon.Gameplay.Combat
 
         [Header("Darkness Visual")]
         [SerializeField]
-        private DarknessOverlay _overlayPrefab;
+        private GameObject _overlayPrefab;
 
         [SerializeField]
         private Sprite _inkSplatterSprite;
@@ -62,7 +62,7 @@ namespace Mukseon.Gameplay.Combat
 
             if (_overlay == null && _overlayPrefab != null)
             {
-                _overlay = Instantiate(_overlayPrefab);
+                _overlay = Instantiate(_overlayPrefab).GetComponentInChildren<DarknessOverlay>();
             }
 
             if (_overlay != null && _inkSplatterSprite != null)
