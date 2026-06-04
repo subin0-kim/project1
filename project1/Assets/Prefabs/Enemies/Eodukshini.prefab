@@ -171,6 +171,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7bd932ee676a8f54baf3bcbe95f1fb2b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.Combat.EodukshiniEnemy
+  _overlayPrefab: {fileID: 8873820318504297679, guid: 3b335be10a06cc645bee9f8859d7b511, type: 3}
   _inkSplatterSprite: {fileID: 0}
   _waitBeforeAttack: 1
   _darknessDuration: 5
