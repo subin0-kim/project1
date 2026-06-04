@@ -79,9 +79,9 @@ namespace Mukseon.Gameplay.Combat
         private void OnDisable()
         {
             _enemyHealth.OnDied -= HandleDied;
-            if (_isDarknessApplied)
+            if (_isDarknessApplied && _overlay != null)
             {
-                _overlay?.FadeOut(_fadeOutDuration);
+                _overlay.FadeOut(_fadeOutDuration);
                 _isDarknessApplied = false;
             }
         }
@@ -157,9 +157,9 @@ namespace Mukseon.Gameplay.Combat
             if (!_fadeOutStarted && _stateTimer >= _darknessDuration - _fadeOutDuration)
             {
                 _fadeOutStarted = true;
-                if (_isDarknessApplied)
+                if (_isDarknessApplied && _overlay != null)
                 {
-                    _overlay?.FadeOut(_fadeOutDuration);
+                    _overlay.FadeOut(_fadeOutDuration);
                     _isDarknessApplied = false;
                 }
             }
@@ -173,9 +173,9 @@ namespace Mukseon.Gameplay.Combat
 
         private void HandleDied()
         {
-            if (_isDarknessApplied)
+            if (_isDarknessApplied && _overlay != null)
             {
-                _overlay?.FadeOut(_fadeOutDuration);
+                _overlay.FadeOut(_fadeOutDuration);
                 _isDarknessApplied = false;
             }
         }
