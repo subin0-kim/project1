@@ -194,6 +194,15 @@ namespace Mukseon.Gameplay.Combat
         }
 
         /// <summary>
+        /// 최대 체력을 직접 설정한다. ApplyMonsterData 이후 미니 보스 배율 적용 시 사용.
+        /// PrepareForReuse() 호출 전에 설정해야 변경된 값으로 체력이 초기화된다.
+        /// </summary>
+        public void SetMaxHealth(float maxHealth)
+        {
+            _maxHealth = Mathf.Max(1f, maxHealth);
+        }
+
+        /// <summary>
         /// 풀에서 꺼낸 직후 호출. 체력과 콜라이더를 초기 상태로 복원한다.
         /// 풀 관리 대상은 스스로 Destroy하지 않도록 _destroyOnDeath를 false로 강제한다.
         /// </summary>
