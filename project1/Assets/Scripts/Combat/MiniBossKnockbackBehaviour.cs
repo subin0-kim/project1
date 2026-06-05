@@ -42,6 +42,13 @@ namespace Mukseon.Gameplay.Combat
             _accumulatedDamage = 0f;
             _isKnockingBack = false;
 
+            // 이전 사용에서 넉백 중 사망했다면 _mover가 비활성 상태로 반환됐을 수 있다.
+            // Initialise에서 명시적으로 복원해 초기화 책임을 한 곳에서 완결짓는다.
+            if (_mover != null)
+            {
+                _mover.enabled = true;
+            }
+
             _enemyHealth.OnDamagedDetailed += HandleDamaged;
             _enemyHealth.OnDeath += HandleDeath;
         }
