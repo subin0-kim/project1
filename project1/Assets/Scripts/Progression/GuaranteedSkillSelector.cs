@@ -17,6 +17,32 @@ namespace Mukseon.Gameplay.Progression
         [SerializeField]
         private PlayerLevelSystem _playerLevelSystem;
 
+        private void Awake()
+        {
+            if (_miniBossSpawner == null)
+            {
+                _miniBossSpawner = GetComponent<MiniBossSpawner>();
+            }
+
+            if (_playerLevelSystem == null)
+            {
+                _playerLevelSystem = FindFirstObjectByType<PlayerLevelSystem>();
+            }
+        }
+
+        private void Start()
+        {
+            if (_miniBossSpawner == null)
+            {
+                Debug.LogError("[GuaranteedSkillSelector] MiniBossSpawner 참조가 누락되었습니다.", this);
+            }
+
+            if (_playerLevelSystem == null)
+            {
+                Debug.LogError("[GuaranteedSkillSelector] PlayerLevelSystem 참조가 누락되었습니다.", this);
+            }
+        }
+
         private void OnEnable()
         {
             if (_miniBossSpawner != null)
