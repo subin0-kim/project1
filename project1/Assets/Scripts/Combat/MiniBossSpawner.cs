@@ -53,10 +53,10 @@ namespace Mukseon.Gameplay.Combat
         public event Action<int, MiniBossStageData> OnMiniBossDefeated;
 
         /// <summary>골드 보상 발행. 인자: (차수 인덱스, 골드량). 골드 시스템(#61)이 구독.</summary>
-        public static event Action<int, int> OnMiniBossGoldDropped;
+        public event Action<int, int> OnMiniBossGoldDropped;
 
         /// <summary>영혼 재화 보상 발행. 인자: (차수 인덱스, 영혼량). 영혼 재화 시스템(#61)이 구독.</summary>
-        public static event Action<int, int> OnMiniBossSoulCurrencyDropped;
+        public event Action<int, int> OnMiniBossSoulCurrencyDropped;
 
         private void OnEnable()
         {
@@ -74,7 +74,10 @@ namespace Mukseon.Gameplay.Combat
             {
                 _director.OnMiniBossMarkReached -= HandleMarkReached;
             }
+        }
 
+        private void OnDestroy()
+        {
             foreach (KeyValuePair<EnemyHealth, int> kvp in _activeMiniBosses)
             {
                 if (kvp.Key != null)
@@ -131,6 +134,12 @@ namespace Mukseon.Gameplay.Combat
                 return;
             }
 
+            if (selected.EnemyPrefab == null)
+            {
+                Debug.LogWarning("[MiniBossSpawner] 선택된 엔트리의 EnemyPrefab이 null입니다.");
+                return;
+            }
+
             Vector3 spawnPos = ResolveOffscreenPosition();
             GameObject prefabGO = selected.EnemyPrefab.gameObject;
             GameObject spawnedObj;
@@ -139,7 +148,15 @@ namespace Mukseon.Gameplay.Combat
             if (PoolManager.Instance != null)
             {
                 spawnedObj = PoolManager.Instance.GetInactive(prefabGO, spawnPos, Quaternion.identity);
+                if (spawnedObj == null) return;
+
                 enemy = spawnedObj.GetComponent<EnemyHealth>();
+                if (enemy == null)
+                {
+                    Debug.LogError($"[MiniBossSpawner] {spawnedObj.name}에 EnemyHealth 컴포넌트가 없습니다.");
+                    return;
+                }
+
                 SetupMiniBoss(enemy, spawnedObj, stage, selected);
                 enemy.PrepareForReuse();
                 spawnedObj.SetActive(true);
@@ -148,6 +165,13 @@ namespace Mukseon.Gameplay.Combat
             {
                 spawnedObj = Instantiate(prefabGO, spawnPos, Quaternion.identity);
                 enemy = spawnedObj.GetComponent<EnemyHealth>();
+                if (enemy == null)
+                {
+                    Debug.LogError($"[MiniBossSpawner] {spawnedObj.name}에 EnemyHealth 컴포넌트가 없습니다.");
+                    Destroy(spawnedObj);
+                    return;
+                }
+
                 SetupMiniBoss(enemy, spawnedObj, stage, selected);
             }
 
@@ -207,6 +231,9 @@ namespace Mukseon.Gameplay.Combat
 
             enemy.OnDeath -= HandleMiniBossDeath;
             _activeMiniBosses.Remove(enemy);
+
+            // 풀 반환 전 크기를 원래대로 복원한다.
+            enemy.transform.localScale = Vector3.one;
 
             MiniBossStageData stage = _stages[stageIndex];
 

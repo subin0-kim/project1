@@ -10,8 +10,6 @@ namespace Mukseon.Gameplay.Combat
     [DisallowMultipleComponent]
     public class MiniBossKnockbackBehaviour : MonoBehaviour
     {
-        private static readonly WaitForEndOfFrame _waitEndOfFrame = new WaitForEndOfFrame();
-
         private EnemyHealth _enemyHealth;
         private EnemyMover _mover;
         private float _knockbackThreshold;
@@ -28,6 +26,13 @@ namespace Mukseon.Gameplay.Combat
             float knockbackDuration,
             Transform playerTransform)
         {
+            // 풀 재사용 시 이전 구독이 남아 있을 수 있으므로 먼저 해제한다.
+            if (_enemyHealth != null)
+            {
+                _enemyHealth.OnDamagedDetailed -= HandleDamaged;
+                _enemyHealth.OnDeath -= HandleDeath;
+            }
+
             _enemyHealth = enemyHealth;
             _mover = GetComponent<EnemyMover>();
             _knockbackThreshold = Mathf.Max(0.01f, knockbackThreshold);
@@ -97,11 +102,8 @@ namespace Mukseon.Gameplay.Combat
             _enemyHealth.OnDamagedDetailed -= HandleDamaged;
             _enemyHealth.OnDeath -= HandleDeath;
             StopAllCoroutines();
-
-            if (_mover != null)
-            {
-                _mover.enabled = true;
-            }
+            _isKnockingBack = false;
+            // 사망한 적의 이동 컴포넌트는 다시 활성화하지 않는다.
         }
     }
 }
