@@ -155,6 +155,25 @@ namespace Mukseon.Gameplay.Progression
             return true;
         }
 
+        /// <summary>
+        /// 경험치/레벨업과 무관하게 스킬 선택 1회를 큐에 추가한다.
+        /// 미니 보스 처치 트리거에서 호출한다.
+        /// </summary>
+        public void AddGuaranteedSkillSelection()
+        {
+            if (_progressionModel == null)
+            {
+                return;
+            }
+
+            _progressionModel.AddGuaranteedSelection();
+
+            if (!IsSelectionOpen)
+            {
+                OpenNextSelection();
+            }
+        }
+
         public int GetSkillLevel(string skillId)
         {
             if (string.IsNullOrWhiteSpace(skillId))

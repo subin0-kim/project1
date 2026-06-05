@@ -60,5 +60,14 @@ namespace Mukseon.Gameplay.Progression
             PendingLevelUps--;
             return true;
         }
+
+        /// <summary>
+        /// 경험치/레벨업과 무관하게 스킬 선택 1회를 큐에 추가한다.
+        /// 미니 보스 처치 등 외부 트리거에 의한 보장 선택에 사용한다.
+        /// </summary>
+        public void AddGuaranteedSelection()
+        {
+            PendingLevelUps++;
+        }
     }
 }
