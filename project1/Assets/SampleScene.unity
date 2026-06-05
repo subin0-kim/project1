@@ -1099,6 +1099,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1453966978}
   - component: {fileID: 1453966977}
+  - component: {fileID: 1453966979}
   m_Layer: 0
   m_Name: WaveSystem
   m_TagString: Untagged
@@ -1150,6 +1151,82 @@ Transform:
   - {fileID: 298169295}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1453966979
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1453966975}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 83ea35bc9699e0443a3f1f4aee038309, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.Combat.MiniBossSpawner
+  _director: {fileID: 1453966977}
+  _playerTransform: {fileID: 187285032}
+  _soulOrbPrefab: {fileID: 2654722044290273375, guid: 100c6736884f69344849b68ede8dffdd, type: 3}
+  _enemyPool:
+  - _enemyType: monster.sonakssi
+    _monsterData: {fileID: 11400000, guid: fb24fd5e38994de6a94055af52dc5df6, type: 2}
+    _enemyPrefab: {fileID: 0}
+    _minAliveCount: 1
+    _moveSpeed: 1
+  - _enemyType: monster.ashen_claw
+    _monsterData: {fileID: 11400000, guid: 77661a277270a784b8c5751d1df4503e, type: 2}
+    _enemyPrefab: {fileID: 0}
+    _minAliveCount: 1
+    _moveSpeed: 1
+  - _enemyType: monster.mangryang
+    _monsterData: {fileID: 11400000, guid: 43506e89a63343819b87c407111527e6, type: 2}
+    _enemyPrefab: {fileID: 0}
+    _minAliveCount: 1
+    _moveSpeed: 1
+  - _enemyType: monster.sangwi
+    _monsterData: {fileID: 11400000, guid: 09e5f3c235914a7a86e707991d9982ed, type: 2}
+    _enemyPrefab: {fileID: 0}
+    _minAliveCount: 1
+    _moveSpeed: 1
+  - _enemyType: monster.dureoksini
+    _monsterData: {fileID: 11400000, guid: 29fa4d2c3fd292642baaf7f072b8e86e, type: 2}
+    _enemyPrefab: {fileID: 0}
+    _minAliveCount: 1
+    _moveSpeed: 1
+  - _enemyType: monster.dusk_shade
+    _monsterData: {fileID: 11400000, guid: 0c9e73336ec6803409b3e8030695eca2, type: 2}
+    _enemyPrefab: {fileID: 0}
+    _minAliveCount: 1
+    _moveSpeed: 1
+  - _enemyType: monster.bramble_idol
+    _monsterData: {fileID: 11400000, guid: 89dfd2a29b064fa47a88cabf39d5d41b, type: 2}
+    _enemyPrefab: {fileID: 0}
+    _minAliveCount: 1
+    _moveSpeed: 1
+  _stages:
+  - _spawnMinuteMark: 3
+    _healthMultiplier: 5
+    _sizeMultiplier: 1.5
+    _knockbackThresholdRatio: 0.1
+    _moveSpeed: 0.5
+    _goldReward: 100
+    _soulCurrencyReward: 1
+  - _spawnMinuteMark: 6
+    _healthMultiplier: 8
+    _sizeMultiplier: 2
+    _knockbackThresholdRatio: 0.1
+    _moveSpeed: 0.5
+    _goldReward: 150
+    _soulCurrencyReward: 2
+  - _spawnMinuteMark: 9
+    _healthMultiplier: 12
+    _sizeMultiplier: 2.5
+    _knockbackThresholdRatio: 0.1
+    _moveSpeed: 0.5
+    _goldReward: 200
+    _soulCurrencyReward: 3
+  _knockbackDistance: 3
+  _knockbackDuration: 0.25
+  _showDebugLogs: 0
 --- !u!1 &1748205191
 GameObject:
   m_ObjectHideFlags: 0
