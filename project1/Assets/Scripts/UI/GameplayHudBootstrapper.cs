@@ -765,11 +765,8 @@ namespace Mukseon.Gameplay.UI
 
             if (!enemy.UsesAttackSequence)
             {
-                hud.ArrowLabels[0].text = Arrow(enemy.SwipeDirection);
-                hud.ArrowLabels[0].style.display = DisplayStyle.Flex;
-                hud.ArrowLabels[0].style.color = new Color(1f, 0.94f, 0.5f);
-                hud.ArrowLabels[0].style.fontSize = 24f;
-                hud.ArrowLabels[0].style.unityFontStyleAndWeight = FontStyle.Bold;
+                // 색상 1차 표시(#82): 단일 방향 적은 현재 방향 색 오브 하나만 표시한다.
+                ApplyOrb(hud.ArrowLabels[0], enemy.SwipeDirection, true);
                 for (int i = 1; i < 3; i++)
                 {
                     hud.ArrowLabels[i].style.display = DisplayStyle.None;
@@ -790,21 +787,8 @@ namespace Mukseon.Gameplay.UI
 
                 if (seqIdx < total)
                 {
-                    label.style.display = DisplayStyle.Flex;
-                    label.text = Arrow(seq.Sequence[seqIdx]);
-
-                    if (i == 0)
-                    {
-                        label.style.color = new Color(1f, 0.94f, 0.2f);
-                        label.style.fontSize = 28f;
-                        label.style.unityFontStyleAndWeight = FontStyle.Bold;
-                    }
-                    else
-                    {
-                        label.style.color = new Color(1f, 1f, 1f, 0.45f);
-                        label.style.fontSize = 20f;
-                        label.style.unityFontStyleAndWeight = FontStyle.Normal;
-                    }
+                    // 시퀀스 적(보스): 현재 타격 대상(i==0)만 강조 색 오브, 이후는 흐린 색 오브.
+                    ApplyOrb(label, seq.Sequence[seqIdx], i == 0);
                 }
                 else
                 {
@@ -989,6 +973,7 @@ namespace Mukseon.Gameplay.UI
             container.style.translate = new Translate(Length.Percent(-50f), 0f);
         }
 
+        // 접근성 화살표 표시(#83)에서 재사용 예정. 현재 기본 표시는 색 오브.
         private static string Arrow(SwipeDirection direction)
         {
             switch (direction)
@@ -1004,6 +989,45 @@ namespace Mukseon.Gameplay.UI
                 default:
                     return "•";
             }
+        }
+
+        /// <summary>
+        /// 방향 표시 슬롯을 색 오브(둥근 색 구슬)로 스타일링한다(#82, `combat_system.md` §3).
+        /// current=true면 현재 타격 대상으로 크게·불투명·밝은 외곽선 강조, false면 작게·반투명.
+        /// 색상은 팔레트 정적 디폴트(글로우와 동일 매핑)를 사용한다.
+        /// </summary>
+        private static void ApplyOrb(Label slot, SwipeDirection direction, bool current)
+        {
+            slot.style.display = DisplayStyle.Flex;
+            slot.text = string.Empty;
+
+            float size = current ? 20f : 14f;
+            slot.style.width = size;
+            slot.style.height = size;
+            slot.style.marginLeft = 3f;
+            slot.style.marginRight = 3f;
+
+            float radius = size * 0.5f;
+            slot.style.borderTopLeftRadius = radius;
+            slot.style.borderTopRightRadius = radius;
+            slot.style.borderBottomLeftRadius = radius;
+            slot.style.borderBottomRightRadius = radius;
+
+            Color color = DirectionColorPalette.DefaultColor(direction);
+            color.a = current ? 1f : 0.5f;
+            slot.style.backgroundColor = color;
+
+            float border = current ? 2f : 0f;
+            slot.style.borderTopWidth = border;
+            slot.style.borderBottomWidth = border;
+            slot.style.borderLeftWidth = border;
+            slot.style.borderRightWidth = border;
+
+            Color borderColor = new Color(1f, 1f, 1f, current ? 0.9f : 0f);
+            slot.style.borderTopColor = borderColor;
+            slot.style.borderBottomColor = borderColor;
+            slot.style.borderLeftColor = borderColor;
+            slot.style.borderRightColor = borderColor;
         }
 
         private static VisualElement Panel(VisualElement parent, float left, float top, float width, float height)
