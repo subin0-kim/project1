@@ -15,6 +15,7 @@ GameObject:
   - component: {fileID: 4829204163632401306}
   - component: {fileID: 2394660698194004625}
   - component: {fileID: 2776196048433973373}
+  - component: {fileID: 7387759474708353289}
   m_Layer: 0
   m_Name: Dummy_Left
   m_TagString: Untagged
@@ -63,7 +64,7 @@ SpriteRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 10754, guid: 0000000000000000f000000000000000, type: 0}
+  - {fileID: 2100000, guid: d1800a8365fe0a64a8e1ba8ad3f072af, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -192,6 +193,7 @@ MonoBehaviour:
   _movePattern: 0
   _playerTarget: {fileID: 0}
   _riseHeight: 10
+  _keepDistance: 5
 --- !u!114 &2776196048433973373
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -205,3 +207,19 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.Combat.EnemyAttackSequence
   _sequence: 030000000200000001000000
+--- !u!114 &7387759474708353289
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6848363840087502861}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 430d9217983d07c42b488f40585b62e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.Combat.EnemyDirectionColorView
+  _enemyHealth: {fileID: 4368540737326870438}
+  _spriteRenderer: {fileID: 2472191227068787534}
+  _palette: {fileID: 11400000, guid: da07367ae5ae2a340ac99c70977e6437, type: 2}
+  _glowColorProperty: _GlowColor
