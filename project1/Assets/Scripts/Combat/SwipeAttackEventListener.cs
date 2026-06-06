@@ -53,11 +53,6 @@ namespace Mukseon.Gameplay.Combat
                 _attackOrigin = transform;
             }
 
-            if (_camera == null)
-            {
-                _camera = Camera.main;
-            }
-
             ValidateCharacterData();
         }
 
@@ -102,13 +97,25 @@ namespace Mukseon.Gameplay.Combat
         /// </summary>
         private Vector2 ResolveAttackOrigin(Vector2 endScreenPosition)
         {
+            // Camera.main은 Awake 시점에 아직 null일 수 있으므로 사용 시점에 지연 해석한다.
+            if (_camera == null)
+            {
+                _camera = Camera.main;
+            }
+
             if (_camera != null)
             {
                 Vector3 world = _camera.ScreenToWorldPoint(endScreenPosition);
                 return new Vector2(world.x, world.y);
             }
 
-            return _attackOrigin != null ? (Vector2)_attackOrigin.position : Vector2.zero;
+            if (_attackOrigin != null)
+            {
+                return _attackOrigin.position;
+            }
+
+            Debug.LogWarning("[SwipeAttackEventListener] 카메라와 _attackOrigin이 모두 없어 월드 원점(0,0)으로 타겟팅합니다. 씬 설정을 확인하세요.");
+            return Vector2.zero;
         }
 
         private int ApplyDamage(SwipeDirection swipeDirection, Vector2 origin)
