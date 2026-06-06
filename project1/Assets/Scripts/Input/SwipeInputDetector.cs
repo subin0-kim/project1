@@ -11,7 +11,8 @@ namespace Mukseon.Core.Input
         public float MinimumSwipeDistance => _minimumSwipeDistance;
         public SwipeDirection LastDetectedDirection { get; private set; } = SwipeDirection.None;
 
-        public event Action<SwipeDirection> OnSwipeDetected;
+        /// <summary>스와이프 방향이 확정된 순간 발생. 방향과 스와이프 끝점(스크린 좌표)을 전달합니다.</summary>
+        public event Action<SwipeDirection, Vector2> OnSwipeDetected;
 
         /// <summary>터치/마우스 버튼이 눌린 순간 발생. 스크린 좌표를 전달합니다.</summary>
         public event Action<Vector2> OnSwipeBegan;
@@ -104,7 +105,7 @@ namespace Mukseon.Core.Input
             }
 
             LastDetectedDirection = direction;
-            OnSwipeDetected?.Invoke(direction);
+            OnSwipeDetected?.Invoke(direction, endPosition);
 
 #if UNITY_EDITOR
             Debug.Log($"[SwipeInputDetector] Swipe detected: {direction}");

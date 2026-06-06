@@ -9,6 +9,15 @@ namespace Mukseon.Gameplay.Combat
     public class EnemyHealth : MonoBehaviour
     {
         private static readonly List<EnemyHealth> _activeEnemies = new List<EnemyHealth>();
+
+        private static readonly SwipeDirection[] DirectionPool =
+        {
+            SwipeDirection.Up,
+            SwipeDirection.Down,
+            SwipeDirection.Left,
+            SwipeDirection.Right
+        };
+
         public static event Action<EnemyHealth> AnyEnemyDied;
         public static event Action<EnemyHealth, float> AnyEnemyDamaged;
 
@@ -57,11 +66,17 @@ namespace Mukseon.Gameplay.Combat
             }
         }
 
+        /// <summary>
+        /// 방향 시퀀스 시스템은 보스 전용이다(#84). 비어 있지 않은 시퀀스를 가진 적만
+        /// 시퀀스 기반(타격당 데미지 1 + 인덱스 전진)으로 동작하며, 그 외 적은 단일 방향 속성을 사용한다.
+        /// </summary>
+        public bool UsesAttackSequence => AttackSequence != null && _attackSequence.SequenceLength > 0;
+
         public SwipeDirection SwipeDirection
         {
             get
             {
-                if (AttackSequence != null)
+                if (UsesAttackSequence)
                 {
                     return _attackSequence.CurrentDirection;
                 }
@@ -212,14 +227,7 @@ namespace Mukseon.Gameplay.Combat
             IsTargetable = true;
             ResetHealth();
 
-            if (_attackSequence != null && _monsterData != null && _monsterData.RandomizeSequence)
-            {
-                _attackSequence.SetSequence(EnemyAttackSequence.GenerateRandomSequence((int)_maxHealth));
-            }
-            else
-            {
-                _attackSequence?.ResetSequence();
-            }
+            ConfigureDirectionForSpawn();
 
             if (_disableCollidersOnDeath)
             {
@@ -251,7 +259,19 @@ namespace Mukseon.Gameplay.Combat
             _maxHealth = _monsterData.MaxHealth;
             _moveSpeed = _monsterData.MoveSpeed;
 
-            if (_attackSequence != null)
+            ConfigureDirectionForSpawn();
+        }
+
+        /// <summary>
+        /// 스폰 시 방향 상태를 구성한다(#84).
+        /// 보스: 방향 시퀀스를 구성한다(랜덤 또는 명시 시퀀스).
+        /// 그 외 적: 시퀀스를 비우고 단일 방향 속성을 랜덤 배정한다(`combat_system.md` §1).
+        /// </summary>
+        private void ConfigureDirectionForSpawn()
+        {
+            bool isBoss = _monsterData != null && _monsterData.IsBoss;
+
+            if (isBoss && _attackSequence != null)
             {
                 if (_monsterData.RandomizeSequence)
                 {
@@ -261,6 +281,21 @@ namespace Mukseon.Gameplay.Combat
                 {
                     _attackSequence.SetSequence(_monsterData.SwipeDirectionSequence);
                 }
+                else
+                {
+                    _attackSequence.SetSequence(Array.Empty<SwipeDirection>());
+                }
+
+                return;
+            }
+
+            // 비보스: 시퀀스 미사용. 단일 방향 속성을 랜덤 배정한다.
+            // (MokgwiRoot / MaeguProjectile 등은 이후 SetSwipeDirection으로 자체 방향을 덮어쓴다.)
+            _attackSequence?.SetSequence(Array.Empty<SwipeDirection>());
+
+            if (_monsterData != null)
+            {
+                _swipeDirection = DirectionPool[UnityEngine.Random.Range(0, DirectionPool.Length)];
             }
         }
 

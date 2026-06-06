@@ -18,6 +18,9 @@ namespace Mukseon.Gameplay.Combat
         [SerializeField]
         private Transform _attackOrigin;
 
+        [SerializeField]
+        private Camera _camera;
+
         [Header("Attack Settings")]
         [SerializeField, Min(0f)]
         private float _baseDamage = 1f;
@@ -69,14 +72,16 @@ namespace Mukseon.Gameplay.Combat
             }
         }
 
-        private void HandleAttackExecuted(SwipeDirection direction)
+        private void HandleAttackExecuted(SwipeDirection direction, Vector2 endScreenPosition)
         {
             if (direction == SwipeDirection.None)
             {
                 return;
             }
 
-            int hitCount = ApplyDamage(direction);
+            // combat_system.md §2: 스와이프 끝점(Touch Up 좌표)에 가장 가까운 적을 우선 타격한다.
+            Vector2 attackOrigin = ResolveAttackOrigin(endScreenPosition);
+            int hitCount = ApplyDamage(direction, attackOrigin);
 
 #if UNITY_EDITOR
             if (_showDebugLogs)
@@ -86,13 +91,35 @@ namespace Mukseon.Gameplay.Combat
 #endif
         }
 
-        private int ApplyDamage(SwipeDirection swipeDirection)
+        /// <summary>
+        /// 타겟팅 기준점을 스와이프 끝점의 월드 좌표로 변환한다(`combat_system.md` §2).
+        /// 카메라가 없으면 공격 원점(_attackOrigin)으로 폴백한다.
+        /// </summary>
+        private Vector2 ResolveAttackOrigin(Vector2 endScreenPosition)
         {
-            if (_attackOrigin == null)
+            // Camera.main은 Awake 시점에 아직 null일 수 있으므로 사용 시점에 지연 해석한다.
+            if (_camera == null)
             {
-                return 0;
+                _camera = Camera.main;
             }
 
+            if (_camera != null)
+            {
+                Vector3 world = _camera.ScreenToWorldPoint(endScreenPosition);
+                return new Vector2(world.x, world.y);
+            }
+
+            if (_attackOrigin != null)
+            {
+                return _attackOrigin.position;
+            }
+
+            Debug.LogWarning("[SwipeAttackEventListener] 카메라와 _attackOrigin이 모두 없어 월드 원점(0,0)으로 타겟팅합니다. 씬 설정을 확인하세요.");
+            return Vector2.zero;
+        }
+
+        private int ApplyDamage(SwipeDirection swipeDirection, Vector2 origin)
+        {
             float damage = ResolveDamage();
             if (damage <= 0f)
             {
@@ -100,7 +127,7 @@ namespace Mukseon.Gameplay.Combat
             }
 
             int selectedCount = SwipeAttackTargeting.SelectNearestTargets(
-                _attackOrigin.position,
+                origin,
                 swipeDirection,
                 EnemyHealth.ActiveEnemies,
                 Mathf.Max(1, ResolveTargetsPerAttack() + _bonusTargets),
@@ -114,13 +141,16 @@ namespace Mukseon.Gameplay.Combat
             for (int i = 0; i < selectedCount; i++)
             {
                 EnemyHealth enemyHealth = _targetBuffer[i];
-                EnemyAttackSequence attackSequence = enemyHealth.AttackSequence;
-                float actualDamage = attackSequence != null ? 1f : damage;
+
+                // 방향 시퀀스는 보스 전용(#84). 시퀀스 적은 타격당 데미지 1 + 인덱스 전진,
+                // 그 외 적은 단일 방향 타격으로 정상 데미지를 적용한다.
+                bool usesSequence = enemyHealth.UsesAttackSequence;
+                float actualDamage = usesSequence ? 1f : damage;
                 enemyHealth.ApplyDamage(actualDamage, this);
 
-                if (enemyHealth.IsAlive && attackSequence != null)
+                if (enemyHealth.IsAlive && usesSequence)
                 {
-                    attackSequence.Advance();
+                    enemyHealth.AttackSequence.Advance();
                 }
             }
 
