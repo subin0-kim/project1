@@ -18,6 +18,8 @@ namespace Mukseon.Gameplay.Combat
         [SerializeField]
         private EnemyHealth _enemyPrefab;
 
+        // 방향 시퀀스는 보스 전용이다(#84). 비보스 적은 이 값과 무관하게 단일 방향 속성으로 동작한다.
+        // (EnemyHealth.ConfigureDirectionForSpawn 에서 IsBoss로 게이팅)
         [SerializeField]
         private SwipeDirection[] _swipeDirectionSequence = new SwipeDirection[0];
 

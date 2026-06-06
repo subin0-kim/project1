@@ -742,7 +742,7 @@ namespace Mukseon.Gameplay.UI
             _sequenceHuds[enemy] = hud;
 
             EnemyAttackSequence seq = enemy.AttackSequence;
-            if (seq != null)
+            if (seq != null && enemy.UsesAttackSequence)
             {
                 hud.AdvancedHandler = _ => RefreshSequenceHud(enemy);
                 seq.OnAdvanced += hud.AdvancedHandler;
@@ -763,7 +763,7 @@ namespace Mukseon.Gameplay.UI
 
             EnemyAttackSequence seq = enemy.AttackSequence;
 
-            if (seq == null)
+            if (!enemy.UsesAttackSequence)
             {
                 hud.ArrowLabels[0].text = Arrow(enemy.SwipeDirection);
                 hud.ArrowLabels[0].style.display = DisplayStyle.Flex;

@@ -114,13 +114,16 @@ namespace Mukseon.Gameplay.Combat
             for (int i = 0; i < selectedCount; i++)
             {
                 EnemyHealth enemyHealth = _targetBuffer[i];
-                EnemyAttackSequence attackSequence = enemyHealth.AttackSequence;
-                float actualDamage = attackSequence != null ? 1f : damage;
+
+                // 방향 시퀀스는 보스 전용(#84). 시퀀스 적은 타격당 데미지 1 + 인덱스 전진,
+                // 그 외 적은 단일 방향 타격으로 정상 데미지를 적용한다.
+                bool usesSequence = enemyHealth.UsesAttackSequence;
+                float actualDamage = usesSequence ? 1f : damage;
                 enemyHealth.ApplyDamage(actualDamage, this);
 
-                if (enemyHealth.IsAlive && attackSequence != null)
+                if (enemyHealth.IsAlive && usesSequence)
                 {
-                    attackSequence.Advance();
+                    enemyHealth.AttackSequence.Advance();
                 }
             }
 
