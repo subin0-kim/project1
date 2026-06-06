@@ -22,7 +22,8 @@ namespace Mukseon.Gameplay.Combat
         [SerializeField]
         private string _rightAttackTrigger = "AttackRight";
 
-        public event Action<SwipeDirection> OnAttackExecuted;
+        /// <summary>공격 실행 시 발생. 방향과 스와이프 끝점(스크린 좌표)을 전달합니다.</summary>
+        public event Action<SwipeDirection, Vector2> OnAttackExecuted;
 
         private Animator _animator;
         private int _upAttackTriggerHash;
@@ -71,15 +72,15 @@ namespace Mukseon.Gameplay.Combat
             }
         }
 
-        private void HandleSwipeDetected(SwipeDirection direction)
+        private void HandleSwipeDetected(SwipeDirection direction, Vector2 endScreenPosition)
         {
-            ExecuteAttack(direction);
+            ExecuteAttack(direction, endScreenPosition);
             TriggerAttackAnimation(direction);
         }
 
-        private void ExecuteAttack(SwipeDirection direction)
+        private void ExecuteAttack(SwipeDirection direction, Vector2 endScreenPosition)
         {
-            OnAttackExecuted?.Invoke(direction);
+            OnAttackExecuted?.Invoke(direction, endScreenPosition);
 
 #if UNITY_EDITOR
             Debug.Log($"[PlayerSwipeAttackController] Attack executed by swipe: {direction}");

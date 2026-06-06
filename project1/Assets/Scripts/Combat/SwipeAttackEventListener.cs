@@ -18,6 +18,9 @@ namespace Mukseon.Gameplay.Combat
         [SerializeField]
         private Transform _attackOrigin;
 
+        [SerializeField]
+        private Camera _camera;
+
         [Header("Attack Settings")]
         [SerializeField, Min(0f)]
         private float _baseDamage = 1f;
@@ -50,6 +53,11 @@ namespace Mukseon.Gameplay.Combat
                 _attackOrigin = transform;
             }
 
+            if (_camera == null)
+            {
+                _camera = Camera.main;
+            }
+
             ValidateCharacterData();
         }
 
@@ -69,14 +77,16 @@ namespace Mukseon.Gameplay.Combat
             }
         }
 
-        private void HandleAttackExecuted(SwipeDirection direction)
+        private void HandleAttackExecuted(SwipeDirection direction, Vector2 endScreenPosition)
         {
             if (direction == SwipeDirection.None)
             {
                 return;
             }
 
-            int hitCount = ApplyDamage(direction);
+            // combat_system.md §2: 스와이프 끝점(Touch Up 좌표)에 가장 가까운 적을 우선 타격한다.
+            Vector2 attackOrigin = ResolveAttackOrigin(endScreenPosition);
+            int hitCount = ApplyDamage(direction, attackOrigin);
 
 #if UNITY_EDITOR
             if (_showDebugLogs)
@@ -86,13 +96,23 @@ namespace Mukseon.Gameplay.Combat
 #endif
         }
 
-        private int ApplyDamage(SwipeDirection swipeDirection)
+        /// <summary>
+        /// 타겟팅 기준점을 스와이프 끝점의 월드 좌표로 변환한다(`combat_system.md` §2).
+        /// 카메라가 없으면 공격 원점(_attackOrigin)으로 폴백한다.
+        /// </summary>
+        private Vector2 ResolveAttackOrigin(Vector2 endScreenPosition)
         {
-            if (_attackOrigin == null)
+            if (_camera != null)
             {
-                return 0;
+                Vector3 world = _camera.ScreenToWorldPoint(endScreenPosition);
+                return new Vector2(world.x, world.y);
             }
 
+            return _attackOrigin != null ? (Vector2)_attackOrigin.position : Vector2.zero;
+        }
+
+        private int ApplyDamage(SwipeDirection swipeDirection, Vector2 origin)
+        {
             float damage = ResolveDamage();
             if (damage <= 0f)
             {
@@ -100,7 +120,7 @@ namespace Mukseon.Gameplay.Combat
             }
 
             int selectedCount = SwipeAttackTargeting.SelectNearestTargets(
-                _attackOrigin.position,
+                origin,
                 swipeDirection,
                 EnemyHealth.ActiveEnemies,
                 Mathf.Max(1, ResolveTargetsPerAttack() + _bonusTargets),
