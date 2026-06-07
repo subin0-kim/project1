@@ -10,6 +10,9 @@ Shader "Mukseon/DirectionOutlineGlow"
         _GlowColor ("Glow Color", Color) = (1,1,1,1)
         _GlowThickness ("Glow Thickness (texels)", Range(0,8)) = 2.5
         _GlowIntensity ("Glow Intensity", Range(0,4)) = 1.6
+        // 아틀라스 내 스프라이트 UV 바운드(min.xy, max.xy). EnemyDirectionColorView가 주입한다.
+        // 미설정 시 전체 텍스처(0..1)로 클램핑 → 비아틀라스 단일 텍스처와 동일하게 동작.
+        _SpriteRect ("Sprite UV Rect", Vector) = (0,0,1,1)
     }
 
     SubShader
@@ -55,6 +58,7 @@ Shader "Mukseon/DirectionOutlineGlow"
             fixed4 _GlowColor;
             float _GlowThickness;
             float _GlowIntensity;
+            float4 _SpriteRect;
 
             v2f vert(appdata IN)
             {
@@ -70,16 +74,20 @@ Shader "Mukseon/DirectionOutlineGlow"
                 fixed4 tex = tex2D(_MainTex, IN.uv) * _Color * IN.color;
 
                 // 8방향 주변 알파를 샘플링해 스프라이트 바깥 외곽 글로우 강도를 계산한다.
+                // 샘플 UV를 스프라이트 자신의 UV 바운드(_SpriteRect)로 클램핑해, 아틀라스 패킹 시
+                // 오프셋이 이웃 스프라이트의 알파를 침범(bleeding)하지 않도록 한다.
                 float2 o = _MainTex_TexelSize.xy * _GlowThickness;
+                float2 uvMin = _SpriteRect.xy;
+                float2 uvMax = _SpriteRect.zw;
                 float a = 0;
-                a += tex2D(_MainTex, IN.uv + float2( o.x, 0)).a;
-                a += tex2D(_MainTex, IN.uv + float2(-o.x, 0)).a;
-                a += tex2D(_MainTex, IN.uv + float2( 0,  o.y)).a;
-                a += tex2D(_MainTex, IN.uv + float2( 0, -o.y)).a;
-                a += tex2D(_MainTex, IN.uv + float2( o.x,  o.y)).a;
-                a += tex2D(_MainTex, IN.uv + float2(-o.x, -o.y)).a;
-                a += tex2D(_MainTex, IN.uv + float2( o.x, -o.y)).a;
-                a += tex2D(_MainTex, IN.uv + float2(-o.x,  o.y)).a;
+                a += tex2D(_MainTex, clamp(IN.uv + float2( o.x, 0), uvMin, uvMax)).a;
+                a += tex2D(_MainTex, clamp(IN.uv + float2(-o.x, 0), uvMin, uvMax)).a;
+                a += tex2D(_MainTex, clamp(IN.uv + float2( 0,  o.y), uvMin, uvMax)).a;
+                a += tex2D(_MainTex, clamp(IN.uv + float2( 0, -o.y), uvMin, uvMax)).a;
+                a += tex2D(_MainTex, clamp(IN.uv + float2( o.x,  o.y), uvMin, uvMax)).a;
+                a += tex2D(_MainTex, clamp(IN.uv + float2(-o.x, -o.y), uvMin, uvMax)).a;
+                a += tex2D(_MainTex, clamp(IN.uv + float2( o.x, -o.y), uvMin, uvMax)).a;
+                a += tex2D(_MainTex, clamp(IN.uv + float2(-o.x,  o.y), uvMin, uvMax)).a;
 
                 // 스프라이트 본체 바깥(현재 알파가 낮은 곳)에서만 글로우가 보이도록 한다.
                 float outline = saturate(a) * (1.0 - tex.a);

@@ -25,9 +25,15 @@ namespace Mukseon.Gameplay.Combat
         [Tooltip("글로우 색상을 적용할 셰이더 프로퍼티명. 외곽선 글로우 머티리얼과 일치해야 한다.")]
         private string _glowColorProperty = "_GlowColor";
 
+        // 외곽선 글로우 셰이더(DirectionOutlineGlow)가 아틀라스 블리딩 방지를 위해 읽는 스프라이트 UV 바운드.
+        private const string SpriteRectProperty = "_SpriteRect";
+
         private MaterialPropertyBlock _propertyBlock;
         private EnemyAttackSequence _attackSequence;
         private int _glowColorId;
+        private int _spriteRectId;
+        private Sprite _boundsSprite;
+        private Vector4 _spriteBounds = new Vector4(0f, 0f, 1f, 1f);
 
         private void Awake()
         {
@@ -43,6 +49,7 @@ namespace Mukseon.Gameplay.Combat
 
             _attackSequence = GetComponent<EnemyAttackSequence>();
             _glowColorId = Shader.PropertyToID(_glowColorProperty);
+            _spriteRectId = Shader.PropertyToID(SpriteRectProperty);
             _propertyBlock = new MaterialPropertyBlock();
         }
 
@@ -95,10 +102,63 @@ namespace Mukseon.Gameplay.Combat
                 return;
             }
 
-            Color color = DirectionColorPalette.Resolve(_palette, _enemyHealth.SwipeDirection);
+            Color color = ResolveColor(_enemyHealth.SwipeDirection);
             _spriteRenderer.GetPropertyBlock(_propertyBlock);
             _propertyBlock.SetColor(_glowColorId, color);
+            _propertyBlock.SetVector(_spriteRectId, ResolveSpriteUvBounds());
             _spriteRenderer.SetPropertyBlock(_propertyBlock);
+        }
+
+        /// <summary>
+        /// 이 적의 외곽선 글로우와 동일한 팔레트 인스턴스로 지정 방향의 색을 조회한다(#82).
+        /// HUD 색 오브가 글로우와 같은 색을 쓰도록 외부(<c>GameplayHudBootstrapper</c>)에서 사용한다.
+        /// </summary>
+        public Color ResolveColor(SwipeDirection direction)
+        {
+            return DirectionColorPalette.Resolve(_palette, direction);
+        }
+
+        /// <summary>
+        /// 현재 스프라이트의 아틀라스 내 UV 바운드(min.xy, max.xy)를 반환한다(#82).
+        /// 글로우 셰이더가 8방향 샘플을 이 바운드로 클램핑해, 아틀라스 패킹 시
+        /// 이웃 스프라이트의 알파를 침범(bleeding)하는 것을 막는다. 스프라이트가 바뀔 때만 재계산한다.
+        /// </summary>
+        private Vector4 ResolveSpriteUvBounds()
+        {
+            Sprite sprite = _spriteRenderer.sprite;
+            if (ReferenceEquals(sprite, _boundsSprite))
+            {
+                return _spriteBounds;
+            }
+
+            _boundsSprite = sprite;
+            _spriteBounds = ComputeSpriteUvBounds(sprite);
+            return _spriteBounds;
+        }
+
+        private static Vector4 ComputeSpriteUvBounds(Sprite sprite)
+        {
+            // 바운드를 모르면 전체 텍스처(0..1)로 폴백 — 셰이더 클램핑이 사실상 비활성화된다.
+            if (sprite == null)
+            {
+                return new Vector4(0f, 0f, 1f, 1f);
+            }
+
+            Vector2[] uv = sprite.uv;
+            if (uv == null || uv.Length == 0)
+            {
+                return new Vector4(0f, 0f, 1f, 1f);
+            }
+
+            Vector2 min = uv[0];
+            Vector2 max = uv[0];
+            for (int i = 1; i < uv.Length; i++)
+            {
+                min = Vector2.Min(min, uv[i]);
+                max = Vector2.Max(max, uv[i]);
+            }
+
+            return new Vector4(min.x, min.y, max.x, max.y);
         }
     }
 }
