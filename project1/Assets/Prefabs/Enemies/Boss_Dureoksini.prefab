@@ -193,7 +193,6 @@ MonoBehaviour:
   _movePattern: 0
   _playerTarget: {fileID: 0}
   _riseHeight: 10
-  _keepDistance: 5
 --- !u!114 &6676783505557286248
 MonoBehaviour:
   m_ObjectHideFlags: 0
