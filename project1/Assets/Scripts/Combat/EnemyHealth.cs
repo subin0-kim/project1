@@ -299,8 +299,9 @@ namespace Mukseon.Gameplay.Combat
 
             if (_monsterData != null)
             {
-                _swipeDirection = DirectionPool[UnityEngine.Random.Range(0, DirectionPool.Length)];
-                OnDirectionChanged?.Invoke(_swipeDirection);
+                // 방향 변경의 단일 진입점을 유지한다: _swipeDirection 직접 할당 + 이벤트 수동 발행 대신
+                // SetSwipeDirection을 경유해, 이후 메서드에 로직이 추가돼도 이 경로가 누락되지 않게 한다.
+                SetSwipeDirection(DirectionPool[UnityEngine.Random.Range(0, DirectionPool.Length)]);
             }
         }
 

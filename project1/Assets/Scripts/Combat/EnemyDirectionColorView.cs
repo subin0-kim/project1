@@ -84,14 +84,26 @@ namespace Mukseon.Gameplay.Combat
             }
         }
 
-        private void HandleDirectionChanged(SwipeDirection direction)
+        // 이벤트 시그니처상 인자를 받지만 현재 방향은 ApplyCurrentColor가 직접 조회하므로 사용하지 않는다.
+        private void HandleDirectionChanged(SwipeDirection _)
         {
             ApplyCurrentColor();
         }
 
-        private void HandleSequenceAdvanced(int currentIndex)
+        private void HandleSequenceAdvanced(int _)
         {
             ApplyCurrentColor();
+        }
+
+        private void Update()
+        {
+            // 애니메이션 등으로 SpriteRenderer의 스프라이트가 방향 이벤트와 무관하게 교체되면
+            // 셰이더에 주입된 UV 바운드가 낡게 된다(아틀라스 적의 프레임 간 바운드 차이).
+            // 스프라이트 변경을 감지해 다시 적용한다(#82). 변경이 없으면 캐시 비교만 수행한다.
+            if (_spriteRenderer != null && !ReferenceEquals(_spriteRenderer.sprite, _boundsSprite))
+            {
+                ApplyCurrentColor();
+            }
         }
 
         /// <summary>현재 방향(시퀀스 적은 현재 타격 대상 방향) 색을 글로우로 적용한다.</summary>
