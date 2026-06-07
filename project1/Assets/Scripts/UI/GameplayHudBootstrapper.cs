@@ -78,6 +78,8 @@ namespace Mukseon.Gameplay.UI
             public Label EllipsisLabel;
             public Action<int> AdvancedHandler;
             public Action SequenceSetHandler;
+            public Action<SwipeDirection> DirectionChangedHandler;
+            public EnemyDirectionColorView ColorView;
         }
 
         private readonly HashSet<EnemyHealth> _trackedEnemies = new HashSet<EnemyHealth>();
@@ -658,6 +660,11 @@ namespace Mukseon.Gameplay.UI
 
             if (enemy != null && _sequenceHuds.TryGetValue(enemy, out SequenceHud hud))
             {
+                if (hud.DirectionChangedHandler != null)
+                {
+                    enemy.OnDirectionChanged -= hud.DirectionChangedHandler;
+                }
+
                 EnemyAttackSequence seq = enemy.AttackSequence;
                 if (seq != null)
                 {
@@ -739,7 +746,14 @@ namespace Mukseon.Gameplay.UI
             container.Add(ellipsis);
             hud.EllipsisLabel = ellipsis;
 
+            // 색 오브 색상을 적의 외곽선 글로우와 동일한 팔레트 인스턴스에서 가져오기 위해 캐싱한다(#82).
+            hud.ColorView = enemy.GetComponent<EnemyDirectionColorView>();
             _sequenceHuds[enemy] = hud;
+
+            // 단일 방향 적(예: MokgwiRoot, MaeguProjectile)은 스폰 이후 SetSwipeDirection으로
+            // 방향이 동적으로 바뀔 수 있으므로, 방향 변경 시 색 오브가 갱신되도록 구독한다(#82).
+            hud.DirectionChangedHandler = _ => RefreshSequenceHud(enemy);
+            enemy.OnDirectionChanged += hud.DirectionChangedHandler;
 
             EnemyAttackSequence seq = enemy.AttackSequence;
             if (seq != null && enemy.UsesAttackSequence)
@@ -765,11 +779,8 @@ namespace Mukseon.Gameplay.UI
 
             if (!enemy.UsesAttackSequence)
             {
-                hud.ArrowLabels[0].text = Arrow(enemy.SwipeDirection);
-                hud.ArrowLabels[0].style.display = DisplayStyle.Flex;
-                hud.ArrowLabels[0].style.color = new Color(1f, 0.94f, 0.5f);
-                hud.ArrowLabels[0].style.fontSize = 24f;
-                hud.ArrowLabels[0].style.unityFontStyleAndWeight = FontStyle.Bold;
+                // 색상 1차 표시(#82): 단일 방향 적은 현재 방향 색 오브 하나만 표시한다.
+                ApplyOrb(hud.ArrowLabels[0], ResolveDirectionColor(hud, enemy.SwipeDirection), true);
                 for (int i = 1; i < 3; i++)
                 {
                     hud.ArrowLabels[i].style.display = DisplayStyle.None;
@@ -790,21 +801,8 @@ namespace Mukseon.Gameplay.UI
 
                 if (seqIdx < total)
                 {
-                    label.style.display = DisplayStyle.Flex;
-                    label.text = Arrow(seq.Sequence[seqIdx]);
-
-                    if (i == 0)
-                    {
-                        label.style.color = new Color(1f, 0.94f, 0.2f);
-                        label.style.fontSize = 28f;
-                        label.style.unityFontStyleAndWeight = FontStyle.Bold;
-                    }
-                    else
-                    {
-                        label.style.color = new Color(1f, 1f, 1f, 0.45f);
-                        label.style.fontSize = 20f;
-                        label.style.unityFontStyleAndWeight = FontStyle.Normal;
-                    }
+                    // 시퀀스 적(보스): 현재 타격 대상(i==0)만 강조 색 오브, 이후는 흐린 색 오브.
+                    ApplyOrb(label, ResolveDirectionColor(hud, seq.Sequence[seqIdx]), i == 0);
                 }
                 else
                 {
@@ -989,6 +987,7 @@ namespace Mukseon.Gameplay.UI
             container.style.translate = new Translate(Length.Percent(-50f), 0f);
         }
 
+        // 접근성 화살표 표시(#83)에서 재사용 예정. 현재 기본 표시는 색 오브.
         private static string Arrow(SwipeDirection direction)
         {
             switch (direction)
@@ -1004,6 +1003,56 @@ namespace Mukseon.Gameplay.UI
                 default:
                     return "•";
             }
+        }
+
+        /// <summary>
+        /// 색 오브 색상을 적의 <see cref="EnemyDirectionColorView"/>(외곽선 글로우와 동일한 팔레트
+        /// 인스턴스)에서 조회한다(#82). 뷰가 없으면 정적 디폴트로 폴백해, HUD 색 오브와 월드의
+        /// 외곽선 글로우 색이 팔레트 에셋을 수정하더라도 항상 일치하도록 보장한다.
+        /// </summary>
+        private static Color ResolveDirectionColor(SequenceHud hud, SwipeDirection direction)
+        {
+            return hud.ColorView != null
+                ? hud.ColorView.ResolveColor(direction)
+                : DirectionColorPalette.DefaultColor(direction);
+        }
+
+        /// <summary>
+        /// 방향 표시 슬롯을 색 오브(둥근 색 구슬)로 스타일링한다(#82, `combat_system.md` §3).
+        /// current=true면 현재 타격 대상으로 크게·불투명·밝은 외곽선 강조, false면 작게·반투명.
+        /// 색상은 <see cref="ResolveDirectionColor"/>가 적 팔레트에서 해석한 값을 받는다.
+        /// </summary>
+        private static void ApplyOrb(Label slot, Color color, bool current)
+        {
+            slot.style.display = DisplayStyle.Flex;
+            slot.text = string.Empty;
+
+            float size = current ? 20f : 14f;
+            slot.style.width = size;
+            slot.style.height = size;
+            slot.style.marginLeft = 3f;
+            slot.style.marginRight = 3f;
+
+            float radius = size * 0.5f;
+            slot.style.borderTopLeftRadius = radius;
+            slot.style.borderTopRightRadius = radius;
+            slot.style.borderBottomLeftRadius = radius;
+            slot.style.borderBottomRightRadius = radius;
+
+            color.a = current ? 1f : 0.5f;
+            slot.style.backgroundColor = color;
+
+            float border = current ? 2f : 0f;
+            slot.style.borderTopWidth = border;
+            slot.style.borderBottomWidth = border;
+            slot.style.borderLeftWidth = border;
+            slot.style.borderRightWidth = border;
+
+            Color borderColor = new Color(1f, 1f, 1f, current ? 0.9f : 0f);
+            slot.style.borderTopColor = borderColor;
+            slot.style.borderBottomColor = borderColor;
+            slot.style.borderLeftColor = borderColor;
+            slot.style.borderRightColor = borderColor;
         }
 
         private static VisualElement Panel(VisualElement parent, float left, float top, float width, float height)

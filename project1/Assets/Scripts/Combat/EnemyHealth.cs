@@ -95,6 +95,9 @@ namespace Mukseon.Gameplay.Combat
         public event Action OnDied;
         public event Action<EnemyHealth> OnDeath;
 
+        /// <summary>현재 방향 속성이 (재)배정될 때 발생(#82). 색상 시각화 갱신에 사용된다.</summary>
+        public event Action<SwipeDirection> OnDirectionChanged;
+
         private void Awake()
         {
             _attackSequence = GetComponent<EnemyAttackSequence>();
@@ -201,6 +204,7 @@ namespace Mukseon.Gameplay.Combat
         public void SetSwipeDirection(SwipeDirection swipeDirection)
         {
             _swipeDirection = swipeDirection;
+            OnDirectionChanged?.Invoke(swipeDirection);
         }
 
         public void SetMoveSpeed(float moveSpeed)
@@ -295,7 +299,9 @@ namespace Mukseon.Gameplay.Combat
 
             if (_monsterData != null)
             {
-                _swipeDirection = DirectionPool[UnityEngine.Random.Range(0, DirectionPool.Length)];
+                // 방향 변경의 단일 진입점을 유지한다: _swipeDirection 직접 할당 + 이벤트 수동 발행 대신
+                // SetSwipeDirection을 경유해, 이후 메서드에 로직이 추가돼도 이 경로가 누락되지 않게 한다.
+                SetSwipeDirection(DirectionPool[UnityEngine.Random.Range(0, DirectionPool.Length)]);
             }
         }
 
