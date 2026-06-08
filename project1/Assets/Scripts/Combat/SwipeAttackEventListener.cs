@@ -30,6 +30,9 @@ namespace Mukseon.Gameplay.Combat
 
         private int _bonusTargets;
 
+        // 동적 방향 변환(#68) n-hit 가드용 스와이프 식별자. 스와이프 1회마다 증가한다.
+        private int _swipeId;
+
         [Header("Debug")]
         [SerializeField]
         private bool _showDebugLogs = true;
@@ -78,6 +81,9 @@ namespace Mukseon.Gameplay.Combat
             {
                 return;
             }
+
+            // 동적 변환(#68): 이 스와이프를 식별해 동일 스와이프의 n-hit 중복 카운트를 막는다.
+            _swipeId++;
 
             // combat_system.md §2: 스와이프 끝점(Touch Up 좌표)에 가장 가까운 적을 우선 타격한다.
             Vector2 attackOrigin = ResolveAttackOrigin(endScreenPosition);
@@ -148,9 +154,19 @@ namespace Mukseon.Gameplay.Combat
                 float actualDamage = usesSequence ? 1f : damage;
                 enemyHealth.ApplyDamage(actualDamage, this);
 
-                if (enemyHealth.IsAlive && usesSequence)
+                if (!enemyHealth.IsAlive)
+                {
+                    continue;
+                }
+
+                if (usesSequence)
                 {
                     enemyHealth.AttackSequence.Advance();
+                }
+                else
+                {
+                    // 동적 방향 변환(#68): 타겟팅이 방향 일치 적만 선택하므로 이 호출 == 동일 방향 타격.
+                    enemyHealth.DirectionConverter?.RegisterDirectionalHit(_swipeId);
                 }
             }
 

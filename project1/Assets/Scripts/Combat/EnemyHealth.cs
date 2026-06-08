@@ -42,6 +42,8 @@ namespace Mukseon.Gameplay.Combat
         private Collider2D[] _colliders;
         private EnemyAttackSequence _attackSequence;
         private bool _attackSequenceCached;
+        private EnemyDirectionConverter _directionConverter;
+        private bool _directionConverterCached;
 
         public float MaxHealth => _maxHealth;
         public float CurrentHealth { get; private set; }
@@ -63,6 +65,21 @@ namespace Mukseon.Gameplay.Combat
                 }
 
                 return _attackSequence;
+            }
+        }
+
+        /// <summary>방향 동적 변환(#68) 컴포넌트. 없으면 null(변환 미적용 적).</summary>
+        public EnemyDirectionConverter DirectionConverter
+        {
+            get
+            {
+                if (!_directionConverterCached)
+                {
+                    _directionConverter = GetComponent<EnemyDirectionConverter>();
+                    _directionConverterCached = true;
+                }
+
+                return _directionConverter;
             }
         }
 

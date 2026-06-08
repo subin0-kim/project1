@@ -25,6 +25,19 @@ namespace Mukseon.Gameplay.Combat
         [Tooltip("글로우 색상을 적용할 셰이더 프로퍼티명. 외곽선 글로우 머티리얼과 일치해야 한다.")]
         private string _glowColorProperty = "_GlowColor";
 
+        [Header("동적 변환 피드백 (#68)")]
+        [SerializeField, Min(0f)]
+        [Tooltip("변환 임박 시 글로우 깜빡임 속도.")]
+        private float _imminentBlinkSpeed = 9f;
+
+        [SerializeField, Range(0f, 1f)]
+        [Tooltip("변환 임박 깜빡임이 흰색으로 섞이는 최대 비율.")]
+        private float _imminentBlinkAmount = 0.7f;
+
+        [SerializeField, Min(0.01f)]
+        [Tooltip("방향 변환 순간 흰색 플래시 지속 시간(초).")]
+        private float _convertFlashDuration = 0.25f;
+
         // 외곽선 글로우 셰이더(DirectionOutlineGlow)가 아틀라스 블리딩 방지를 위해 읽는 스프라이트 UV 바운드.
         private const string SpriteRectProperty = "_SpriteRect";
 
@@ -34,6 +47,11 @@ namespace Mukseon.Gameplay.Combat
         private int _spriteRectId;
         private Sprite _boundsSprite;
         private Vector4 _spriteBounds = new Vector4(0f, 0f, 1f, 1f);
+
+        private EnemyDirectionConverter _converter;
+        private float _imminence;   // 0~1, 변환 임박 강도
+        private float _flashTimer;  // 변환 순간 플래시 잔여 시간
+        private bool _pulseActive;  // 현재 펄스/플래시로 글로우 색을 덮어쓰는 중인지
 
         private void Awake()
         {
@@ -48,6 +66,7 @@ namespace Mukseon.Gameplay.Combat
             }
 
             _attackSequence = GetComponent<EnemyAttackSequence>();
+            _converter = GetComponent<EnemyDirectionConverter>();
             _glowColorId = Shader.PropertyToID(_glowColorProperty);
             _spriteRectId = Shader.PropertyToID(SpriteRectProperty);
             _propertyBlock = new MaterialPropertyBlock();
@@ -66,6 +85,17 @@ namespace Mukseon.Gameplay.Combat
                 _attackSequence.OnSequenceSet += ApplyCurrentColor;
             }
 
+            if (_converter != null)
+            {
+                _converter.OnHitCountChanged += HandleHitCountChanged;
+                _converter.OnConverted += HandleConverted;
+            }
+
+            // 풀 재사용 직후 변환 피드백 상태를 초기화한다.
+            _imminence = 0f;
+            _flashTimer = 0f;
+            _pulseActive = false;
+
             // 스폰/재사용 직후 현재 방향 색을 즉시 반영한다.
             ApplyCurrentColor();
         }
@@ -82,6 +112,12 @@ namespace Mukseon.Gameplay.Combat
                 _attackSequence.OnAdvanced -= HandleSequenceAdvanced;
                 _attackSequence.OnSequenceSet -= ApplyCurrentColor;
             }
+
+            if (_converter != null)
+            {
+                _converter.OnHitCountChanged -= HandleHitCountChanged;
+                _converter.OnConverted -= HandleConverted;
+            }
         }
 
         // 이벤트 시그니처상 인자를 받지만 현재 방향은 ApplyCurrentColor가 직접 조회하므로 사용하지 않는다.
@@ -95,6 +131,19 @@ namespace Mukseon.Gameplay.Combat
             ApplyCurrentColor();
         }
 
+        // 변환 임박 강도 갱신(#68). 0이 되면 평상 색으로 복귀한다. 카운트 값은 피드백에 쓰지 않으므로 무시한다.
+        private void HandleHitCountChanged(int _, float intensity)
+        {
+            _imminence = Mathf.Clamp01(intensity);
+        }
+
+        // 방향 변환 순간(#68): 흰색 플래시를 시작한다. 색 전환 자체는 OnDirectionChanged가 처리한다.
+        // from/to는 현재 미사용이나, 향후 변환 연출(먹물 번짐 파티클 등)을 방향별로 분기하기 위해 시그니처를 유지한다.
+        private void HandleConverted(SwipeDirection from, SwipeDirection to)
+        {
+            _flashTimer = _convertFlashDuration;
+        }
+
         private void Update()
         {
             // 애니메이션 등으로 SpriteRenderer의 스프라이트가 방향 이벤트와 무관하게 교체되면
@@ -104,6 +153,58 @@ namespace Mukseon.Gameplay.Combat
             {
                 ApplyCurrentColor();
             }
+
+            UpdateConversionFeedback();
+        }
+
+        /// <summary>
+        /// 변환 임박 깜빡임 + 변환 순간 플래시를 글로우 색에 반영한다(#68).
+        /// 임박/플래시가 없으면 평상 색으로 1회 복귀 후 매 프레임 쓰기를 멈춘다.
+        /// </summary>
+        private void UpdateConversionFeedback()
+        {
+            if (_spriteRenderer == null || _enemyHealth == null)
+            {
+                return;
+            }
+
+            bool flashing = _flashTimer > 0f;
+            if (flashing)
+            {
+                _flashTimer -= Time.deltaTime;
+            }
+
+            bool imminent = _imminence > 0f;
+            if (!imminent && !flashing)
+            {
+                if (_pulseActive)
+                {
+                    // 펄스 종료 → 평상 색으로 복귀(이후 이벤트 발생 전까지 매 프레임 쓰기 없음).
+                    _pulseActive = false;
+                    ApplyCurrentColor();
+                }
+
+                return;
+            }
+
+            _pulseActive = true;
+
+            float blink = 0f;
+            if (imminent)
+            {
+                // 임박 깜빡임: 강도가 높을수록 빠르고 강하게 흰색으로 점멸한다.
+                float wave = Mathf.Sin(Time.time * _imminentBlinkSpeed * (0.5f + _imminence)) * 0.5f + 0.5f;
+                blink = wave * _imminentBlinkAmount * _imminence;
+            }
+
+            if (flashing)
+            {
+                // 변환 순간 강한 흰색 플래시(시간에 따라 감쇠).
+                blink = Mathf.Max(blink, Mathf.Clamp01(_flashTimer / Mathf.Max(0.01f, _convertFlashDuration)));
+            }
+
+            Color glow = Color.Lerp(ResolveColor(_enemyHealth.SwipeDirection), Color.white, blink);
+            WriteGlow(glow);
         }
 
         /// <summary>현재 방향(시퀀스 적은 현재 타격 대상 방향) 색을 글로우로 적용한다.</summary>
@@ -114,9 +215,14 @@ namespace Mukseon.Gameplay.Combat
                 return;
             }
 
-            Color color = ResolveColor(_enemyHealth.SwipeDirection);
+            WriteGlow(ResolveColor(_enemyHealth.SwipeDirection));
+        }
+
+        /// <summary>주어진 글로우 색과 현재 스프라이트 UV 바운드를 MaterialPropertyBlock으로 적용한다.</summary>
+        private void WriteGlow(Color glow)
+        {
             _spriteRenderer.GetPropertyBlock(_propertyBlock);
-            _propertyBlock.SetColor(_glowColorId, color);
+            _propertyBlock.SetColor(_glowColorId, glow);
             _propertyBlock.SetVector(_spriteRectId, ResolveSpriteUvBounds());
             _spriteRenderer.SetPropertyBlock(_propertyBlock);
         }

@@ -16,6 +16,7 @@ GameObject:
   - component: {fileID: 110446678007002424}
   - component: {fileID: 8797208339621773822}
   - component: {fileID: 3917159128010735540}
+  - component: {fileID: 2685217770002757526}
   m_Layer: 0
   m_Name: Dummy_Right
   m_TagString: Untagged
@@ -222,3 +223,17 @@ MonoBehaviour:
   _spriteRenderer: {fileID: 5588491822506949314}
   _palette: {fileID: 11400000, guid: da07367ae5ae2a340ac99c70977e6437, type: 2}
   _glowColorProperty: _GlowColor
+--- !u!114 &2685217770002757526
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5516339678559892061}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 14befdec210748342a13614bec6adcee, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.Combat.EnemyDirectionConverter
+  _enemyHealth: {fileID: 1475677598667535634}
+  _config: {fileID: 11400000, guid: f1a9553ab329986408b9f0c2d2067df3, type: 2}
