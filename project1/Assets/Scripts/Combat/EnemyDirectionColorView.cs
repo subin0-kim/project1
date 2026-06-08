@@ -131,13 +131,14 @@ namespace Mukseon.Gameplay.Combat
             ApplyCurrentColor();
         }
 
-        // 변환 임박 강도 갱신(#68). 0이 되면 평상 색으로 복귀한다.
-        private void HandleHitCountChanged(int count, float intensity)
+        // 변환 임박 강도 갱신(#68). 0이 되면 평상 색으로 복귀한다. 카운트 값은 피드백에 쓰지 않으므로 무시한다.
+        private void HandleHitCountChanged(int _, float intensity)
         {
             _imminence = Mathf.Clamp01(intensity);
         }
 
         // 방향 변환 순간(#68): 흰색 플래시를 시작한다. 색 전환 자체는 OnDirectionChanged가 처리한다.
+        // from/to는 현재 미사용이나, 향후 변환 연출(먹물 번짐 파티클 등)을 방향별로 분기하기 위해 시그니처를 유지한다.
         private void HandleConverted(SwipeDirection from, SwipeDirection to)
         {
             _flashTimer = _convertFlashDuration;

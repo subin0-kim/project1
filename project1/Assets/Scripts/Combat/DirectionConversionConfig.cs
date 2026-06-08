@@ -18,7 +18,9 @@ namespace Mukseon.Gameplay.Combat
 
         [SerializeField]
         [Tooltip("누적 타격 수별 방향 변환 확률(0~1). index 0 = 1회차. 카운트가 길이를 넘으면 마지막 값을 사용한다.")]
-        private float[] _conversionProbabilities = { 0f, 0.10f, 0.25f, 0.50f, 0.75f };
+        // 정적 폴백과 동일한 초안값을 공유한다(이중 관리 방지). Unity 직렬화 시 값이 복사되어 에셋은 독립 동작하고,
+        // 에셋 없이 실행할 때만 DefaultProbabilities가 폴백으로 사용된다. 어느 쪽도 배열 내용을 변경하지 않는다.
+        private float[] _conversionProbabilities = DefaultProbabilities;
 
         [SerializeField, Min(1)]
         [Tooltip("변환 임박 연출(흔들림/깜빡임)을 시작하는 누적 타격 카운트.")]

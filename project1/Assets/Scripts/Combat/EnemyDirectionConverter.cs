@@ -29,7 +29,9 @@ namespace Mukseon.Gameplay.Combat
         private DirectionConversionConfig _config;
 
         private int _hitCount;
-        private int _lastSwipeId = int.MinValue;
+        // 센티넬은 -1: _swipeId는 0에서 시작해 증가하므로(SwipeAttackEventListener) 절대 충돌하지 않는다.
+        // int.MinValue를 쓰면 _swipeId가 오버플로우해 int.MinValue로 반전될 때 첫 유효 타격이 잘못 차단될 수 있다.
+        private int _lastSwipeId = -1;
 
         /// <summary>누적 타격 카운트가 변할 때 발생. (현재 카운트, 변환 임박 강도 0~1). 흔들림/깜빡임 연출용.</summary>
         public event Action<int, float> OnHitCountChanged;
@@ -99,7 +101,7 @@ namespace Mukseon.Gameplay.Combat
         private void ResetCount()
         {
             _hitCount = 0;
-            _lastSwipeId = int.MinValue;
+            _lastSwipeId = -1;
             OnHitCountChanged?.Invoke(0, 0f);
         }
 
