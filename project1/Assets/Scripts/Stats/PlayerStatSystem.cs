@@ -68,6 +68,21 @@ namespace Mukseon.Gameplay.Stats
             return _runtimeStats.TryGetValue(statType, out RuntimeStat runtimeStat) ? runtimeStat.Value : 0f;
         }
 
+        /// <summary>
+        /// 지정 시스템에서 스탯값을 조회하되, 시스템이 없거나 스탯이 미정의(값 0)면 폴백값을 반환한다(#40).
+        /// 여러 컴포넌트(SoulCollector/SwipeSoulPuller/GangshinController 등)의 폴백 조회 패턴을 한 곳으로 모은다.
+        /// </summary>
+        public static float ResolveValueOrDefault(PlayerStatSystem system, StatType statType, float fallback)
+        {
+            if (system == null)
+            {
+                return fallback;
+            }
+
+            float value = system.GetValue(statType);
+            return value > 0f ? value : fallback;
+        }
+
         public bool AddModifier(StatType statType, StatModifier modifier)
         {
             if (!_runtimeStats.TryGetValue(statType, out RuntimeStat runtimeStat))

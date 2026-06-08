@@ -23,7 +23,7 @@ namespace Mukseon.Gameplay.Progression
         public static SoulCollector ActiveCollector { get; private set; }
 
         /// <summary>자력 반경. StatType.MagnetRadius가 있으면 그 값을, 없으면 직렬화 폴백값을 사용한다(#40).</summary>
-        public float AttractionRadius => Mathf.Max(0.1f, ResolveStat(StatType.MagnetRadius, _attractionRadius));
+        public float AttractionRadius => Mathf.Max(0.1f, PlayerStatSystem.ResolveValueOrDefault(_playerStatSystem, StatType.MagnetRadius, _attractionRadius));
         public float CollectRadius => Mathf.Max(0.05f, _collectRadius);
 
         public event Action<int> OnSoulCollected;
@@ -63,23 +63,12 @@ namespace Mukseon.Gameplay.Progression
             }
 
             // 혼불 획득 배율 × 경험치 획득 배율을 적용한다(#40). 두 스탯이 없으면 1배.
-            float multiplier = ResolveStat(StatType.HonbulAcquireMultiplier, 1f) * ResolveStat(StatType.ExperienceGain, 1f);
+            float multiplier = PlayerStatSystem.ResolveValueOrDefault(_playerStatSystem, StatType.HonbulAcquireMultiplier, 1f)
+                * PlayerStatSystem.ResolveValueOrDefault(_playerStatSystem, StatType.ExperienceGain, 1f);
             int amount = Mathf.Max(1, Mathf.RoundToInt(baseAmount * multiplier));
 
             _playerLevelSystem?.AddExperience(amount);
             OnSoulCollected?.Invoke(amount);
-        }
-
-        /// <summary>스탯값을 조회하되, 스탯이 정의되지 않아 0이면 폴백값을 반환한다.</summary>
-        private float ResolveStat(StatType statType, float fallback)
-        {
-            if (_playerStatSystem == null)
-            {
-                return fallback;
-            }
-
-            float value = _playerStatSystem.GetValue(statType);
-            return value > 0f ? value : fallback;
         }
 
         private void OnDrawGizmosSelected()

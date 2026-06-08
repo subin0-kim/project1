@@ -39,9 +39,6 @@ namespace Mukseon.Gameplay.Progression
         [SerializeField]
         private SwipeAttackEventListener _swipeAttackEventListener;
 
-        [SerializeField]
-        private SoulCollector _soulCollector;
-
         [Header("Progression")]
         [SerializeField, Min(1f)]
         private float _baseExperienceThreshold = 5f;
@@ -91,11 +88,6 @@ namespace Mukseon.Gameplay.Progression
             if (_swipeAttackEventListener == null)
             {
                 _swipeAttackEventListener = GetComponent<SwipeAttackEventListener>();
-            }
-
-            if (_soulCollector == null)
-            {
-                _soulCollector = GetComponent<SoulCollector>();
             }
 
             ResolveSkillDefinitions();

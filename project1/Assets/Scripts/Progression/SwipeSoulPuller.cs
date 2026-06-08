@@ -35,10 +35,10 @@ namespace Mukseon.Gameplay.Progression
         private float _moveDistance = 3f;
 
         /// <summary>스와이프 끝점 당기기 반경. StatType.SwipeEndpointPullRadius가 있으면 그 값을 사용한다(#40).</summary>
-        public float PullRadius => Mathf.Max(0f, ResolveStat(StatType.SwipeEndpointPullRadius, _pullRadius));
+        public float PullRadius => Mathf.Max(0f, PlayerStatSystem.ResolveValueOrDefault(_playerStatSystem, StatType.SwipeEndpointPullRadius, _pullRadius));
 
         /// <summary>한 번 당겨질 때 이동 거리. StatType.HonbulMoveDistance가 있으면 그 값을 사용한다(#40).</summary>
-        public float MoveDistance => Mathf.Max(0f, ResolveStat(StatType.HonbulMoveDistance, _moveDistance));
+        public float MoveDistance => Mathf.Max(0f, PlayerStatSystem.ResolveValueOrDefault(_playerStatSystem, StatType.HonbulMoveDistance, _moveDistance));
 
         private void Awake()
         {
@@ -56,18 +56,6 @@ namespace Mukseon.Gameplay.Progression
             {
                 _playerStatSystem = GetComponent<PlayerStatSystem>();
             }
-        }
-
-        /// <summary>스탯값을 조회하되, 스탯이 정의되지 않아 0이면 폴백값을 반환한다.</summary>
-        private float ResolveStat(StatType statType, float fallback)
-        {
-            if (_playerStatSystem == null)
-            {
-                return fallback;
-            }
-
-            float value = _playerStatSystem.GetValue(statType);
-            return value > 0f ? value : fallback;
         }
 
         private void OnEnable()
