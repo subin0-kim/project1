@@ -137,6 +137,7 @@ GameObject:
   - component: {fileID: 187285035}
   - component: {fileID: 187285038}
   - component: {fileID: 187285039}
+  - component: {fileID: 187285040}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -159,6 +160,7 @@ MonoBehaviour:
   _playerSwipeAttackController: {fileID: 0}
   _playerStatSystem: {fileID: 0}
   _attackOrigin: {fileID: 0}
+  _camera: {fileID: 0}
   _baseDamage: 1
   _targetsPerAttack: 1
   _showDebugLogs: 1
@@ -356,6 +358,22 @@ MonoBehaviour:
   _inkExplosionPrefab: {fileID: 1521378134529826040, guid: ab7ed0e16a58dbf4baec6ec147295338, type: 3}
   _barrierRenderer: {fileID: 1279299310}
   _barrierRadius: 3
+--- !u!114 &187285040
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 187285028}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 17d0d85837d6e3d42a86b5c46545a42a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.Progression.SwipeSoulPuller
+  _swipeAttackController: {fileID: 0}
+  _camera: {fileID: 0}
+  _pullRadius: 2.5
+  _moveDistance: 3
 --- !u!1 &289712652
 GameObject:
   m_ObjectHideFlags: 0
