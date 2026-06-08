@@ -125,6 +125,8 @@ namespace Mukseon.Gameplay.Progression
 
         private void OnDrawGizmosSelected()
         {
+            // 실제 당기기 판정은 런타임 스와이프 끝점(endWorld) 기준이다(HandleAttackExecuted 참고).
+            // 끝점은 런타임에만 알 수 있으므로, 여기서는 당기기 반경의 '크기'만 플레이어 위치에 참고용으로 표시한다.
             Gizmos.color = new Color(0.4f, 1f, 1f, 0.5f);
             Gizmos.DrawWireSphere(transform.position, PullRadius);
         }

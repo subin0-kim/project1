@@ -23,6 +23,14 @@ namespace Mukseon.Gameplay.Progression
 
         private static readonly List<SoulOrb> _activeSouls = new List<SoulOrb>(64);
 
+        // Enter Play Mode 설정에서 Domain Reload가 꺼져 있으면 static 필드가 세션 간 유지된다.
+        // 이전 세션의 파괴된 혼불 참조가 남아 누수/불필요한 순회를 일으키지 않도록 시작 시 비운다.
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetActiveSouls()
+        {
+            _activeSouls.Clear();
+        }
+
         /// <summary>현재 씬에 활성화된 모든 혼불. 스와이프 끝점 당기기 탐색용(읽기 전용).</summary>
         public static IReadOnlyList<SoulOrb> ActiveSouls => _activeSouls;
 
@@ -167,7 +175,8 @@ namespace Mukseon.Gameplay.Progression
         {
             // 드랍 직후 산개 속도를 점차 감쇠시켜 제자리에 정착한다.
             transform.position += _scatterVelocity * Time.deltaTime;
-            _scatterVelocity = Vector3.Lerp(_scatterVelocity, Vector3.zero, Time.deltaTime * 4f);
+            // 프레임레이트 독립적 지수 감쇠. Lerp 방식은 프레임 드랍 시 deltaTime*4가 1을 넘으면 속도가 즉시 끊긴다.
+            _scatterVelocity *= Mathf.Exp(-4f * Time.deltaTime);
             TickDespawn();
         }
 
@@ -197,7 +206,9 @@ namespace Mukseon.Gameplay.Progression
 
             _currentAttractSpeed += _attractAcceleration * Time.deltaTime;
             Vector3 dir = distance > 0.001f ? toCenter / distance : Vector3.zero;
-            transform.position += dir * _currentAttractSpeed * Time.deltaTime;
+            // 가속된 속도가 남은 거리를 넘어 중앙을 지나치며 진동하는 것을 막는다(오버슈트 클램프).
+            float step = Mathf.Min(_currentAttractSpeed * Time.deltaTime, distance);
+            transform.position += dir * step;
         }
 
         private void EnterAttracting()
