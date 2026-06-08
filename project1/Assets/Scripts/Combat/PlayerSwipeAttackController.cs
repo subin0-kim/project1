@@ -1,5 +1,6 @@
 using System;
 using Mukseon.Core.Input;
+using Mukseon.Gameplay.Stats;
 using UnityEngine;
 
 namespace Mukseon.Gameplay.Combat
@@ -11,6 +12,15 @@ namespace Mukseon.Gameplay.Combat
         [Header("Input")]
         [SerializeField]
         private SwipeInputDetector _swipeInputDetector;
+
+        [SerializeField]
+        private PlayerStatSystem _playerStatSystem;
+
+        // 공격 쿨타임 하한(#40, stat_balance_mvp.md — 쿨타임이 지나치게 낮아지지 않도록).
+        private const float MinAttackCooldown = 0.1f;
+
+        // 마지막 공격 시각(unscaledTime). 강신 슬로모/일시정지에 영향받지 않도록 실시간 기준으로 둔다.
+        private float _lastAttackTime = -999f;
 
         [Header("Animator Parameters")]
         [SerializeField]
@@ -44,6 +54,11 @@ namespace Mukseon.Gameplay.Combat
                 _swipeInputDetector = FindSwipeDetectorInScene();
             }
 
+            if (_playerStatSystem == null)
+            {
+                _playerStatSystem = GetComponent<PlayerStatSystem>();
+            }
+
             BuildAnimatorTriggerHashes();
 
             if (_animator.runtimeAnimatorController == null)
@@ -74,8 +89,27 @@ namespace Mukseon.Gameplay.Combat
 
         private void HandleSwipeDetected(SwipeDirection direction, Vector2 endScreenPosition)
         {
+            // 공격 쿨타임(#40): 쿨타임 내 재입력은 공격·애니메이션·혼불 당기기 전부 무시한다.
+            if (!CanAttackNow())
+            {
+                return;
+            }
+
+            _lastAttackTime = Time.unscaledTime;
             ExecuteAttack(direction, endScreenPosition);
             TriggerAttackAnimation(direction);
+        }
+
+        private bool CanAttackNow()
+        {
+            float cooldown = _playerStatSystem != null ? _playerStatSystem.GetValue(StatType.AttackCooldown) : 0f;
+            if (cooldown <= 0f)
+            {
+                return true;
+            }
+
+            cooldown = Mathf.Max(MinAttackCooldown, cooldown);
+            return Time.unscaledTime - _lastAttackTime >= cooldown;
         }
 
         private void ExecuteAttack(SwipeDirection direction, Vector2 endScreenPosition)

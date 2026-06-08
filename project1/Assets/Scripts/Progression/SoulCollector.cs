@@ -1,4 +1,5 @@
-﻿using System;
+using System;
+using Mukseon.Gameplay.Stats;
 using UnityEngine;
 
 namespace Mukseon.Gameplay.Progression
@@ -9,7 +10,11 @@ namespace Mukseon.Gameplay.Progression
         [SerializeField]
         private PlayerLevelSystem _playerLevelSystem;
 
+        [SerializeField]
+        private PlayerStatSystem _playerStatSystem;
+
         [SerializeField, Min(0.1f)]
+        [Tooltip("StatType.MagnetRadius가 정의되지 않았을 때 사용하는 자력 반경 폴백값.")]
         private float _attractionRadius = 2.5f;
 
         [SerializeField, Min(0.05f)]
@@ -17,7 +22,8 @@ namespace Mukseon.Gameplay.Progression
 
         public static SoulCollector ActiveCollector { get; private set; }
 
-        public float AttractionRadius => Mathf.Max(0.1f, _attractionRadius);
+        /// <summary>자력 반경. StatType.MagnetRadius가 있으면 그 값을, 없으면 직렬화 폴백값을 사용한다(#40).</summary>
+        public float AttractionRadius => Mathf.Max(0.1f, ResolveStat(StatType.MagnetRadius, _attractionRadius));
         public float CollectRadius => Mathf.Max(0.05f, _collectRadius);
 
         public event Action<int> OnSoulCollected;
@@ -27,6 +33,11 @@ namespace Mukseon.Gameplay.Progression
             if (_playerLevelSystem == null)
             {
                 _playerLevelSystem = GetComponent<PlayerLevelSystem>();
+            }
+
+            if (_playerStatSystem == null)
+            {
+                _playerStatSystem = GetComponent<PlayerStatSystem>();
             }
         }
 
@@ -45,19 +56,30 @@ namespace Mukseon.Gameplay.Progression
 
         public void Collect(int experienceAmount)
         {
-            int amount = Mathf.Max(0, experienceAmount);
-            if (amount <= 0)
+            int baseAmount = Mathf.Max(0, experienceAmount);
+            if (baseAmount <= 0)
             {
                 return;
             }
+
+            // 혼불 획득 배율 × 경험치 획득 배율을 적용한다(#40). 두 스탯이 없으면 1배.
+            float multiplier = ResolveStat(StatType.HonbulAcquireMultiplier, 1f) * ResolveStat(StatType.ExperienceGain, 1f);
+            int amount = Mathf.Max(1, Mathf.RoundToInt(baseAmount * multiplier));
 
             _playerLevelSystem?.AddExperience(amount);
             OnSoulCollected?.Invoke(amount);
         }
 
-        public void AddPickupRadius(float amount)
+        /// <summary>스탯값을 조회하되, 스탯이 정의되지 않아 0이면 폴백값을 반환한다.</summary>
+        private float ResolveStat(StatType statType, float fallback)
         {
-            _attractionRadius = Mathf.Max(0.1f, _attractionRadius + amount);
+            if (_playerStatSystem == null)
+            {
+                return fallback;
+            }
+
+            float value = _playerStatSystem.GetValue(statType);
+            return value > 0f ? value : fallback;
         }
 
         private void OnDrawGizmosSelected()

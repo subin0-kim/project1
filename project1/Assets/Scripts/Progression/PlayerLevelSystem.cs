@@ -281,9 +281,10 @@ namespace Mukseon.Gameplay.Progression
                     }
                     break;
                 case LevelUpSkillEffectType.PickupRadius:
-                    if (_soulCollector != null)
+                    if (_playerStatSystem != null)
                     {
-                        _soulCollector.AddPickupRadius(definition.Value);
+                        // 혼불 자력 반경을 Flat StatModifier로 증가시킨다(#40). SoulCollector가 MagnetRadius 스탯을 읽는다.
+                        _playerStatSystem.AddModifier(StatType.MagnetRadius, new StatModifier(definition.Value, StatModifierType.Flat, this));
                     }
                     break;
                 default:

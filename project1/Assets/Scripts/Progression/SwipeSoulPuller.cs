@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Mukseon.Core.Input;
 using Mukseon.Gameplay.Combat;
+using Mukseon.Gameplay.Stats;
 using UnityEngine;
 
 namespace Mukseon.Gameplay.Progression
@@ -19,19 +20,25 @@ namespace Mukseon.Gameplay.Progression
         private PlayerSwipeAttackController _swipeAttackController;
 
         [SerializeField]
+        private PlayerStatSystem _playerStatSystem;
+
+        [SerializeField]
         private Camera _camera;
 
-        [Header("당기기 설정 (#40에서 스탯 연동 예정)")]
+        [Header("당기기 폴백 설정")]
         [SerializeField, Min(0f)]
-        [Tooltip("스와이프 끝점 기준 혼불을 탐색·당기는 반경.")]
+        [Tooltip("StatType.SwipeEndpointPullRadius가 없을 때 사용하는 당기기 반경 폴백값.")]
         private float _pullRadius = 2.5f;
 
         [SerializeField, Min(0f)]
-        [Tooltip("한 번 당겨질 때 혼불이 중앙 방향으로 이동하는 거리.")]
+        [Tooltip("StatType.HonbulMoveDistance가 없을 때 사용하는 이동 거리 폴백값.")]
         private float _moveDistance = 3f;
 
-        public float PullRadius => Mathf.Max(0f, _pullRadius);
-        public float MoveDistance => Mathf.Max(0f, _moveDistance);
+        /// <summary>스와이프 끝점 당기기 반경. StatType.SwipeEndpointPullRadius가 있으면 그 값을 사용한다(#40).</summary>
+        public float PullRadius => Mathf.Max(0f, ResolveStat(StatType.SwipeEndpointPullRadius, _pullRadius));
+
+        /// <summary>한 번 당겨질 때 이동 거리. StatType.HonbulMoveDistance가 있으면 그 값을 사용한다(#40).</summary>
+        public float MoveDistance => Mathf.Max(0f, ResolveStat(StatType.HonbulMoveDistance, _moveDistance));
 
         private void Awake()
         {
@@ -44,6 +51,23 @@ namespace Mukseon.Gameplay.Progression
             {
                 _swipeAttackController = FindSwipeAttackController();
             }
+
+            if (_playerStatSystem == null)
+            {
+                _playerStatSystem = GetComponent<PlayerStatSystem>();
+            }
+        }
+
+        /// <summary>스탯값을 조회하되, 스탯이 정의되지 않아 0이면 폴백값을 반환한다.</summary>
+        private float ResolveStat(StatType statType, float fallback)
+        {
+            if (_playerStatSystem == null)
+            {
+                return fallback;
+            }
+
+            float value = _playerStatSystem.GetValue(statType);
+            return value > 0f ? value : fallback;
         }
 
         private void OnEnable()

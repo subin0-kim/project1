@@ -18,6 +18,9 @@ namespace Mukseon.Gameplay.Combat
 
         private const float AbsoluteMinHealth = 1f;
 
+        // 방어력 데미지 감소율 상한(#40, stat_balance_mvp.md — 최대 70%).
+        private const float MaxDefenseReduction = 0.7f;
+
         [Header("Debug")]
         [SerializeField]
         private bool _showDebugLogs;
@@ -93,8 +96,10 @@ namespace Mukseon.Gameplay.Combat
                 return;
             }
 
+            float mitigatedAmount = ApplyDefense(amount);
+
             float previous = _currentHealth;
-            _currentHealth = Mathf.Max(0f, _currentHealth - amount);
+            _currentHealth = Mathf.Max(0f, _currentHealth - mitigatedAmount);
 
             float actualDamage = previous - _currentHealth;
 
@@ -185,6 +190,24 @@ namespace Mukseon.Gameplay.Combat
             }
 
             OnHealthChanged?.Invoke(_currentHealth, _resolvedMaxHealth);
+        }
+
+        /// <summary>방어력(StatType.Defense, 감소율 %)을 적용해 실제 피해량을 반환한다(#40). 상한 70%.</summary>
+        private float ApplyDefense(float amount)
+        {
+            if (_playerStatSystem == null)
+            {
+                return amount;
+            }
+
+            float defensePercent = _playerStatSystem.GetValue(StatType.Defense);
+            if (defensePercent <= 0f)
+            {
+                return amount;
+            }
+
+            float reduction = Mathf.Clamp(defensePercent / 100f, 0f, MaxDefenseReduction);
+            return amount * (1f - reduction);
         }
 
         private void ResolveMaxHealth()

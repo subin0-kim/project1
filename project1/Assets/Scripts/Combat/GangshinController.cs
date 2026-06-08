@@ -141,7 +141,14 @@ namespace Mukseon.Gameplay.Combat
 
         private void HandleAnyEnemyDied(EnemyHealth enemyHealth)
         {
-            AddGauge(_gaugePerKill);
+            // 강신 게이지 충전 배율(#40)을 적용한다. 스탯이 없으면 1배.
+            float chargeRate = _playerStatSystem != null ? _playerStatSystem.GetValue(StatType.GangshinGaugeChargeRate) : 0f;
+            if (chargeRate <= 0f)
+            {
+                chargeRate = 1f;
+            }
+
+            AddGauge(_gaugePerKill * chargeRate);
         }
 
         private void HandleActivationRequested()

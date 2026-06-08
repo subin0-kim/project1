@@ -204,6 +204,16 @@ namespace Mukseon.Gameplay.Combat
 
         private int ResolveTargetsPerAttack()
         {
+            // 다중 히트 스탯(#40)이 정의되어 있으면 동시 타격 수의 기준값으로 사용한다.
+            if (_playerStatSystem != null)
+            {
+                float multiHit = _playerStatSystem.GetValue(StatType.MultiHit);
+                if (multiHit > 0f)
+                {
+                    return Mathf.Max(1, Mathf.RoundToInt(multiHit));
+                }
+            }
+
             CharacterData characterData = _playerStatSystem?.CharacterData;
             return characterData != null ? characterData.TargetsPerAttack : _targetsPerAttack;
         }
