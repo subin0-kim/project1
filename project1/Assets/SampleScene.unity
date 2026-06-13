@@ -177,6 +177,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Mukseon.Gameplay.Combat.PlayerSwipeAttackController
   _swipeInputDetector: {fileID: 0}
+  _playerStatSystem: {fileID: 0}
   _upAttackTrigger: AttackUp
   _downAttackTrigger: AttackDown
   _leftAttackTrigger: AttackLeft
@@ -292,7 +293,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.Progression.PlayerLevelSystem
   _playerStatSystem: {fileID: 0}
   _swipeAttackEventListener: {fileID: 0}
-  _soulCollector: {fileID: 0}
   _baseExperienceThreshold: 5
   _thresholdGrowthFactor: 1.35
   _pauseGameOnSelection: 1
@@ -310,6 +310,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.Progression.SoulCollector
   _playerLevelSystem: {fileID: 0}
+  _playerStatSystem: {fileID: 0}
   _attractionRadius: 2.5
   _collectRadius: 0.45
 --- !u!114 &187285037
@@ -371,9 +372,41 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.Progression.SwipeSoulPuller
   _swipeAttackController: {fileID: 0}
+  _playerStatSystem: {fileID: 0}
   _camera: {fileID: 0}
   _pullRadius: 2.5
   _moveDistance: 3
+--- !u!1 &275740323
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 275740324}
+  m_Layer: 0
+  m_Name: BossSpawnPoint
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &275740324
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 275740323}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 2.22, y: -0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &289712652
 GameObject:
   m_ObjectHideFlags: 0
@@ -500,6 +533,57 @@ Transform:
   - {fileID: 513494811}
   - {fileID: 892543206}
   m_Father: {fileID: 1453966978}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &332375238
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 332375240}
+  - component: {fileID: 332375239}
+  m_Layer: 0
+  m_Name: BossEncounterDirector
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &332375239
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 332375238}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7dd05940247ffed4facbec1e8fc4d6b9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.Combat.BossEncounterDirector
+  _director: {fileID: 1453966977}
+  _bossPrefab: {fileID: 2681383079461457332, guid: f6f5de12d7863c04ab83d3482bca5c6b, type: 3}
+  _bossSpawnPoint: {fileID: 275740324}
+  _introDurationSeconds: 2
+  _invincibleDuringIntro: 1
+  _deathDelaySeconds: 1.5
+  _showDebugLogs: 0
+--- !u!4 &332375240
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 332375238}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: -0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &513494810
 GameObject:
@@ -1498,3 +1582,5 @@ SceneRoots:
   - {fileID: 1453966978}
   - {fileID: 2014046898}
   - {fileID: 1252770135}
+  - {fileID: 332375240}
+  - {fileID: 275740324}
