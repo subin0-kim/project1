@@ -80,7 +80,8 @@ namespace Mukseon.Gameplay.Combat
 
             if (!_bossData.IsValid(out string reason))
             {
-                Debug.LogWarning($"[BossHealthComponent] BossData '{_bossData.name}' 무효: {reason}", this);
+                Debug.LogWarning($"[BossHealthComponent] BossData '{_bossData.name}' 무효 — 초기화를 건너뜁니다: {reason}", this);
+                return;
             }
 
             EnemyHealth health = Health;
@@ -142,6 +143,13 @@ namespace Mukseon.Gameplay.Combat
         private void HandleDamaged(float currentHealth, float actualDamage)
         {
             if (_bossData == null || _enemyHealth == null)
+            {
+                return;
+            }
+
+            // 치명타로 체력이 0 이하가 되면 사망 처리에 맡기고 페이즈 전환 감지는 건너뛴다
+            // (사망 연출과 페이즈 전환 연출/패턴이 동시에 트리거되는 오동작 방지).
+            if (currentHealth <= 0f)
             {
                 return;
             }

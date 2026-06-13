@@ -1234,7 +1234,7 @@ MonoBehaviour:
   - 3
   - 6
   - 9
-  _bossMinuteMark: 0.2
+  _bossMinuteMark: 10
   _defaultSpawnIntervalSeconds: 1
   _defaultMaxAliveEnemies: 5
   _showDebugLogs: 0

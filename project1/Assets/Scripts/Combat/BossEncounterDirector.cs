@@ -118,30 +118,42 @@ namespace Mukseon.Gameplay.Combat
             Vector3 spawnPosition = ResolveSpawnPosition();
             GameObject prefabGO = _bossPrefab.gameObject;
 
-            if (PoolManager.Instance != null)
-            {
-                GameObject spawned = PoolManager.Instance.GetInactive(prefabGO, spawnPosition, Quaternion.identity);
-                if (spawned == null)
-                {
-                    return false;
-                }
+            bool pooled = PoolManager.Instance != null;
+            GameObject spawned = pooled
+                ? PoolManager.Instance.GetInactive(prefabGO, spawnPosition, Quaternion.identity)
+                : Instantiate(prefabGO, spawnPosition, Quaternion.identity);
 
-                CacheBossComponents(spawned);
-                InitializeBoss();
-                _activeBoss.PrepareForReuse();
-                spawned.SetActive(true);
-            }
-            else
+            if (spawned == null)
             {
-                GameObject spawned = Instantiate(prefabGO, spawnPosition, Quaternion.identity);
-                CacheBossComponents(spawned);
-                InitializeBoss();
+                Debug.LogError("[BossEncounterDirector] 보스 스폰에 실패했습니다.", this);
+                return false;
             }
 
+            CacheBossComponents(spawned);
+
+            // null 체크는 _activeBoss를 사용(PrepareForReuse 등)하기 전에 수행해 NRE를 방지한다.
             if (_activeBoss == null)
             {
                 Debug.LogError("[BossEncounterDirector] 스폰된 보스에 EnemyHealth 컴포넌트가 없습니다.", this);
+                if (pooled)
+                {
+                    PoolManager.Instance.Release(spawned);
+                }
+                else
+                {
+                    Destroy(spawned);
+                }
+
                 return false;
+            }
+
+            InitializeBoss();
+
+            if (pooled)
+            {
+                // 풀 재사용 시에만 상태 복원이 필요하다. Instantiate 신규 인스턴스는 Awake에서 초기화되므로 생략한다.
+                _activeBoss.PrepareForReuse();
+                spawned.SetActive(true);
             }
 
             // PrepareForReuse가 IsTargetable을 true로 되돌리므로, 무적 처리는 그 이후에 적용한다.
@@ -150,6 +162,8 @@ namespace Mukseon.Gameplay.Combat
                 _activeBossHealth.SetInvincible(true);
             }
 
+            // 풀 재사용 시 이전 구독이 남아 있을 수 있으므로 중복 구독을 방지한다.
+            _activeBoss.OnDeath -= HandleBossDeath;
             _activeBoss.OnDeath += HandleBossDeath;
             OnBossSpawned?.Invoke(_activeBoss);
 
@@ -209,10 +223,10 @@ namespace Mukseon.Gameplay.Combat
                 boss.OnDeath -= HandleBossDeath;
             }
 
-            StartCoroutine(DeathRoutine());
+            StartCoroutine(DeathRoutine(boss));
         }
 
-        private IEnumerator DeathRoutine()
+        private IEnumerator DeathRoutine(EnemyHealth boss)
         {
             if (_deathDelaySeconds > 0f)
             {
@@ -220,6 +234,25 @@ namespace Mukseon.Gameplay.Combat
             }
 
             OnChapterCleared?.Invoke();
+
+            // 사망 연출 후 보스 오브젝트를 풀에 반환(없으면 파괴)해 씬에 남지 않도록 정리한다.
+            if (boss != null)
+            {
+                if (PoolManager.Instance != null)
+                {
+                    PoolManager.Instance.Release(boss.gameObject);
+                }
+                else
+                {
+                    Destroy(boss.gameObject);
+                }
+            }
+
+            if (_activeBoss == boss)
+            {
+                _activeBoss = null;
+                _activeBossHealth = null;
+            }
 
 #if UNITY_EDITOR
             if (_showDebugLogs)

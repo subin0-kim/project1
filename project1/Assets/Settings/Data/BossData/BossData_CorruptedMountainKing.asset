@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: BossData_CorruptedMountainKing
   m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.Combat.BossData
   _bossId: boss.CorruptedMountainKing
-  _displayName: Boss
+  _displayName: "\uD0C0\uB77D\uD55C \uC0B0\uAD70"
   _totalHealth: 1000
   _phaseHealthThresholds:
   - 0.5
