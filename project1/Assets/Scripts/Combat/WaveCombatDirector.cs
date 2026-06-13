@@ -171,6 +171,18 @@ namespace Mukseon.Gameplay.Combat
             _currentWaveIndex = -1;
         }
 
+        /// <summary>
+        /// 현재 추적 중인 모든 일반 적을 즉시 풀로 반환한다(보스 등장 시 사용, #37).
+        /// 내부 디스폰 경로(<see cref="CleanupAliveEnemies"/>)는 자기 OnDeath 핸들러를 떼고 풀에 반환하므로
+        /// <see cref="EnemyHealth.OnDeath"/>가 발행되지 않는다 → 영혼 등 처치 보상이 드랍되지 않는다.
+        /// 보스 본체는 별도 시스템(#37 BossEncounterDirector)이 스폰하므로 여기서 영향받지 않는다.
+        /// </summary>
+        public void DespawnTrackedEnemies()
+        {
+            CleanupAliveEnemies(true);
+            NotifyRemainingEnemyCountChanged();
+        }
+
         internal void Tick(float deltaTime)
         {
             if (!_isRunning)
