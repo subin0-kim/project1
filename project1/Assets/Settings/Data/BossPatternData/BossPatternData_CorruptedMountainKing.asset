@@ -1,0 +1,55 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f6345277822891741f13e4f998bcc52, type: 3}
+  m_Name: BossPatternData_CorruptedMountainKing
+  m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.Combat.MountainKingBossPatternData
+  _phases:
+  - _phaseName: "1\uD398\uC774\uC988"
+    _patterns:
+    - _type: 0
+      _telegraphSeconds: 1
+      _executeSeconds: 0.5
+      _recoverSeconds: 0.5
+      _counterType: 1
+      _counterWindowSeconds: 0
+      _unhandledDamage: 15
+      _counterBonusDamage: 25
+      _indicatorOffset: {x: 0, y: 0}
+      _minionCount: 0
+    - _type: 1
+      _telegraphSeconds: 1.2
+      _executeSeconds: 0.4
+      _recoverSeconds: 0.5
+      _counterType: 2
+      _counterWindowSeconds: 0
+      _unhandledDamage: 15
+      _counterBonusDamage: 25
+      _indicatorOffset: {x: -2, y: 0}
+      _minionCount: 0
+    - _type: 2
+      _telegraphSeconds: 1.5
+      _executeSeconds: 0.5
+      _recoverSeconds: 0.8
+      _counterType: 0
+      _counterWindowSeconds: 0
+      _unhandledDamage: 0
+      _counterBonusDamage: 0
+      _indicatorOffset: {x: 0, y: 0}
+      _minionCount: 3
+    _cycleIntervalMinSeconds: 8
+    _cycleIntervalMaxSeconds: 10
+  _counterBonusMultiplier: 1.5
+  _offscreenMargin: 2
+  _onscreenMargin: 2
+  _approachSpeed: 12
+  _retreatSpeed: 10
+  _phaseTransitionCutsceneSeconds: 2
