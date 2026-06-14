@@ -19,10 +19,11 @@ MonoBehaviour:
       _telegraphSeconds: 1
       _executeSeconds: 0.5
       _recoverSeconds: 0.5
-      _counterType: 1
+      _counterType: 3
       _counterWindowSeconds: 0
       _unhandledDamage: 15
-      _counterBonusDamage: 25
+      _counterBonusDamage: 0
+      _counterDamageThreshold: 50
       _indicatorOffset: {x: 0, y: 0}
       _minionCount: 0
     - _type: 1
@@ -33,7 +34,8 @@ MonoBehaviour:
       _counterWindowSeconds: 0
       _unhandledDamage: 15
       _counterBonusDamage: 25
-      _indicatorOffset: {x: -2, y: 0}
+      _counterDamageThreshold: 0
+      _indicatorOffset: {x: -0.2, y: 0.1}
       _minionCount: 0
     - _type: 2
       _telegraphSeconds: 1.5
@@ -43,6 +45,7 @@ MonoBehaviour:
       _counterWindowSeconds: 0
       _unhandledDamage: 0
       _counterBonusDamage: 0
+      _counterDamageThreshold: 0
       _indicatorOffset: {x: 0, y: 0}
       _minionCount: 3
     _cycleIntervalMinSeconds: 8

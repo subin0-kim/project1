@@ -203,7 +203,6 @@ MonoBehaviour:
   _swipeInputDetector: {fileID: 0}
   _minionSpawner: {fileID: 0}
   _playerHealth: {fileID: 0}
-  _indicatorPrefab: {fileID: 9118382497136757938, guid: 63eb3b750e7e04e488cbeb4dd865ca58, type: 3}
   _camera: {fileID: 0}
   _homeOnRightSide: 1
   _showDebugLogs: 0

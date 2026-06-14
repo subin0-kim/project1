@@ -60,6 +60,20 @@ namespace Mukseon.Tests.EditMode
         }
 
         [Test]
+        public void MirrorOffsetForSide_FlipsXOnLeftKeepsY()
+        {
+            var offset = new Vector2(0.3f, 0.1f);
+
+            Assert.That(
+                MountainKingBossController.MirrorOffsetForSide(offset, true),
+                Is.EqualTo(offset), "오른쪽 측면은 오프셋을 그대로 사용한다.");
+
+            Assert.That(
+                MountainKingBossController.MirrorOffsetForSide(offset, false),
+                Is.EqualTo(new Vector2(-0.3f, 0.1f)), "왼쪽 측면은 x만 미러링하고 y는 유지한다.");
+        }
+
+        [Test]
         public void SelectNextPatternIndex_AvoidsImmediateRepeat()
         {
             GameObject go = MakeBoss(out MountainKingBossController controller);

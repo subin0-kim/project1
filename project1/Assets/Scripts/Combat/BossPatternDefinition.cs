@@ -41,6 +41,10 @@ namespace Mukseon.Gameplay.Combat
         [SerializeField, Min(0f)]
         private float _counterBonusDamage = 20f;
 
+        [Tooltip("DamageThreshold 카운터 전용 — 카운터 윈도우 동안 보스에 누적해야 하는 피해량. 도달 시 패턴 파훼. 다른 카운터 타입에서는 무시된다.")]
+        [SerializeField, Min(0f)]
+        private float _counterDamageThreshold = 0f;
+
         [Tooltip("인디케이터 위치 오프셋(보스 기준, 월드 단위). 하드코딩 금지 — 아트 기준 수동 조정.")]
         [SerializeField]
         private Vector2 _indicatorOffset = Vector2.zero;
@@ -56,11 +60,19 @@ namespace Mukseon.Gameplay.Combat
         public BossCounterType CounterType => _counterType;
         public float UnhandledDamage => Mathf.Max(0f, _unhandledDamage);
         public float CounterBonusDamage => Mathf.Max(0f, _counterBonusDamage);
+        public float CounterDamageThreshold => Mathf.Max(0f, _counterDamageThreshold);
         public Vector2 IndicatorOffset => _indicatorOffset;
         public int MinionCount => Mathf.Max(0, _minionCount);
 
         /// <summary>카운터로 파훼 가능한 패턴인지 여부.</summary>
         public bool IsCounterable => _counterType != BossCounterType.None;
+
+        /// <summary>
+        /// 패턴 인디케이터(색 오브)를 표시할지 여부. 카운터 방향이 본체와 독립인
+        /// <see cref="BossCounterType.PatternDirection"/>일 때만 표시한다.
+        /// 돌진(BossDirection)은 본체 색이 곧 카운터 색이라, 포효(None)는 카운터가 없어 불필요하다.
+        /// </summary>
+        public bool ShowsIndicator => _counterType == BossCounterType.PatternDirection;
 
         /// <summary>실제 카운터 입력 수령 시간(초). 미지정(0 이하) 시 예고+발동 시간으로 폴백.</summary>
         public float ResolvedCounterWindowSeconds =>
@@ -81,7 +93,8 @@ namespace Mukseon.Gameplay.Combat
             float unhandledDamage = 10f,
             float counterBonusDamage = 20f,
             int minionCount = 0,
-            Vector2 indicatorOffset = default)
+            Vector2 indicatorOffset = default,
+            float counterDamageThreshold = 0f)
         {
             _type = type;
             _counterType = counterType;
@@ -93,6 +106,7 @@ namespace Mukseon.Gameplay.Combat
             _counterBonusDamage = counterBonusDamage;
             _minionCount = minionCount;
             _indicatorOffset = indicatorOffset;
+            _counterDamageThreshold = counterDamageThreshold;
         }
     }
 }

@@ -14,5 +14,11 @@ namespace Mukseon.Gameplay.Combat
 
         /// <summary>패턴이 예고 시점에 굴린 방향으로 카운터. 인디케이터에 표시되는 방향과 동일(발톱 할퀴기).</summary>
         PatternDirection = 2,
+
+        /// <summary>
+        /// 카운터 윈도우 동안 보스에 누적된 피해가 임계치에 도달하면 파훼(돌진). 방향 입력과 무관 —
+        /// 본체를 계속 공격하는 것만으로 파훼되는 방향 카운터의 무의미함을 피하기 위해 일정 피해를 강제한다.
+        /// </summary>
+        DamageThreshold = 3,
     }
 }
