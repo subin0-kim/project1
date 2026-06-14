@@ -20,5 +20,11 @@ namespace Mukseon.Gameplay.Combat
         /// 본체를 계속 공격하는 것만으로 파훼되는 방향 카운터의 무의미함을 피하기 위해 일정 피해를 강제한다.
         /// </summary>
         DamageThreshold = 3,
+
+        /// <summary>
+        /// 예고 시점에 굴린 방향 시퀀스를 순서대로 모두 스와이프해야 파훼(연속 할퀴기).
+        /// 인디케이터가 현재 단계 방향을 표시하며, 성공할 때마다 다음 방향으로 넘어간다.
+        /// </summary>
+        DirectionSequence = 4,
     }
 }

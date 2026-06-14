@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using Mukseon.Core.Input;
 using Mukseon.Gameplay.UI;
 using UnityEngine;
@@ -96,6 +97,10 @@ namespace Mukseon.Gameplay.Combat
         private bool _counterWindowOpen;
         private bool _counterResolved;
         private float _counterDamageAccumulated;
+
+        // 연속 할퀴기(DirectionSequence) 카운터 상태: 순서대로 입력해야 하는 방향 목록과 현재 진행 단계.
+        private readonly List<SwipeDirection> _activeCounterSequence = new List<SwipeDirection>(4);
+        private int _sequenceProgress;
 
         /// <summary>페이즈 전환이 실제 적용된 순간 발행(인자: 진입한 페이즈 인덱스). 2페이즈 연출/패턴 훅.</summary>
         public event Action<int> OnPhaseChanged;
@@ -367,6 +372,15 @@ namespace Mukseon.Gameplay.Combat
             // 매 패턴 시작 시 본체 방향을 새로 굴린다(돌진의 BossDirection 카운터가 매번 달라지도록).
             RollBossDirection();
 
+            bool isSequence = pattern.CounterType == BossCounterType.DirectionSequence;
+
+            _activeCounterSequence.Clear();
+            _sequenceProgress = 0;
+            if (isSequence)
+            {
+                RollDirectionSequence(pattern.CounterSequenceLength, _activeCounterSequence);
+            }
+
             SwipeDirection rolled = pattern.CounterType == BossCounterType.PatternDirection
                 ? RandomDirection()
                 : SwipeDirection.None;
@@ -376,18 +390,20 @@ namespace Mukseon.Gameplay.Combat
             yield return MoveTo(ResolveAttackPosition(), _patternData.ApproachSpeed * PhaseMoveMultiplier());
             SetTargetable(true);
 
-            // 예고: 카운터 방향이 본체와 독립인 패턴(할퀴기)만 인디케이터를 노출한다.
+            // 예고: 카운터 방향이 본체와 독립인 패턴(할퀴기/연속 할퀴기)만 인디케이터를 노출한다.
             // 돌진은 본체 색이 곧 카운터 색, 포효는 카운터가 없어 인디케이터가 불필요하다.
             if (pattern.ShowsIndicator)
             {
-                SwipeDirection indicatorDir = required != SwipeDirection.None ? required : _bossEnemyHealth.SwipeDirection;
+                SwipeDirection indicatorDir = isSequence
+                    ? (_activeCounterSequence.Count > 0 ? _activeCounterSequence[0] : SwipeDirection.None)
+                    : (required != SwipeDirection.None ? required : _bossEnemyHealth.SwipeDirection);
                 ShowIndicator(indicatorDir, MirrorOffsetForSide(pattern.IndicatorOffset, _currentOnRightSide));
             }
 
             _counterResolved = false;
             _activeCounterRequired = required;
             _counterDamageAccumulated = 0f;
-            _counterWindowOpen = pattern.IsCounterable;
+            _counterWindowOpen = pattern.IsCounterable && (!isSequence || _activeCounterSequence.Count > 0);
 
             float window = pattern.ResolvedCounterWindowSeconds;
             float elapsed = 0f;
@@ -456,9 +472,16 @@ namespace Mukseon.Gameplay.Combat
                 return;
             }
 
-            // 방향 기반 카운터만 스와이프로 파훼된다. 돌진(DamageThreshold)은 피해 누적으로 처리한다.
+            // 돌진(DamageThreshold)은 피해 누적으로 처리하므로 스와이프 카운터에서 제외.
             if (_activePattern.CounterType == BossCounterType.DamageThreshold)
             {
+                return;
+            }
+
+            // 연속 할퀴기(DirectionSequence)는 시퀀스 진행으로 처리한다.
+            if (_activePattern.CounterType == BossCounterType.DirectionSequence)
+            {
+                HandleSequenceSwipe(direction);
                 return;
             }
 
@@ -468,6 +491,36 @@ namespace Mukseon.Gameplay.Combat
             }
 
             ResolveCounterSuccess($"({direction})");
+        }
+
+        // 연속 할퀴기 카운터: 현재 단계 방향과 일치하면 다음 단계로 진행(인디케이터 갱신), 전체 완료 시 파훼.
+        // 틀린 방향을 입력하면 처음 단계로 되돌려 "순서대로" 입력을 강제한다.
+        private void HandleSequenceSwipe(SwipeDirection direction)
+        {
+            if (_activeCounterSequence.Count == 0)
+            {
+                return;
+            }
+
+            if (direction == _activeCounterSequence[_sequenceProgress])
+            {
+                _sequenceProgress++;
+                if (_sequenceProgress >= _activeCounterSequence.Count)
+                {
+                    ResolveCounterSuccess($"(시퀀스 {_activeCounterSequence.Count}단 완료)");
+                    return;
+                }
+            }
+            else
+            {
+                // 틀린 입력 → 처음부터 다시.
+                _sequenceProgress = 0;
+            }
+
+            // 현재 단계 방향으로 인디케이터를 갱신한다.
+            ShowIndicator(
+                _activeCounterSequence[_sequenceProgress],
+                MirrorOffsetForSide(_activePattern.IndicatorOffset, _currentOnRightSide));
         }
 
         // 돌진(DamageThreshold) 카운터: 윈도우 동안 보스에 누적된 피해가 임계치에 도달하면 파훼한다(#69).
@@ -715,6 +768,31 @@ namespace Mukseon.Gameplay.Combat
         private static SwipeDirection RandomDirection()
         {
             return CardinalDirections[UnityEngine.Random.Range(0, CardinalDirections.Length)];
+        }
+
+        // 연속 할퀴기용 방향 시퀀스를 생성한다(연속 중복 없이 — 단계가 또렷이 바뀌도록). 결과를 into에 채운다.
+        internal static void RollDirectionSequence(int length, List<SwipeDirection> into)
+        {
+            if (into == null)
+            {
+                return;
+            }
+
+            into.Clear();
+            int count = Mathf.Max(0, length);
+            SwipeDirection previous = SwipeDirection.None;
+            for (int i = 0; i < count; i++)
+            {
+                SwipeDirection next;
+                do
+                {
+                    next = RandomDirection();
+                }
+                while (next == previous);
+
+                into.Add(next);
+                previous = next;
+            }
         }
 
         // ── 순수 로직 (테스트 seam) ────────────────────────────────────────

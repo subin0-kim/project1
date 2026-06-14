@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Mukseon.Core.Input;
 using Mukseon.Gameplay.Combat;
 using NUnit.Framework;
@@ -71,6 +72,30 @@ namespace Mukseon.Tests.EditMode
             Assert.That(
                 MountainKingBossController.MirrorOffsetForSide(offset, false),
                 Is.EqualTo(new Vector2(-0.3f, 0.1f)), "왼쪽 측면은 x만 미러링하고 y는 유지한다.");
+        }
+
+        [Test]
+        public void RollDirectionSequence_HasRequestedLengthAndNoImmediateRepeats()
+        {
+            var seq = new List<SwipeDirection>();
+
+            for (int trial = 0; trial < 50; trial++)
+            {
+                MountainKingBossController.RollDirectionSequence(3, seq);
+                Assert.That(seq.Count, Is.EqualTo(3));
+
+                for (int i = 0; i < seq.Count; i++)
+                {
+                    Assert.That(seq[i], Is.Not.EqualTo(SwipeDirection.None));
+                    if (i > 0)
+                    {
+                        Assert.That(seq[i], Is.Not.EqualTo(seq[i - 1]), "연속 단계는 같은 방향이 나오지 않는다.");
+                    }
+                }
+            }
+
+            MountainKingBossController.RollDirectionSequence(0, seq);
+            Assert.That(seq.Count, Is.EqualTo(0), "길이 0이면 빈 시퀀스.");
         }
 
         [Test]

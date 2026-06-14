@@ -44,11 +44,13 @@ namespace Mukseon.Tests.EditMode
             var bossDir = new BossPatternDefinition(BossPatternType.Charge, BossCounterType.BossDirection);
             var patternDir = new BossPatternDefinition(BossPatternType.ClawSwipe, BossCounterType.PatternDirection);
             var damage = new BossPatternDefinition(BossPatternType.Charge, BossCounterType.DamageThreshold);
+            var sequence = new BossPatternDefinition(BossPatternType.SequenceClaw, BossCounterType.DirectionSequence);
 
             Assert.That(none.IsCounterable, Is.False);
             Assert.That(bossDir.IsCounterable, Is.True);
             Assert.That(patternDir.IsCounterable, Is.True);
             Assert.That(damage.IsCounterable, Is.True);
+            Assert.That(sequence.IsCounterable, Is.True);
         }
 
         [Test]
@@ -58,11 +60,29 @@ namespace Mukseon.Tests.EditMode
             var bossDir = new BossPatternDefinition(BossPatternType.Charge, BossCounterType.BossDirection);
             var patternDir = new BossPatternDefinition(BossPatternType.ClawSwipe, BossCounterType.PatternDirection);
             var damage = new BossPatternDefinition(BossPatternType.Charge, BossCounterType.DamageThreshold);
+            var sequence = new BossPatternDefinition(BossPatternType.SequenceClaw, BossCounterType.DirectionSequence);
 
             Assert.That(none.ShowsIndicator, Is.False);
             Assert.That(bossDir.ShowsIndicator, Is.False);
             Assert.That(patternDir.ShowsIndicator, Is.True);
             Assert.That(damage.ShowsIndicator, Is.False);
+            Assert.That(sequence.ShowsIndicator, Is.True, "연속 할퀴기도 방향을 표시한다.");
+        }
+
+        [Test]
+        public void CounterSequenceLength_IsClampedToZero()
+        {
+            var three = new BossPatternDefinition(
+                BossPatternType.SequenceClaw,
+                BossCounterType.DirectionSequence,
+                counterSequenceLength: 3);
+            var negative = new BossPatternDefinition(
+                BossPatternType.SequenceClaw,
+                BossCounterType.DirectionSequence,
+                counterSequenceLength: -2);
+
+            Assert.That(three.CounterSequenceLength, Is.EqualTo(3));
+            Assert.That(negative.CounterSequenceLength, Is.EqualTo(0));
         }
 
         [Test]

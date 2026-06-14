@@ -14,5 +14,8 @@ namespace Mukseon.Gameplay.Combat
 
         /// <summary>포효 — 부하 호랑이를 소환한다. 카운터 불가.</summary>
         Roar = 2,
+
+        /// <summary>연속 할퀴기(2페이즈) — 여러 방향으로 연속 발톱 공격. 표시된 방향을 순서대로 스와이프해 파훼.</summary>
+        SequenceClaw = 3,
     }
 }

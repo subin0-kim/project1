@@ -53,6 +53,10 @@ namespace Mukseon.Gameplay.Combat
         [SerializeField, Min(0)]
         private int _minionCount = 0;
 
+        [Tooltip("DirectionSequence 카운터 전용 — 순서대로 스와이프해야 하는 방향 개수(연속 할퀴기). 2 미만이면 단일 방향 카운터와 동일.")]
+        [SerializeField, Min(0)]
+        private int _counterSequenceLength = 0;
+
         public BossPatternType Type => _type;
         public float TelegraphSeconds => Mathf.Max(0f, _telegraphSeconds);
         public float ExecuteSeconds => Mathf.Max(0f, _executeSeconds);
@@ -63,16 +67,20 @@ namespace Mukseon.Gameplay.Combat
         public float CounterDamageThreshold => Mathf.Max(0f, _counterDamageThreshold);
         public Vector2 IndicatorOffset => _indicatorOffset;
         public int MinionCount => Mathf.Max(0, _minionCount);
+        public int CounterSequenceLength => Mathf.Max(0, _counterSequenceLength);
 
         /// <summary>카운터로 파훼 가능한 패턴인지 여부.</summary>
         public bool IsCounterable => _counterType != BossCounterType.None;
 
         /// <summary>
         /// 패턴 인디케이터(색 오브)를 표시할지 여부. 카운터 방향이 본체와 독립인
-        /// <see cref="BossCounterType.PatternDirection"/>일 때만 표시한다.
+        /// <see cref="BossCounterType.PatternDirection"/>(할퀴기) 또는
+        /// <see cref="BossCounterType.DirectionSequence"/>(연속 할퀴기)일 때 표시한다.
         /// 돌진(BossDirection)은 본체 색이 곧 카운터 색이라, 포효(None)는 카운터가 없어 불필요하다.
         /// </summary>
-        public bool ShowsIndicator => _counterType == BossCounterType.PatternDirection;
+        public bool ShowsIndicator =>
+            _counterType == BossCounterType.PatternDirection ||
+            _counterType == BossCounterType.DirectionSequence;
 
         /// <summary>실제 카운터 입력 수령 시간(초). 미지정(0 이하) 시 예고+발동 시간으로 폴백.</summary>
         public float ResolvedCounterWindowSeconds =>
@@ -94,7 +102,8 @@ namespace Mukseon.Gameplay.Combat
             float counterBonusDamage = 20f,
             int minionCount = 0,
             Vector2 indicatorOffset = default,
-            float counterDamageThreshold = 0f)
+            float counterDamageThreshold = 0f,
+            int counterSequenceLength = 0)
         {
             _type = type;
             _counterType = counterType;
@@ -106,6 +115,7 @@ namespace Mukseon.Gameplay.Combat
             _counterBonusDamage = counterBonusDamage;
             _minionCount = minionCount;
             _indicatorOffset = indicatorOffset;
+            _counterSequenceLength = counterSequenceLength;
             _counterDamageThreshold = counterDamageThreshold;
         }
     }
