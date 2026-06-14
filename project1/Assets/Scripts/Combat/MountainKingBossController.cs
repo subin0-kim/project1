@@ -100,6 +100,12 @@ namespace Mukseon.Gameplay.Combat
         /// <summary>페이즈 전환이 실제 적용된 순간 발행(인자: 진입한 페이즈 인덱스). 2페이즈 연출/패턴 훅.</summary>
         public event Action<int> OnPhaseChanged;
 
+        /// <summary>페이즈 전환 연출 시작 시 발행. 포효/타락 VFX·SFX·애니메이션을 여기에 연결한다(데이터/연출 분리).</summary>
+        public event Action OnPhaseTransitionStarted;
+
+        /// <summary>페이즈 전환 연출 종료 시 발행(무적 해제·패턴 재개 직전).</summary>
+        public event Action OnPhaseTransitionEnded;
+
         public int CurrentPhaseIndex => _currentPhaseIndex;
         public bool IsCombatActive => _combatActive;
 
@@ -317,7 +323,8 @@ namespace Mukseon.Gameplay.Combat
         {
             while (_combatActive && IsBossAlive())
             {
-                TryApplyPendingPhase();
+                // 대기 중인 페이즈 전환이 있으면 연출을 먼저 재생한 뒤 적용한다(패턴 사이에서만).
+                yield return TransitionIfPending();
 
                 float interval = _patternData.GetRandomCycleInterval(_currentPhaseIndex);
                 float waited = 0f;
@@ -365,8 +372,8 @@ namespace Mukseon.Gameplay.Combat
                 : SwipeDirection.None;
             SwipeDirection required = ResolveCounterDirection(pattern, _bossEnemyHealth.SwipeDirection, rolled);
 
-            // 화면 안으로 진입 + 타격 가능.
-            yield return MoveTo(ResolveAttackPosition(), _patternData.ApproachSpeed);
+            // 화면 안으로 진입 + 타격 가능. 페이즈가 오를수록 진입이 빨라진다(BossData 페이즈 이동 배율).
+            yield return MoveTo(ResolveAttackPosition(), _patternData.ApproachSpeed * PhaseMoveMultiplier());
             SetTargetable(true);
 
             // 예고: 카운터 방향이 본체와 독립인 패턴(할퀴기)만 인디케이터를 노출한다.
@@ -416,7 +423,7 @@ namespace Mukseon.Gameplay.Combat
             }
 
             // 화면 밖으로 복귀 + 타격 불가.
-            yield return MoveTo(ResolveWaitPosition(), _patternData.RetreatSpeed);
+            yield return MoveTo(ResolveWaitPosition(), _patternData.RetreatSpeed * PhaseMoveMultiplier());
             SetTargetable(false);
 
             if (pattern.RecoverSeconds > 0f)
@@ -426,7 +433,7 @@ namespace Mukseon.Gameplay.Combat
 
             _activePattern = null;
             _patternActive = false;
-            TryApplyPendingPhase();
+            // 페이즈 전환은 다음 루프 반복의 TransitionIfPending에서 연출과 함께 적용한다.
         }
 
         private IEnumerator MoveTo(Vector3 target, float speed)
@@ -537,6 +544,56 @@ namespace Mukseon.Gameplay.Combat
         private void HandlePhaseThresholdReached(int phaseIndex)
         {
             RequestPhaseTransition(phaseIndex);
+        }
+
+        // 대기 중인 페이즈 전환이 있으면 연출을 재생한 뒤 실제 전환을 적용한다(패턴 사이에서만 호출).
+        private IEnumerator TransitionIfPending()
+        {
+            if (_patternActive || _pendingPhaseIndex <= _currentPhaseIndex)
+            {
+                yield break;
+            }
+
+            yield return PhaseTransitionRoutine();
+            TryApplyPendingPhase();
+        }
+
+        // 2페이즈 전환 연출(#69): 본체를 화면 안으로 들여 무적 상태로 포효 연출을 보여준 뒤 화면 밖으로 복귀한다.
+        // 실제 포효/타락 VFX·SFX·애니메이션은 OnPhaseTransition* 이벤트에 연결한다(데이터/연출 분리).
+        private IEnumerator PhaseTransitionRoutine()
+        {
+            // 연출 동안 다른 전환/패턴 적용을 막고, 인디케이터를 정리하며, 타격 불가(무적)로 둔다.
+            _patternActive = true;
+            HideIndicator();
+            SetTargetable(false);
+
+            // 현재 측면 화면 안으로 진입해 연출을 노출한다.
+            SetSide(_currentOnRightSide);
+            transform.position = ResolveWaitPosition();
+            yield return MoveTo(ResolveAttackPosition(), _patternData.ApproachSpeed * PhaseMoveMultiplier());
+
+            OnPhaseTransitionStarted?.Invoke();
+
+            float cutscene = _patternData.PhaseTransitionCutsceneSeconds;
+            if (cutscene > 0f)
+            {
+                yield return new WaitForSeconds(cutscene);
+            }
+
+            OnPhaseTransitionEnded?.Invoke();
+
+            // 화면 밖으로 복귀(계속 타격 불가). 이후 다음 패턴이 새 페이즈 속도로 진입한다.
+            yield return MoveTo(ResolveWaitPosition(), _patternData.RetreatSpeed * PhaseMoveMultiplier());
+            SetTargetable(false);
+
+            _patternActive = false;
+        }
+
+        // 현재 페이즈의 이동 속도 배율(BossData.PhaseMoveSpeeds). 데이터가 없으면 1배.
+        private float PhaseMoveMultiplier()
+        {
+            BossData data = _bossHealth != null ? _bossHealth.BossData : null;
+            return data != null ? data.GetPhaseMoveSpeed(_currentPhaseIndex) : 1f;
         }
 
         private void HandleBossDefeated(BossHealthComponent _)
