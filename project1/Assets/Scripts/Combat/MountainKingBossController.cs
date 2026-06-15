@@ -85,6 +85,9 @@ namespace Mukseon.Gameplay.Combat
         // 현재 보스가 자리잡은 화면 방향(오른쪽=true). 패턴마다 갱신되며 포지셔닝/미러링의 기준이 된다.
         private bool _currentOnRightSide = true;
 
+        // 광란 돌진이 플레이어에 "닿았다"고 판정하는 거리의 제곱(보스 반폭 고려). 이 안으로 들어오면 접촉 피해.
+        private const float FrenzyContactDistanceSqr = 1.44f;
+
         private bool _combatActive;
         private bool _patternActive;
         private int _currentPhaseIndex;
@@ -362,6 +365,24 @@ namespace Mukseon.Gameplay.Combat
             _patternActive = true;
             _activePattern = pattern;
 
+            // 광란 돌진은 화면 밖에서 곧장 플레이어를 향해 돌진하는 별도 흐름(진입 후 예고가 아님)을 쓴다.
+            if (pattern.Type == BossPatternType.FrenzyCharge)
+            {
+                yield return RunFrenzyCharge(pattern);
+            }
+            else
+            {
+                yield return RunTelegraphedPattern(pattern);
+            }
+
+            _activePattern = null;
+            _patternActive = false;
+            // 페이즈 전환은 다음 루프 반복의 TransitionIfPending에서 연출과 함께 적용한다.
+        }
+
+        // 일반(예고형) 패턴: 화면 밖 → 화면 안 진입 후 예고/카운터 윈도우 → 미처리 시 발동 → 화면 밖 복귀.
+        private IEnumerator RunTelegraphedPattern(BossPatternDefinition pattern)
+        {
             // 매 패턴 시작 시 등장 측면을 새로 고른다(좌/우 양쪽에서 출현). 포지셔닝/미러링의 기준이 된다.
             SetSide(RollPatternSide());
 
@@ -446,10 +467,71 @@ namespace Mukseon.Gameplay.Combat
             {
                 yield return new WaitForSeconds(pattern.RecoverSeconds);
             }
+        }
 
-            _activePattern = null;
-            _patternActive = false;
-            // 페이즈 전환은 다음 루프 반복의 TransitionIfPending에서 연출과 함께 적용한다.
+        // 광란 돌진(2페이즈): 예고/진입 없이 화면 밖에서 곧장 플레이어를 향해 빠르게 돌진한다.
+        // 닿기 전에 보스 색(BossDirection)을 스와이프하면 카운터(취소+보너스). 닿으면 접촉 피해. RepeatCount만큼 반복.
+        private IEnumerator RunFrenzyCharge(BossPatternDefinition pattern)
+        {
+            int charges = Mathf.Max(1, pattern.RepeatCount);
+            float speedMul = PhaseMoveMultiplier();
+
+            for (int i = 0; i < charges && _combatActive && IsBossAlive(); i++)
+            {
+                // 각 돌진은 좌/우를 새로 골라 해당 측면 화면 밖에서 시작한다.
+                SetSide(RollPatternSide());
+                transform.position = ResolveWaitPosition();
+                RollBossDirection();
+
+                // 카운터 윈도우 = 돌진 이동 시간(예고 없음). 요구 입력은 보스 색.
+                _activeCounterSequence.Clear();
+                _sequenceProgress = 0;
+                _counterDamageAccumulated = 0f;
+                _counterResolved = false;
+                _activeCounterRequired = _bossEnemyHealth.SwipeDirection;
+                _counterWindowOpen = pattern.IsCounterable;
+                SetTargetable(true);
+
+                // 플레이어를 향해 빠르게 돌진. 닿기 전 카운터되면 즉시 중단.
+                Vector3 target = ResolvePlayerChargeTarget();
+                float speed = _patternData.ApproachSpeed * speedMul;
+                while ((transform.position - target).sqrMagnitude > FrenzyContactDistanceSqr
+                       && !_counterResolved && _combatActive && IsBossAlive())
+                {
+                    transform.position = Vector3.MoveTowards(transform.position, target, speed * Time.deltaTime);
+                    yield return null;
+                }
+
+                _counterWindowOpen = false;
+
+                if (!_counterResolved && _combatActive && IsBossAlive())
+                {
+                    // 플레이어에 닿음 → 접촉 피해.
+                    ApplyUnhandledDamageToPlayer(pattern.UnhandledDamage);
+                }
+
+                // 화면 밖으로 복귀(다음 돌진 준비 / 종료) + 타격 불가.
+                SetTargetable(false);
+                yield return MoveTo(ResolveWaitPosition(), _patternData.RetreatSpeed * speedMul);
+            }
+
+            if (pattern.RecoverSeconds > 0f)
+            {
+                yield return new WaitForSeconds(pattern.RecoverSeconds);
+            }
+        }
+
+        // 광란 돌진의 목표 지점 — 플레이어 위치. 플레이어 참조가 없으면 화면 중앙으로 폴백.
+        private Vector3 ResolvePlayerChargeTarget()
+        {
+            if (_playerHealth != null)
+            {
+                Vector3 p = _playerHealth.transform.position;
+                return new Vector3(p.x, p.y, 0f);
+            }
+
+            ResolveCameraExtents(out Vector3 center, out _, out _);
+            return center;
         }
 
         private IEnumerator MoveTo(Vector3 target, float speed)

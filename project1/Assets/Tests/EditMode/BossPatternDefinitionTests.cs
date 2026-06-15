@@ -86,6 +86,22 @@ namespace Mukseon.Tests.EditMode
         }
 
         [Test]
+        public void RepeatCount_IsClampedToAtLeastOne()
+        {
+            var two = new BossPatternDefinition(
+                BossPatternType.FrenzyCharge,
+                BossCounterType.BossDirection,
+                repeatCount: 2);
+            var zero = new BossPatternDefinition(
+                BossPatternType.FrenzyCharge,
+                BossCounterType.BossDirection,
+                repeatCount: 0);
+
+            Assert.That(two.RepeatCount, Is.EqualTo(2));
+            Assert.That(zero.RepeatCount, Is.EqualTo(1), "최소 1회는 동작한다.");
+        }
+
+        [Test]
         public void CounterDamageThreshold_IsClampedToZero()
         {
             var positive = new BossPatternDefinition(

@@ -17,5 +17,11 @@ namespace Mukseon.Gameplay.Combat
 
         /// <summary>연속 할퀴기(2페이즈) — 여러 방향으로 연속 발톱 공격. 표시된 방향을 순서대로 스와이프해 파훼.</summary>
         SequenceClaw = 3,
+
+        /// <summary>
+        /// 광란 돌진(2페이즈) — 예고/진입 없이 화면 밖에서 곧장 플레이어를 향해 빠르게 돌진(연속). 닿기 전에
+        /// 보스 색(BossDirection)을 스와이프해 카운터. 닿으면 접촉 피해.
+        /// </summary>
+        FrenzyCharge = 4,
     }
 }

@@ -57,6 +57,10 @@ namespace Mukseon.Gameplay.Combat
         [SerializeField, Min(0)]
         private int _counterSequenceLength = 0;
 
+        [Tooltip("패턴 핵심 동작 반복 횟수(광란 돌진의 연속 돌진 수 등). 최소 1.")]
+        [SerializeField, Min(1)]
+        private int _repeatCount = 1;
+
         public BossPatternType Type => _type;
         public float TelegraphSeconds => Mathf.Max(0f, _telegraphSeconds);
         public float ExecuteSeconds => Mathf.Max(0f, _executeSeconds);
@@ -68,6 +72,7 @@ namespace Mukseon.Gameplay.Combat
         public Vector2 IndicatorOffset => _indicatorOffset;
         public int MinionCount => Mathf.Max(0, _minionCount);
         public int CounterSequenceLength => Mathf.Max(0, _counterSequenceLength);
+        public int RepeatCount => Mathf.Max(1, _repeatCount);
 
         /// <summary>카운터로 파훼 가능한 패턴인지 여부.</summary>
         public bool IsCounterable => _counterType != BossCounterType.None;
@@ -103,7 +108,8 @@ namespace Mukseon.Gameplay.Combat
             int minionCount = 0,
             Vector2 indicatorOffset = default,
             float counterDamageThreshold = 0f,
-            int counterSequenceLength = 0)
+            int counterSequenceLength = 0,
+            int repeatCount = 1)
         {
             _type = type;
             _counterType = counterType;
@@ -116,6 +122,7 @@ namespace Mukseon.Gameplay.Combat
             _minionCount = minionCount;
             _indicatorOffset = indicatorOffset;
             _counterSequenceLength = counterSequenceLength;
+            _repeatCount = repeatCount;
             _counterDamageThreshold = counterDamageThreshold;
         }
     }

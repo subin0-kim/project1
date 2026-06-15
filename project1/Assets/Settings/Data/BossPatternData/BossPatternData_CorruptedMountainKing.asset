@@ -97,6 +97,19 @@ MonoBehaviour:
       _counterDamageThreshold: 0
       _indicatorOffset: {x: 0, y: 0}
       _minionCount: 5
+    - _type: 4
+      _telegraphSeconds: 0
+      _executeSeconds: 0.4
+      _recoverSeconds: 0.5
+      _counterType: 1
+      _counterWindowSeconds: 0
+      _unhandledDamage: 18
+      _counterBonusDamage: 30
+      _counterDamageThreshold: 0
+      _indicatorOffset: {x: 0, y: 0}
+      _minionCount: 0
+      _counterSequenceLength: 0
+      _repeatCount: 2
     _cycleIntervalMinSeconds: 5
     _cycleIntervalMaxSeconds: 7
   _counterBonusMultiplier: 1.5
