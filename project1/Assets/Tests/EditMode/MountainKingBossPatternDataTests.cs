@@ -44,6 +44,31 @@ namespace Mukseon.Tests.EditMode
         }
 
         [Test]
+        public void IsValid_RejectsPhaseContainingInvalidPattern()
+        {
+            var data = ScriptableObject.CreateInstance<MountainKingBossPatternData>();
+
+            try
+            {
+                // DamageThreshold 카운터인데 임계치가 0 → 개별 패턴 무효 → 데이터 전체도 무효여야 한다.
+                var invalidPattern = new BossPatternDefinition(
+                    BossPatternType.Charge,
+                    BossCounterType.DamageThreshold,
+                    counterDamageThreshold: 0f);
+                var phase = new BossPhaseDefinition(
+                    new List<BossPatternDefinition> { invalidPattern }, 8f, 10f);
+                data.ConfigureForTests(new List<BossPhaseDefinition> { phase });
+
+                Assert.That(data.IsValid(out string reason), Is.False);
+                Assert.That(reason, Is.Not.Null.And.Not.Empty);
+            }
+            finally
+            {
+                Object.DestroyImmediate(data);
+            }
+        }
+
+        [Test]
         public void GetPhase_ClampsOutOfRangeToLastPhase()
         {
             var data = ScriptableObject.CreateInstance<MountainKingBossPatternData>();

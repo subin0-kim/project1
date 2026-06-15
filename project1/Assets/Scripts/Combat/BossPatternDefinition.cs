@@ -41,9 +41,9 @@ namespace Mukseon.Gameplay.Combat
         [SerializeField, Min(0f)]
         private float _counterBonusDamage = 20f;
 
-        [Tooltip("DamageThreshold 카운터 전용 — 카운터 윈도우 동안 보스에 누적해야 하는 피해량. 도달 시 패턴 파훼. 다른 카운터 타입에서는 무시된다.")]
+        [Tooltip("DamageThreshold 카운터 전용 — 카운터 윈도우 동안 보스에 누적해야 하는 피해량. 도달 시 패턴 파훼. 다른 카운터 타입에서는 무시된다. 0이면 한 대만 맞아도 즉시 파훼되므로 의미 있는 값으로 설정.")]
         [SerializeField, Min(0f)]
-        private float _counterDamageThreshold = 0f;
+        private float _counterDamageThreshold = 50f;
 
         [Tooltip("인디케이터 위치 오프셋(보스 기준, 월드 단위). 하드코딩 금지 — 아트 기준 수동 조정.")]
         [SerializeField]
@@ -90,6 +90,22 @@ namespace Mukseon.Gameplay.Combat
         /// <summary>실제 카운터 입력 수령 시간(초). 미지정(0 이하) 시 예고+발동 시간으로 폴백.</summary>
         public float ResolvedCounterWindowSeconds =>
             _counterWindowSeconds > 0f ? _counterWindowSeconds : TelegraphSeconds + ExecuteSeconds;
+
+        /// <summary>
+        /// 패턴 수치 유효성 검사. DamageThreshold 카운터인데 임계치가 0 이하이면 본체를 한 번만 때려도
+        /// 즉시 파훼되어 의미가 없으므로 무효로 본다(에디터 설정 누락 안전망).
+        /// </summary>
+        public bool IsValid(out string reason)
+        {
+            if (_counterType == BossCounterType.DamageThreshold && CounterDamageThreshold <= 0f)
+            {
+                reason = $"'{_type}' 패턴: DamageThreshold 카운터는 CounterDamageThreshold가 0보다 커야 합니다.";
+                return false;
+            }
+
+            reason = null;
+            return true;
+        }
 
         public BossPatternDefinition()
         {

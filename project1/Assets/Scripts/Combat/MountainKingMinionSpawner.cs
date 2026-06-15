@@ -45,9 +45,35 @@ namespace Mukseon.Gameplay.Combat
         private readonly HashSet<EnemyHealth> _aliveMinions = new HashSet<EnemyHealth>();
         private readonly List<EnemyHealth> _cleanupBuffer = new List<EnemyHealth>(8);
 
+        // Destroy된 유니티 객체는 C# null이 아니라 "파괴됨" 상태로 HashSet에 남는다(유니티 == 오버로드로만 감지).
+        // 캐싱해 GC 부담 없이 매 조회에서 재사용한다.
+        private static readonly System.Predicate<EnemyHealth> IsDestroyedMinion = minion => minion == null;
+
         /// <summary>이번 포효로 소환된 부하가 한 마리 이상 살아있는 동안 true. 1페이즈 패턴 게이팅에 사용.</summary>
-        public bool HasActiveMinions => _aliveMinions.Count > 0;
-        public int AliveMinionCount => _aliveMinions.Count;
+        public bool HasActiveMinions
+        {
+            get
+            {
+                PruneDestroyedMinions();
+                return _aliveMinions.Count > 0;
+            }
+        }
+
+        public int AliveMinionCount
+        {
+            get
+            {
+                PruneDestroyedMinions();
+                return _aliveMinions.Count;
+            }
+        }
+
+        // 사망(OnDeath) 외 경로로 파괴된 부하(웨이브 강제 종료/디스폰 등)는 HashSet에서 제거되지 못해
+        // HasActiveMinions가 영원히 true로 남아 패턴 루프를 소프트락시킬 수 있다. 조회 시 정리해 막는다.
+        private void PruneDestroyedMinions()
+        {
+            _aliveMinions.RemoveWhere(IsDestroyedMinion);
+        }
 
         /// <summary>소환된 부하가 모두 처치되어 전멸한 순간 1회 발행. 컨트롤러가 P1 패턴 재개에 구독.</summary>
         public event Action OnAllMinionsCleared;

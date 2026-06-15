@@ -64,6 +64,38 @@ namespace Mukseon.Tests.EditMode
         }
 
         [Test]
+        public void HasActiveMinions_PrunesDestroyedMinionsToAvoidSoftlock()
+        {
+            var spawnerGo = new GameObject("Spawner");
+            var m1 = new GameObject("m1");
+
+            try
+            {
+                var spawner = spawnerGo.AddComponent<MountainKingMinionSpawner>();
+                var e1 = m1.AddComponent<EnemyHealth>();
+                e1.ResetHealth();
+
+                spawner.Track(e1);
+                Assert.That(spawner.HasActiveMinions, Is.True);
+
+                // 사망(OnDeath) 외 경로로 파괴 — HashSet에는 "파괴된" 유니티 객체 참조가 남는다.
+                Object.DestroyImmediate(m1);
+
+                // 조회 시 정리되어 소프트락 없이 false / 0을 반환해야 한다.
+                Assert.That(spawner.HasActiveMinions, Is.False);
+                Assert.That(spawner.AliveMinionCount, Is.EqualTo(0));
+            }
+            finally
+            {
+                Object.DestroyImmediate(spawnerGo);
+                if (m1 != null)
+                {
+                    Object.DestroyImmediate(m1);
+                }
+            }
+        }
+
+        [Test]
         public void AllMinionsCleared_FiresOnlyWhenLastTrackedMinionDies()
         {
             var spawnerGo = new GameObject("Spawner");

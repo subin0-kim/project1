@@ -118,6 +118,29 @@ namespace Mukseon.Tests.EditMode
         }
 
         [Test]
+        public void IsValid_RejectsDamageThresholdWithNonPositiveThreshold()
+        {
+            var zeroThreshold = new BossPatternDefinition(
+                BossPatternType.Charge,
+                BossCounterType.DamageThreshold,
+                counterDamageThreshold: 0f);
+            var validThreshold = new BossPatternDefinition(
+                BossPatternType.Charge,
+                BossCounterType.DamageThreshold,
+                counterDamageThreshold: 50f);
+            // DamageThreshold가 아닌 패턴은 임계치가 0이어도 무효가 아니다(해당 필드를 쓰지 않으므로).
+            var otherCounter = new BossPatternDefinition(
+                BossPatternType.Charge,
+                BossCounterType.BossDirection,
+                counterDamageThreshold: 0f);
+
+            Assert.That(zeroThreshold.IsValid(out string reason), Is.False);
+            Assert.That(reason, Is.Not.Null.And.Not.Empty);
+            Assert.That(validThreshold.IsValid(out _), Is.True);
+            Assert.That(otherCounter.IsValid(out _), Is.True);
+        }
+
+        [Test]
         public void ResolvedCounterWindow_FallsBackToTelegraphPlusExecute_WhenUnset()
         {
             var unset = new BossPatternDefinition(

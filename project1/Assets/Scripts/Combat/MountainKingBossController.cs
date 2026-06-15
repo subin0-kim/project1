@@ -73,6 +73,10 @@ namespace Mukseon.Gameplay.Combat
         [SerializeField, Min(0f), Tooltip("등장 연출 — 플레이어 옆에 멈춰 출현을 알리는 시간(초).")]
         private float _entrancePauseSeconds = 1f;
 
+        [Header("Frenzy Charge")]
+        [SerializeField, Min(0f), Tooltip("광란 돌진 접촉 판정 거리(월드 단위). 보스가 플레이어에 이만큼 가까워지면 닿은 것으로 보고 접촉 피해. 보스 반폭 기준으로 설정(스케일/콜라이더 변경 시 함께 조정).")]
+        private float _frenzyContactDistance = 1.2f;
+
         [Header("Debug")]
         [SerializeField]
         private bool _showDebugLogs;
@@ -84,9 +88,6 @@ namespace Mukseon.Gameplay.Combat
 
         // 현재 보스가 자리잡은 화면 방향(오른쪽=true). 패턴마다 갱신되며 포지셔닝/미러링의 기준이 된다.
         private bool _currentOnRightSide = true;
-
-        // 광란 돌진이 플레이어에 "닿았다"고 판정하는 거리의 제곱(보스 반폭 고려). 이 안으로 들어오면 접촉 피해.
-        private const float FrenzyContactDistanceSqr = 1.44f;
 
         private bool _combatActive;
         private bool _patternActive;
@@ -294,6 +295,14 @@ namespace Mukseon.Gameplay.Combat
         // 이동 진행도에 맞춰 보스 체력바를 채우며 목표 위치로 이동한다.
         private IEnumerator MoveInWithHealthReveal(Vector3 target, float speed)
         {
+            // 속도가 0 이하면 MoveTowards가 전진하지 않아 무한 루프가 된다. 즉시 목표로 스냅하고 종료한다.
+            if (speed <= 0f)
+            {
+                transform.position = target;
+                GameplayHudBootstrapper.Instance?.SetBossHealthRevealRatio(1f);
+                yield break;
+            }
+
             GameplayHudBootstrapper hud = GameplayHudBootstrapper.Instance;
             float total = (target - transform.position).magnitude;
 
@@ -475,6 +484,7 @@ namespace Mukseon.Gameplay.Combat
         {
             int charges = Mathf.Max(1, pattern.RepeatCount);
             float speedMul = PhaseMoveMultiplier();
+            float contactSqr = _frenzyContactDistance * _frenzyContactDistance;
 
             for (int i = 0; i < charges && _combatActive && IsBossAlive(); i++)
             {
@@ -495,7 +505,15 @@ namespace Mukseon.Gameplay.Combat
                 // 플레이어를 향해 빠르게 돌진. 닿기 전 카운터되면 즉시 중단.
                 Vector3 target = ResolvePlayerChargeTarget();
                 float speed = _patternData.ApproachSpeed * speedMul;
-                while ((transform.position - target).sqrMagnitude > FrenzyContactDistanceSqr
+                if (speed <= 0f)
+                {
+                    // 속도가 0 이하(잘못된 데이터)면 돌진이 불가능하므로 무한 루프를 피해 정리하고 종료한다.
+                    _counterWindowOpen = false;
+                    SetTargetable(false);
+                    break;
+                }
+
+                while ((transform.position - target).sqrMagnitude > contactSqr
                        && !_counterResolved && _combatActive && IsBossAlive())
                 {
                     transform.position = Vector3.MoveTowards(transform.position, target, speed * Time.deltaTime);
@@ -536,6 +554,13 @@ namespace Mukseon.Gameplay.Combat
 
         private IEnumerator MoveTo(Vector3 target, float speed)
         {
+            // 속도가 0 이하면 MoveTowards가 전진하지 않아 무한 루프가 된다. 즉시 목표로 스냅하고 종료한다.
+            if (speed <= 0f)
+            {
+                transform.position = target;
+                yield break;
+            }
+
             while ((transform.position - target).sqrMagnitude > 0.0004f)
             {
                 transform.position = Vector3.MoveTowards(transform.position, target, speed * Time.deltaTime);
@@ -776,17 +801,20 @@ namespace Mukseon.Gameplay.Combat
             return onRight ? offset : new Vector2(-offset.x, offset.y);
         }
 
-        // 등장 연출에서 보스가 멈춰 서는 위치 — 플레이어 오른쪽. 플레이어 참조가 없으면 화면 중앙 우측으로 폴백.
+        // 등장 연출에서 보스가 멈춰 서는 위치 — 홈 방향(현재 측면)에 맞춰 플레이어 옆에 선다.
+        // 홈이 왼쪽이면 플레이어 왼쪽, 오른쪽이면 오른쪽. 플레이어 참조가 없으면 화면 중앙에서 같은 방향으로 폴백.
         private Vector3 ResolveIntroPosition()
         {
+            float sign = _currentOnRightSide ? 1f : -1f;
+
             if (_playerHealth != null)
             {
                 Vector3 p = _playerHealth.transform.position;
-                return new Vector3(p.x + _entranceStandOffsetX, p.y, 0f);
+                return new Vector3(p.x + sign * _entranceStandOffsetX, p.y, 0f);
             }
 
             ResolveCameraExtents(out Vector3 center, out float hExt, out _);
-            return new Vector3(center.x + hExt * 0.4f, center.y, 0f);
+            return new Vector3(center.x + sign * hExt * 0.4f, center.y, 0f);
         }
 
         private void ResolveCameraExtents(out Vector3 center, out float horizontalExtent, out float verticalExtent)

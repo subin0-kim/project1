@@ -139,6 +139,22 @@ namespace Mukseon.Gameplay.Combat
                     reason = $"Phase[{i}] has no patterns.";
                     return false;
                 }
+
+                for (int j = 0; j < phase.PatternCount; j++)
+                {
+                    BossPatternDefinition pattern = phase.Patterns[j];
+                    if (pattern == null)
+                    {
+                        reason = $"Phase[{i}] pattern[{j}] is null.";
+                        return false;
+                    }
+
+                    if (!pattern.IsValid(out string patternReason))
+                    {
+                        reason = $"Phase[{i}] pattern[{j}] {patternReason}";
+                        return false;
+                    }
+                }
             }
 
             reason = null;
