@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Mukseon.Core.Input;
 using Mukseon.Gameplay.Stats;
@@ -21,6 +22,9 @@ namespace Mukseon.Gameplay.Combat
         [SerializeField]
         private Camera _camera;
 
+        [SerializeField, Tooltip("부채살 흩뿌리기(#76). 없으면 일반 단일 방향 스와이프만 동작.")]
+        private FanAttackSkill _fanAttackSkill;
+
         [Header("Attack Settings")]
         [SerializeField, Min(0f)]
         private float _baseDamage = 1f;
@@ -38,6 +42,10 @@ namespace Mukseon.Gameplay.Combat
         private bool _showDebugLogs = true;
 
         private readonly List<EnemyHealth> _targetBuffer = new List<EnemyHealth>(16);
+        private readonly List<FanAttackPattern.FanBranch> _fanBranchBuffer = new List<FanAttackPattern.FanBranch>(5);
+
+        /// <summary>부채살 흩뿌리기(#76) 발동 시 발생. (스와이프 방향, 부채 원점=끝점 최근접 적 위치, 부채 레벨)을 전달.</summary>
+        public event Action<SwipeDirection, Vector2, int> OnFanAttackTriggered;
 
         private void Awake()
         {
@@ -49,6 +57,11 @@ namespace Mukseon.Gameplay.Combat
             if (_playerStatSystem == null)
             {
                 _playerStatSystem = GetComponent<PlayerStatSystem>();
+            }
+
+            if (_fanAttackSkill == null)
+            {
+                _fanAttackSkill = GetComponent<FanAttackSkill>();
             }
 
             if (_attackOrigin == null)
@@ -132,11 +145,47 @@ namespace Mukseon.Gameplay.Combat
                 return 0;
             }
 
+            int baseTargets = Mathf.Max(1, ResolveTargetsPerAttack() + _bonusTargets);
+
+            // 부채살 흩뿌리기(#76): 확률 발동 시 스와이프 방향뿐 아니라 부채꼴 다방향을 동시 타격한다.
+            // 미발동/미보유 시 기존 일반 단일 방향 스와이프로 폴백.
+            bool fanTriggered = _fanAttackSkill != null
+                && _fanAttackSkill.TryBuildFanBranches(swipeDirection, _fanBranchBuffer);
+
+            if (!fanTriggered)
+            {
+                return ApplyDamageToDirection(swipeDirection, origin, baseTargets, damage);
+            }
+
+            // VFX 부채는 스와이프 끝점에서 가장 가까운 적에서 펼쳐진다(적이 없으면 끝점 자체).
+            Vector2 fanVfxOrigin = ResolveNearestEnemyOrigin(origin);
+            OnFanAttackTriggered?.Invoke(swipeDirection, fanVfxOrigin, _fanAttackSkill.Level);
+
+            int totalHits = 0;
+            for (int i = 0; i < _fanBranchBuffer.Count; i++)
+            {
+                FanAttackPattern.FanBranch branch = _fanBranchBuffer[i];
+
+                // 적은 단일 방향 속성을 가지므로 각 방향은 한 번씩만 질의되며 중복 타격이 없다.
+                // 동일 방향 추가 타격(Lv3 스와이프 방향)은 BonusTargets로 표현한다.
+                int maxTargets = Mathf.Max(1, baseTargets + branch.BonusTargets);
+                totalHits += ApplyDamageToDirection(branch.Direction, origin, maxTargets, damage);
+            }
+
+            return totalHits;
+        }
+
+        /// <summary>
+        /// 한 방향에 대해 끝점에서 가까운 순으로 최대 <paramref name="maxTargets"/>개 적을 선택·타격한다.
+        /// 타격 적용 직후 _targetBuffer는 다음 호출에서 덮어써지므로, 호출 간 버퍼를 보관하지 않는다.
+        /// </summary>
+        private int ApplyDamageToDirection(SwipeDirection direction, Vector2 origin, int maxTargets, float damage)
+        {
             int selectedCount = SwipeAttackTargeting.SelectNearestTargets(
                 origin,
-                swipeDirection,
+                direction,
                 EnemyHealth.ActiveEnemies,
-                Mathf.Max(1, ResolveTargetsPerAttack() + _bonusTargets),
+                maxTargets,
                 _targetBuffer);
 
             if (selectedCount <= 0)
@@ -171,6 +220,40 @@ namespace Mukseon.Gameplay.Combat
             }
 
             return selectedCount;
+        }
+
+        /// <summary>
+        /// 스와이프 끝점(<paramref name="point"/>)에서 가장 가까운, 살아있고 타격 가능한 적의 위치를 반환한다.
+        /// 부채살 VFX 원점용 — 방향 속성과 무관하게 끝점 최근접 적을 고른다. 적이 없으면 끝점 자체를 반환한다.
+        /// </summary>
+        private Vector2 ResolveNearestEnemyOrigin(Vector2 point)
+        {
+            IReadOnlyList<EnemyHealth> enemies = EnemyHealth.ActiveEnemies;
+            if (enemies == null)
+            {
+                return point;
+            }
+
+            EnemyHealth nearest = null;
+            float bestSqr = float.MaxValue;
+
+            for (int i = 0; i < enemies.Count; i++)
+            {
+                EnemyHealth enemy = enemies[i];
+                if (enemy == null || !enemy.IsAlive || !enemy.IsTargetable)
+                {
+                    continue;
+                }
+
+                float sqr = ((Vector2)enemy.transform.position - point).sqrMagnitude;
+                if (sqr < bestSqr)
+                {
+                    bestSqr = sqr;
+                    nearest = enemy;
+                }
+            }
+
+            return nearest != null ? (Vector2)nearest.transform.position : point;
         }
 
         private float ResolveDamage()
