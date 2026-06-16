@@ -38,6 +38,9 @@ namespace Mukseon.Gameplay.UI
 
         private const string RootObjectName = "GameplayHudRuntime";
 
+        /// <summary>씬 전역 단일 인스턴스. 보스 컨트롤러가 패턴 인디케이터 오브를 띄울 때 사용한다(#69).</summary>
+        public static GameplayHudBootstrapper Instance { get; private set; }
+
         private PlayerHealth _playerHealth;
         private GangshinController _gangshinController;
         private PlayerLevelSystem _playerLevelSystem;
@@ -90,6 +93,20 @@ namespace Mukseon.Gameplay.UI
         private float _resolveRetryTimer;
         private Camera _cachedCamera;
 
+        // 패턴 인디케이터 오브(#69): 적 머리 위 색 오브와 동일한 HUD 요소를, 보스 패턴 텔레그래프
+        // 위치 상단에 띄운다. 접근성(화살표) 모드는 적 오브와 같은 ApplyOrb/Arrow 경로로 함께 처리된다(#83).
+        private Label _patternOrb;
+        private Transform _patternOrbAnchor;
+        private Vector3 _patternOrbWorldOffset;
+        private bool _patternOrbActive;
+        private const float PatternOrbWorldYOffset = 0.8f;
+
+        // 보스 등장 연출(#69): 연출 동안 체력바를 가렸다가(스폰 직후) 채움 비율로 드러낸다.
+        // _bossHealthRevealing이 true이면 실제 HP 대신 _bossHealthRevealRatio로 표시한다.
+        private bool _suppressBossHud;
+        private bool _bossHealthRevealing;
+        private float _bossHealthRevealRatio;
+
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void EnsureHudBootstrapper()
         {
@@ -123,6 +140,7 @@ namespace Mukseon.Gameplay.UI
 
         private void Awake()
         {
+            Instance = this;
             DontDestroyOnLoad(gameObject);
             SceneManager.sceneLoaded += HandleSceneLoaded;
             EnsureUi();
@@ -131,6 +149,11 @@ namespace Mukseon.Gameplay.UI
 
         private void OnDestroy()
         {
+            if (Instance == this)
+            {
+                Instance = null;
+            }
+
             SceneManager.sceneLoaded -= HandleSceneLoaded;
             UnsubscribeAll();
             ClearEnemies();
@@ -170,6 +193,10 @@ namespace Mukseon.Gameplay.UI
         {
             UnsubscribeAll();
             ClearEnemies();
+            HidePatternOrb();
+            _suppressBossHud = false;
+            _bossHealthRevealing = false;
+            _bossHealthRevealRatio = 0f;
             _playerHealth = null;
             _gangshinController = null;
             _playerLevelSystem = null;
@@ -532,7 +559,8 @@ namespace Mukseon.Gameplay.UI
         private void RefreshBoss()
         {
             ResolveBossEnemy();
-            bool visible = _bossEnemy != null && _bossEnemy.IsAlive;
+            // 등장 연출 스폰 직후에는 보스가 살아 있어도 체력바를 가린다(_suppressBossHud).
+            bool visible = _bossEnemy != null && _bossEnemy.IsAlive && !_suppressBossHud;
             _bossRoot.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
             if (!visible)
             {
@@ -540,7 +568,34 @@ namespace Mukseon.Gameplay.UI
             }
 
             _bossLabel.text = _bossEnemy.DisplayName;
-            Fill(_bossFill, _bossEnemy.CurrentHealth / Mathf.Max(1f, _bossEnemy.MaxHealth));
+            // 등장 연출 중에는 실제 HP가 아닌 연출용 채움 비율로 표시한다.
+            float ratio = _bossHealthRevealing
+                ? _bossHealthRevealRatio
+                : _bossEnemy.CurrentHealth / Mathf.Max(1f, _bossEnemy.MaxHealth);
+            Fill(_bossFill, ratio);
+        }
+
+        /// <summary>보스 체력바를 강제로 가리거나 다시 표시한다(등장 연출 — 스폰 후 화면 밖 대기 동안 숨김).</summary>
+        public void SuppressBossHealthBar(bool suppress)
+        {
+            _suppressBossHud = suppress;
+            RefreshBoss();
+        }
+
+        /// <summary>등장 연출 채움 모드로 전환하고 체력바를 주어진 비율(0~1)로 표시한다. 숨김도 함께 해제한다.</summary>
+        public void SetBossHealthRevealRatio(float ratio)
+        {
+            _bossHealthRevealing = true;
+            _bossHealthRevealRatio = Mathf.Clamp01(ratio);
+            _suppressBossHud = false;
+            RefreshBoss();
+        }
+
+        /// <summary>등장 연출 채움 모드를 끝내고 실제 HP 기반 표시로 되돌린다.</summary>
+        public void EndBossHealthReveal()
+        {
+            _bossHealthRevealing = false;
+            RefreshBoss();
         }
 
         private void RefreshLevelUp()
@@ -686,6 +741,8 @@ namespace Mukseon.Gameplay.UI
             if (_bossEnemy == enemy)
             {
                 _bossEnemy = null;
+                _suppressBossHud = false;
+                _bossHealthRevealing = false;
             }
         }
 
@@ -868,6 +925,8 @@ namespace Mukseon.Gameplay.UI
                 PositionSequenceHud(pair.Key, pair.Value, camera, panel);
             }
 
+            PositionPatternOrb(camera, panel);
+
             for (int i = _floatingTexts.Count - 1; i >= 0; i--)
             {
                 FloatingText floatingText = _floatingTexts[i];
@@ -985,6 +1044,96 @@ namespace Mukseon.Gameplay.UI
             container.style.left = panelPos.x;
             container.style.top = panelPos.y - 24f;
             container.style.translate = new Translate(Length.Percent(-50f), 0f);
+        }
+
+        // ── 패턴 인디케이터 오브(#69) ───────────────────────────────────────
+        // 적 머리 위 색 오브와 동일한 HUD 요소를, 보스 패턴 텔레그래프 위치 상단에 띄운다.
+        // 일반 적 오브와 같은 ApplyOrb 경로를 쓰므로, 접근성(화살표) 모드는 한 곳에서 처리된다(#83).
+
+        /// <summary>보스 패턴 텔레그래프 위치(앵커+오프셋) 상단에 카운터 방향 색 오브를 띄운다.</summary>
+        public void ShowPatternOrb(Transform anchor, Vector2 worldOffset, SwipeDirection direction)
+        {
+            if (anchor == null)
+            {
+                return;
+            }
+
+            EnsurePatternOrb();
+            if (_patternOrb == null)
+            {
+                return;
+            }
+
+            _patternOrbAnchor = anchor;
+            _patternOrbWorldOffset = new Vector3(worldOffset.x, worldOffset.y, 0f);
+            _patternOrbActive = true;
+            ApplyOrb(_patternOrb, ResolvePatternOrbColor(direction), true);
+        }
+
+        /// <summary>패턴 인디케이터 오브를 숨긴다.</summary>
+        public void HidePatternOrb()
+        {
+            _patternOrbActive = false;
+            _patternOrbAnchor = null;
+            if (_patternOrb != null)
+            {
+                _patternOrb.style.display = DisplayStyle.None;
+            }
+        }
+
+        private void EnsurePatternOrb()
+        {
+            if (_patternOrb != null || _worldRoot == null)
+            {
+                return;
+            }
+
+            _patternOrb = new Label();
+            _patternOrb.style.position = Position.Absolute;
+            _patternOrb.style.display = DisplayStyle.None;
+            _worldRoot.Add(_patternOrb);
+        }
+
+        // 보스 본체 색 오브와 동일한 팔레트로 해석해 색을 일치시킨다. 보스가 없으면 정적 디폴트로 폴백.
+        private Color ResolvePatternOrbColor(SwipeDirection direction)
+        {
+            if (_bossEnemy != null && _sequenceHuds.TryGetValue(_bossEnemy, out SequenceHud hud))
+            {
+                return ResolveDirectionColor(hud, direction);
+            }
+
+            return DirectionColorPalette.DefaultColor(direction);
+        }
+
+        private void PositionPatternOrb(Camera camera, IPanel panel)
+        {
+            if (!_patternOrbActive || _patternOrb == null)
+            {
+                return;
+            }
+
+            if (_patternOrbAnchor == null)
+            {
+                _patternOrb.style.display = DisplayStyle.None;
+                return;
+            }
+
+            Vector3 world = _patternOrbAnchor.position + _patternOrbWorldOffset + Vector3.up * PatternOrbWorldYOffset;
+            Vector3 screenPoint = camera.WorldToScreenPoint(world);
+            if (screenPoint.z <= 0f)
+            {
+                _patternOrb.style.display = DisplayStyle.None;
+                return;
+            }
+
+            Vector2 panelPos = panel != null
+                ? RuntimePanelUtils.ScreenToPanel(panel, new Vector2(screenPoint.x, Screen.height - screenPoint.y))
+                : new Vector2(screenPoint.x, Screen.height - screenPoint.y);
+
+            _patternOrb.style.display = DisplayStyle.Flex;
+            _patternOrb.style.left = panelPos.x;
+            _patternOrb.style.top = panelPos.y;
+            _patternOrb.style.translate = new Translate(Length.Percent(-50f), Length.Percent(-50f));
         }
 
         // 접근성 화살표 표시(#83)에서 재사용 예정. 현재 기본 표시는 색 오브.

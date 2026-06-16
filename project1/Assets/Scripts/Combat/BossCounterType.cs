@@ -1,0 +1,30 @@
+namespace Mukseon.Gameplay.Combat
+{
+    /// <summary>
+    /// 보스 패턴의 카운터(파훼) 입력 종류(#69).
+    /// 요구 방향은 <see cref="MountainKingBossController"/>가 이 종류에 따라 해석한다.
+    /// </summary>
+    public enum BossCounterType
+    {
+        /// <summary>카운터 불가 — 미처리 시 피해만 수령(포효).</summary>
+        None = 0,
+
+        /// <summary>보스의 현재 방향 속성으로 카운터(돌진).</summary>
+        BossDirection = 1,
+
+        /// <summary>패턴이 예고 시점에 굴린 방향으로 카운터. 인디케이터에 표시되는 방향과 동일(발톱 할퀴기).</summary>
+        PatternDirection = 2,
+
+        /// <summary>
+        /// 카운터 윈도우 동안 보스에 누적된 피해가 임계치에 도달하면 파훼(돌진). 방향 입력과 무관 —
+        /// 본체를 계속 공격하는 것만으로 파훼되는 방향 카운터의 무의미함을 피하기 위해 일정 피해를 강제한다.
+        /// </summary>
+        DamageThreshold = 3,
+
+        /// <summary>
+        /// 예고 시점에 굴린 방향 시퀀스를 순서대로 모두 스와이프해야 파훼(연속 할퀴기).
+        /// 인디케이터가 현재 단계 방향을 표시하며, 성공할 때마다 다음 방향으로 넘어간다.
+        /// </summary>
+        DirectionSequence = 4,
+    }
+}

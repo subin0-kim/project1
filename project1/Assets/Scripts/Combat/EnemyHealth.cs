@@ -193,7 +193,7 @@ namespace Mukseon.Gameplay.Combat
 
             IsAlive = false;
 
-            if (_disableCollidersOnDeath)
+            if (_disableCollidersOnDeath && _colliders != null)
             {
                 for (int i = 0; i < _colliders.Length; i++)
                 {
@@ -250,7 +250,7 @@ namespace Mukseon.Gameplay.Combat
 
             ConfigureDirectionForSpawn();
 
-            if (_disableCollidersOnDeath)
+            if (_disableCollidersOnDeath && _colliders != null)
             {
                 for (int i = 0; i < _colliders.Length; i++)
                 {
