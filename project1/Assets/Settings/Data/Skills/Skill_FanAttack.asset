@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c108d14243300c4b992897d5c4b7f43, type: 3}
+  m_Name: Skill_FanAttack
+  m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.Progression.SkillData
+  _skillId: fan_attack
+  _displayName: "\uBD80\uCC44\uC0B4 \uD769\uBFCC\uB9AC\uAE30"
+  _description: "\uC2A4\uC640\uC774\uD504 \uC2DC \uD655\uB960\uB85C \uBA39\uC120\uC774
+    \uBD80\uCC44\uAF34 \uB2E4\uBC29\uD5A5\uC73C\uB85C \uD37C\uC838 \uB2E4\uC218\uC758
+    \uC801\uC744 \uB3D9\uC2DC \uD0C0\uACA9. [\uBB34\uB2F9 \uC804\uC6A9]"
+  _effectType: 20
+  _statType: 1
+  _value: 1
+  _maxLevel: 3
+  _icon: {fileID: 0}

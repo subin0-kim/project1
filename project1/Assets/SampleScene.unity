@@ -169,6 +169,8 @@ GameObject:
   - component: {fileID: 187285038}
   - component: {fileID: 187285039}
   - component: {fileID: 187285040}
+  - component: {fileID: 187285041}
+  - component: {fileID: 187285042}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -192,6 +194,7 @@ MonoBehaviour:
   _playerStatSystem: {fileID: 0}
   _attackOrigin: {fileID: 0}
   _camera: {fileID: 0}
+  _fanAttackSkill: {fileID: 0}
   _baseDamage: 1
   _targetsPerAttack: 1
   _showDebugLogs: 1
@@ -407,6 +410,52 @@ MonoBehaviour:
   _camera: {fileID: 0}
   _pullRadius: 2.5
   _moveDistance: 3
+--- !u!114 &187285041
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 187285028}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2e33e2482f5420d4883de397f4be2d60, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.Combat.FanAttackSkill
+  _playerLevelSystem: {fileID: 0}
+  _triggerChancePerLevel:
+  - 0.3
+  - 0.45
+  - 0.6
+--- !u!114 &187285042
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 187285028}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 273dc8d82091e6b469726416c4346e1d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.VFX.FanAttackVFX
+  _swipeAttackEventListener: {fileID: 0}
+  _branchPrefab: {fileID: 3101283234877940134, guid: 959fafdeb6182874abeb7b77fbfe81ef, type: 3}
+  _strokeSprites:
+  - {fileID: 21300000, guid: 58257d84a8f01b1458b4b06daff8056d, type: 3}
+  - {fileID: 21300000, guid: b29b1e33883ec1c4c950c36dbc9232ff, type: 3}
+  - {fileID: 21300000, guid: 1537dc43bbf360842aa081907395ea12, type: 3}
+  - {fileID: 21300000, guid: 473185080e45b0c4a98bc42e2f76b128, type: 3}
+  _branchCountPerLevel: 030000000400000005000000
+  _spreadAnglePerLevel:
+  - 60
+  - 70
+  - 80
+  _inkColor: {r: 0.05, g: 0.03, b: 0.03, a: 0.92}
+  _lengthRange: {x: 1.9, y: 2.6}
+  _thicknessRange: {x: 0.4, y: 0.55}
+  _innerOffset: 0.2
+  _angleJitter: 4
 --- !u!1 &275740323
 GameObject:
   m_ObjectHideFlags: 0
@@ -1358,7 +1407,7 @@ MonoBehaviour:
   - 3
   - 6
   - 9
-  _bossMinuteMark: 0.2
+  _bossMinuteMark: 10
   _defaultSpawnIntervalSeconds: 1
   _defaultMaxAliveEnemies: 5
   _showDebugLogs: 0

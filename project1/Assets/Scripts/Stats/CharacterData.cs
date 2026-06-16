@@ -25,12 +25,16 @@ namespace Mukseon.Gameplay.Stats
         [SerializeField]
         private List<SkillData> _levelUpSkills = new List<SkillData>();
 
+        [SerializeField, Tooltip("게임 시작 시 레벨 1로 자동 보유하는 스킬(예: 무당 = 부채살 흩뿌리기, #76).")]
+        private List<SkillData> _startingSkills = new List<SkillData>();
+
         public string CharacterId => string.IsNullOrWhiteSpace(_characterId) ? name : _characterId;
         public string DisplayName => string.IsNullOrWhiteSpace(_displayName) ? name : _displayName;
         public PlayerStatsDefinition InitialStats => _initialStats;
         public float BaseAttackDamage => Mathf.Max(0f, _baseAttackDamage);
         public int TargetsPerAttack => Mathf.Max(1, _targetsPerAttack);
         public IReadOnlyList<SkillData> LevelUpSkills => _levelUpSkills;
+        public IReadOnlyList<SkillData> StartingSkills => _startingSkills;
 
         public bool IsValid(out string reason)
         {

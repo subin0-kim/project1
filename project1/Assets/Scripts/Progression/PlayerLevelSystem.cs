@@ -58,6 +58,7 @@ namespace Mukseon.Gameplay.Progression
 
         private LevelProgressionModel _progressionModel;
         private float _timeScaleBeforePause = 1f;
+        private bool _startingSkillsGranted;
 
         public event Action<int, float, float> OnExperienceChanged;
         public event Action<int, IReadOnlyList<SkillData>> OnLevelSelectionOpened;
@@ -93,6 +94,13 @@ namespace Mukseon.Gameplay.Progression
             ResolveSkillDefinitions();
             _progressionModel = new LevelProgressionModel(_baseExperienceThreshold, _thresholdGrowthFactor);
             NotifyExperienceChanged();
+        }
+
+        // 시작 스킬은 Start에서 부여한다. 다른 컴포넌트의 OnEnable(구독)이 모두 끝난 뒤여야
+        // OnSkillEffectPending 구독자(예: FanAttackSkill)가 레벨 1 부여를 놓치지 않는다.
+        private void Start()
+        {
+            GrantStartingSkills();
         }
 
         private void OnDisable()
@@ -174,6 +182,58 @@ namespace Mukseon.Gameplay.Progression
             }
 
             return _skillLevels.TryGetValue(skillId, out int level) ? level : 0;
+        }
+
+        /// <summary>
+        /// CharacterData.StartingSkills를 레벨 1로 부여한다(예: 무당 = 부채살 흩뿌리기, #76).
+        /// 레벨업 풀(BuildRandomChoices)은 GetSkillLevel을 보므로, 부여 후엔 레벨 2부터 카드로 등장한다.
+        /// 멱등: 이미 부여됐으면 재실행하지 않는다.
+        /// </summary>
+        public void GrantStartingSkills()
+        {
+            if (_startingSkillsGranted)
+            {
+                return;
+            }
+
+            _startingSkillsGranted = true;
+
+            IReadOnlyList<SkillData> startingSkills = _playerStatSystem?.CharacterData?.StartingSkills;
+            if (startingSkills == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < startingSkills.Count; i++)
+            {
+                GrantSkill(startingSkills[i]);
+            }
+        }
+
+        private void GrantSkill(SkillData skill)
+        {
+            if (skill == null)
+            {
+                return;
+            }
+
+            if (!skill.IsValid(out string reason))
+            {
+                Debug.LogWarning($"[PlayerLevelSystem] 시작 스킬 '{skill.name}'이(가) 유효하지 않습니다. {reason}");
+                return;
+            }
+
+            // 이미 보유 중이면 중복 부여하지 않는다.
+            if (GetSkillLevel(skill.SkillId) > 0)
+            {
+                return;
+            }
+
+            // ApplySkillEffect는 미내장 효과(부채살 등)에 OnSkillEffectPending(skill, 1)을 발행하므로
+            // 레벨 증가 전에 호출해 구독자가 레벨 1을 받게 한다(ApplyChoice와 동일한 순서).
+            ApplySkillEffect(skill);
+            int newLevel = IncrementSkillLevel(skill.SkillId);
+            OnSkillApplied?.Invoke(skill, newLevel);
         }
 
         private void OpenNextSelection()
