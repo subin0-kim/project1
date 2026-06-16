@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c108d14243300c4b992897d5c4b7f43, type: 3}
+  m_Name: Skill_InkTrailSlow
+  m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.Progression.SkillData
+  _skillId: ink_trail_slow
+  _displayName: "\uB048\uC801\uD55C \uBB35\uC561"
+  _description: "\uC2A4\uC640\uC774\uD504 \uC2DC \uD655\uB960\uB85C \uB05D\uC810\uC5D0
+    \uBA39\uBB3C \uC790\uAD6D\uC744 \uB0A8\uACA8, \uC790\uAD6D\uC744 \uBC1F\uC740
+    \uC801\uC758 \uC774\uB3D9 \uC18D\uB3C4\uB97C \uB2A6\uCD98\uB2E4."
+  _effectType: 15
+  _statType: 1
+  _value: 1
+  _maxLevel: 3
+  _icon: {fileID: 0}
