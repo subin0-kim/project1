@@ -229,6 +229,11 @@ namespace Mukseon.Gameplay.Combat
         private Vector2 ResolveNearestEnemyOrigin(Vector2 point)
         {
             IReadOnlyList<EnemyHealth> enemies = EnemyHealth.ActiveEnemies;
+            if (enemies == null)
+            {
+                return point;
+            }
+
             EnemyHealth nearest = null;
             float bestSqr = float.MaxValue;
 

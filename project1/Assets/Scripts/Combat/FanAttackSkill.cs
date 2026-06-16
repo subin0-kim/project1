@@ -24,6 +24,9 @@ namespace Mukseon.Gameplay.Combat
         [SerializeField]
         private PlayerLevelSystem _playerLevelSystem;
 
+        [SerializeField, Tooltip("연동되는 SkillData의 SkillId. OnEnable 레벨 동기화에 사용 (Skill_FanAttack 기준).")]
+        private string _skillId = "fan_attack";
+
         [Header("Trigger Chance Per Level")]
         [SerializeField, Tooltip("레벨별 발동 확률(0~1). 인덱스 0 = Lv1. skill_balance_mvp.md §5 기준.")]
         private float[] _triggerChancePerLevel = { 0.3f, 0.45f, 0.6f };
@@ -49,6 +52,10 @@ namespace Mukseon.Gameplay.Combat
             if (_playerLevelSystem != null)
             {
                 _playerLevelSystem.OnSkillEffectPending += HandleSkillEffectPending;
+
+                // 비활성 중 부여/레벨업 이벤트를 놓쳤을 수 있으므로 현재 레벨을 직접 동기화한다.
+                // (최초 로드 시엔 GrantStartingSkills(Start) 이전이라 0이며, 이후 이벤트로 갱신된다.)
+                ApplyLevel(_playerLevelSystem.GetSkillLevel(_skillId));
             }
         }
 

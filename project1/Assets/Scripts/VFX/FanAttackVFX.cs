@@ -25,10 +25,10 @@ namespace Mukseon.Gameplay.VFX
         private Sprite[] _strokeSprites;
 
         [Header("Per-Level Visuals (index 0 = Lv1)")]
-        [SerializeField, Tooltip("레벨별 갈래 수")]
+        [SerializeField, Tooltip("레벨별 갈래 수(시각 전용). 게임플레이 타격 방향은 FanAttackPattern.BuildBranches가 별도로 결정하므로, 레벨 수치 조정 시 양쪽을 함께 맞춰야 한다.")]
         private int[] _branchCountPerLevel = { 3, 4, 5 };
 
-        [SerializeField, Tooltip("레벨별 방사각(도)")]
+        [SerializeField, Tooltip("레벨별 방사각(도, 시각 전용). FanAttackPattern 수치와 연동해 관리.")]
         private float[] _spreadAnglePerLevel = { 60f, 70f, 80f };
 
         [Header("Branch Appearance")]
