@@ -82,11 +82,9 @@ namespace Mukseon.Gameplay.VFX
                 case LevelUpSkillEffectType.InkExplosionOnKill:
                     _inkExplosionOnKillActive = true;
                     break;
-                case LevelUpSkillEffectType.BarrierRadiusExpand:
-                    // 매 선택 시 skill.Value만큼 고정 확장 (nextLevel 무관)
-                    _barrierRadius += skill.Value;
-                    UpdateBarrierVisual();
-                    break;
+
+                // BarrierRadiusExpand(항마의 결계, #73)는 BarrierAuraSkill이 반경을 소유하고
+                // SetBarrierRadius로 직접 비주얼을 동기화한다. 여기서는 처리하지 않는다.
             }
         }
 
