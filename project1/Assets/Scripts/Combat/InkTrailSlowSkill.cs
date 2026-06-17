@@ -113,12 +113,21 @@ namespace Mukseon.Gameplay.Combat
                 _swipeAttackController.OnAttackExecuted -= HandleAttackExecuted;
             }
 
-            // 추적 중인 자국 구독을 모두 해제하고 목록을 비워 이벤트 누수를 막는다.
-            for (int i = 0; i < _activeMarks.Count; i++)
+            // 스킬이 해제되면 남은 자국도 함께 회수한다(게임오버·스킬 상실 등에서 자국이 잔존하지 않도록).
+            // 구독을 먼저 해제하므로 풀 반환 시 발생하는 OnDeactivated가 목록을 재진입 수정하지 않는다.
+            // 씬 언로드/종료 시(PoolManager 부재)에는 오브젝트가 곧 함께 파괴되므로 추적만 비운다.
+            for (int i = _activeMarks.Count - 1; i >= 0; i--)
             {
-                if (_activeMarks[i] != null)
+                InkTrailMark mark = _activeMarks[i];
+                if (mark == null)
                 {
-                    _activeMarks[i].OnDeactivated -= HandleMarkDeactivated;
+                    continue;
+                }
+
+                mark.OnDeactivated -= HandleMarkDeactivated;
+                if (PoolManager.Instance != null)
+                {
+                    PoolManager.Instance.Release(mark.gameObject);
                 }
             }
 
@@ -207,7 +216,7 @@ namespace Mukseon.Gameplay.Combat
             }
 
             // 동시 존재 상한 초과 시 가장 오래된 자국을 회수해 교체한다(발동감 유지).
-            // ReleaseMark는 OnDeactivated → HandleMarkDeactivated를 통해 목록에서 동기 제거된다.
+            // ReleaseMark가 _activeMarks에서 직접(동기) 제거하므로 루프는 항상 진행·종료된다.
             while (_activeMarks.Count >= _maxConcurrent && _activeMarks.Count > 0)
             {
                 ReleaseMark(_activeMarks[0]);
