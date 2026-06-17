@@ -49,6 +49,8 @@ namespace Mukseon.Gameplay.Combat
 
         private void OnEnable()
         {
+            // 풀 재사용 가드: 슬로우 상태로 사망하면 Tick의 조기 반환으로 리셋이 누락되므로 여기서 초기화한다.
+            _slowThisFrame = 1f;
             _spawnPosition = transform.position;
 
             if (_playerTarget == null)

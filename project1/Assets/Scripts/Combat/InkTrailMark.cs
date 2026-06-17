@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Mukseon.Core.Pool;
 using UnityEngine;
@@ -31,6 +32,12 @@ namespace Mukseon.Gameplay.Combat
         private float _duration = 2f;
         private float _remaining;
         private bool _active;
+
+        /// <summary>
+        /// 자국이 비활성화(만료·풀 반환 등)될 때 발생. 구독한 스킬이 추적 목록에서 즉시 제거해,
+        /// 풀 재사용 시 참조 오염/누수를 방지한다.
+        /// </summary>
+        public event Action<InkTrailMark> OnDeactivated;
 
         public Vector2 WorldPosition => transform.position;
         public bool IsActiveMark => _active && isActiveAndEnabled;
@@ -68,6 +75,13 @@ namespace Mukseon.Gameplay.Combat
 
             ApplyRadiusScale();
             ApplyAlpha(1f);
+        }
+
+        private void OnDisable()
+        {
+            // 풀 반환·만료·파괴 등 비활성화 시점에 구독자(스킬)가 즉시 참조를 정리하도록 알린다.
+            _active = false;
+            OnDeactivated?.Invoke(this);
         }
 
         private void Update()

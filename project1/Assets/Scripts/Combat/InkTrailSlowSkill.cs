@@ -112,6 +112,17 @@ namespace Mukseon.Gameplay.Combat
             {
                 _swipeAttackController.OnAttackExecuted -= HandleAttackExecuted;
             }
+
+            // 추적 중인 자국 구독을 모두 해제하고 목록을 비워 이벤트 누수를 막는다.
+            for (int i = 0; i < _activeMarks.Count; i++)
+            {
+                if (_activeMarks[i] != null)
+                {
+                    _activeMarks[i].OnDeactivated -= HandleMarkDeactivated;
+                }
+            }
+
+            _activeMarks.Clear();
         }
 
         private void HandleSkillEffectPending(SkillData skill, int nextLevel)
@@ -142,7 +153,11 @@ namespace Mukseon.Gameplay.Combat
                 return;
             }
 
-            Vector2 world = ScreenToWorld(endScreenPosition);
+            if (!TryScreenToWorld(endScreenPosition, out Vector2 world))
+            {
+                return;
+            }
+
             SpawnOrRefreshMark(world, spec);
         }
 
@@ -159,7 +174,13 @@ namespace Mukseon.Gameplay.Combat
         {
             spec = default;
             float chance = GetChance(_level);
-            if (chance <= 0f || roll >= chance)
+            if (chance <= 0f)
+            {
+                return false;
+            }
+
+            // 확률 100% 이상이면 roll과 무관하게 항상 발동(비결정론 오버로드와 동작 일치).
+            if (chance < 1f && roll >= chance)
             {
                 return false;
             }
@@ -185,10 +206,11 @@ namespace Mukseon.Gameplay.Combat
                 }
             }
 
-            // 동시 존재 상한 초과 시 이번 발동은 스킵(가장 오래된 것을 유지).
-            if (_activeMarks.Count >= _maxConcurrent)
+            // 동시 존재 상한 초과 시 가장 오래된 자국을 회수해 교체한다(발동감 유지).
+            // ReleaseMark는 OnDeactivated → HandleMarkDeactivated를 통해 목록에서 동기 제거된다.
+            while (_activeMarks.Count >= _maxConcurrent && _activeMarks.Count > 0)
             {
-                return;
+                ReleaseMark(_activeMarks[0]);
             }
 
             GameObject go = AcquireMark(position);
@@ -204,8 +226,41 @@ namespace Mukseon.Gameplay.Combat
             }
 
             mark.Initialize(spec.Duration, spec.SlowMultiplier, _markRadius);
+            mark.OnDeactivated += HandleMarkDeactivated;
             go.SetActive(true);
             _activeMarks.Add(mark);
+        }
+
+        private void ReleaseMark(InkTrailMark mark)
+        {
+            if (mark == null)
+            {
+                return;
+            }
+
+            // 목록에서 동기적으로 먼저 제거(구독 해제 포함)해, 교체 루프가 확실히 진행되도록 한다.
+            // Destroy는 지연 파괴라 OnDisable 콜백만 믿으면 무한 루프가 될 수 있다.
+            mark.OnDeactivated -= HandleMarkDeactivated;
+            _activeMarks.Remove(mark);
+
+            if (PoolManager.Instance != null)
+            {
+                PoolManager.Instance.Release(mark.gameObject);
+            }
+            else
+            {
+                Destroy(mark.gameObject);
+            }
+        }
+
+        private void HandleMarkDeactivated(InkTrailMark mark)
+        {
+            if (mark != null)
+            {
+                mark.OnDeactivated -= HandleMarkDeactivated;
+            }
+
+            _activeMarks.Remove(mark);
         }
 
         private GameObject AcquireMark(Vector2 position)
@@ -223,18 +278,25 @@ namespace Mukseon.Gameplay.Combat
             return obj;
         }
 
+        // 이벤트(OnDeactivated) 기반 제거가 주 경로이며, 이 메서드는 파괴된(null) 항목 등을 막는 방어적 정리다.
         private void PruneInactiveMarks()
         {
             for (int i = _activeMarks.Count - 1; i >= 0; i--)
             {
-                if (_activeMarks[i] == null || !_activeMarks[i].IsActiveMark)
+                InkTrailMark mark = _activeMarks[i];
+                if (mark == null || !mark.IsActiveMark)
                 {
+                    if (mark != null)
+                    {
+                        mark.OnDeactivated -= HandleMarkDeactivated;
+                    }
+
                     _activeMarks.RemoveAt(i);
                 }
             }
         }
 
-        private Vector2 ScreenToWorld(Vector2 screenPosition)
+        private bool TryScreenToWorld(Vector2 screenPosition, out Vector2 world)
         {
             if (_camera == null)
             {
@@ -243,12 +305,16 @@ namespace Mukseon.Gameplay.Combat
 
             if (_camera == null)
             {
-                return screenPosition;
+                // 스크린 좌표를 월드로 오인해 화면 밖에 자국을 만들면 안 되므로, 카메라가 없으면 발동을 건너뛴다.
+                Debug.LogError("[InkTrailSlowSkill] Camera를 찾을 수 없어 자국 위치를 계산할 수 없습니다. 발동을 건너뜁니다.");
+                world = default;
+                return false;
             }
 
             float depth = -_camera.transform.position.z; // 월드 z=0 평면
-            Vector3 world = _camera.ScreenToWorldPoint(new Vector3(screenPosition.x, screenPosition.y, depth));
-            return new Vector2(world.x, world.y);
+            Vector3 p = _camera.ScreenToWorldPoint(new Vector3(screenPosition.x, screenPosition.y, depth));
+            world = new Vector2(p.x, p.y);
+            return true;
         }
 
         private float GetChance(int level)
