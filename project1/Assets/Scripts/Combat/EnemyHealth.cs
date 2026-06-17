@@ -44,6 +44,8 @@ namespace Mukseon.Gameplay.Combat
         private bool _attackSequenceCached;
         private EnemyDirectionConverter _directionConverter;
         private bool _directionConverterCached;
+        private EnemyMover _mover;
+        private bool _moverCached;
 
         public float MaxHealth => _maxHealth;
         public float CurrentHealth { get; private set; }
@@ -65,6 +67,21 @@ namespace Mukseon.Gameplay.Combat
                 }
 
                 return _attackSequence;
+            }
+        }
+
+        /// <summary>이동 AI 컴포넌트. 없으면 null(자체 이동/정지 적). 끈적한 묵액(#75) 슬로우 적용 등에 사용.</summary>
+        public EnemyMover Mover
+        {
+            get
+            {
+                if (!_moverCached)
+                {
+                    _mover = GetComponent<EnemyMover>();
+                    _moverCached = true;
+                }
+
+                return _mover;
             }
         }
 

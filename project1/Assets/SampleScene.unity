@@ -171,6 +171,7 @@ GameObject:
   - component: {fileID: 187285040}
   - component: {fileID: 187285041}
   - component: {fileID: 187285042}
+  - component: {fileID: 187285043}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -423,6 +424,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.Combat.FanAttackSkill
   _playerLevelSystem: {fileID: 0}
+  _skillId: fan_attack
   _triggerChancePerLevel:
   - 0.3
   - 0.45
@@ -456,6 +458,38 @@ MonoBehaviour:
   _thicknessRange: {x: 0.4, y: 0.55}
   _innerOffset: 0.2
   _angleJitter: 4
+--- !u!114 &187285043
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 187285028}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e9033f13caac5c54c85ac7d5773c4e2b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.Combat.InkTrailSlowSkill
+  _playerLevelSystem: {fileID: 0}
+  _swipeAttackController: {fileID: 0}
+  _camera: {fileID: 0}
+  _skillId: ink_trail_slow
+  _markPrefab: {fileID: 4008275423575029201, guid: 3ade9ce45b36d924c9e652d2a7a00906, type: 3}
+  _markRadius: 1.1
+  _maxConcurrent: 8
+  _mergeDistance: 0.8
+  _triggerChancePerLevel:
+  - 0.3
+  - 0.45
+  - 0.6
+  _slowPercentPerLevel:
+  - 0.3
+  - 0.4
+  - 0.5
+  _durationPerLevel:
+  - 2
+  - 2.5
+  - 3
 --- !u!1 &275740323
 GameObject:
   m_ObjectHideFlags: 0

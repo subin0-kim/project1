@@ -36,6 +36,10 @@ namespace Mukseon.Gameplay.Combat
         private EnemyHealth _enemyHealth;
         private Vector3 _spawnPosition;
 
+        // 프레임 단위 슬로우 팩터(1 = 정상). 끈적한 묵액(#75) 등 외부 효과가 매 프레임 요청하며,
+        // Tick에서 소비 후 1로 리셋한다. 매 프레임 가장 강한 슬로우(가장 작은 값)만 반영된다.
+        private float _slowThisFrame = 1f;
+
         public EnemyMovePattern MovePattern => _movePattern;
 
         private void Awake()
@@ -45,6 +49,8 @@ namespace Mukseon.Gameplay.Combat
 
         private void OnEnable()
         {
+            // 풀 재사용 가드: 슬로우 상태로 사망하면 Tick의 조기 반환으로 리셋이 누락되므로 여기서 초기화한다.
+            _slowThisFrame = 1f;
             _spawnPosition = transform.position;
 
             if (_playerTarget == null)
@@ -78,7 +84,7 @@ namespace Mukseon.Gameplay.Combat
                 return;
             }
 
-            float step = _enemyHealth.MoveSpeed * Mathf.Max(0f, deltaTime);
+            float step = _enemyHealth.MoveSpeed * Mathf.Max(0f, deltaTime) * _slowThisFrame;
 
             switch (_movePattern)
             {
@@ -95,6 +101,18 @@ namespace Mukseon.Gameplay.Combat
                     MoveKeepDistance(step);
                     break;
             }
+
+            // 이번 프레임 슬로우 요청을 소비했으므로 리셋. 자국을 벗어나면 다음 프레임부터 정상 속도로 복원된다.
+            _slowThisFrame = 1f;
+        }
+
+        /// <summary>
+        /// 이번 프레임 이동 속도에 곱할 슬로우 배수(0~1)를 요청한다. 여러 요청 중 가장 강한(작은) 값이 적용된다.
+        /// 끈적한 묵액(#75) 자국이 매 프레임 호출한다. Tick에서 소비 후 1로 리셋된다.
+        /// </summary>
+        public void RequestSlow(float multiplier)
+        {
+            _slowThisFrame = Mathf.Min(_slowThisFrame, Mathf.Clamp01(multiplier));
         }
 
         /// <summary>플레이어 방향으로 직선 이동 (창귀)</summary>
