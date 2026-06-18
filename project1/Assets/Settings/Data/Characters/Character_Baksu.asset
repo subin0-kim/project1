@@ -24,4 +24,5 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 97c074d38c7e7b041ba5fe136301f1cc, type: 2}
   - {fileID: 11400000, guid: b5f6b329496938f4780bf000813e8429, type: 2}
   - {fileID: 11400000, guid: 409eb7a6cfdb5704887435b77656ff18, type: 2}
+  - {fileID: 11400000, guid: 4607d94a2a2945347a2e658b78885046, type: 2}
   _startingSkills: []
