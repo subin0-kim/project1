@@ -20,17 +20,20 @@ namespace Mukseon.Gameplay.Combat
             IReadOnlyList<EnemyHealth> enemies,
             object source)
         {
-            if (enemies == null || radius <= 0f || damage <= 0f)
+            if (enemies == null || radius <= 0f || damage <= 0f || enemies.Count == 0)
             {
                 return 0;
             }
 
+            // ApplyDamage로 적이 사망하면 EnemyHealth.ActiveEnemies에서 즉시 제거되어
+            // 순회 중 컬렉션이 변경(인덱스 밀림 → 다음 적 스킵)될 수 있다. 스냅샷을 떠서 순회한다.
+            var targets = new List<EnemyHealth>(enemies);
             float sqrRadius = radius * radius;
             int hitCount = 0;
 
-            for (int i = 0; i < enemies.Count; i++)
+            for (int i = 0; i < targets.Count; i++)
             {
-                EnemyHealth enemy = enemies[i];
+                EnemyHealth enemy = targets[i];
                 if (enemy == null || !enemy.IsAlive || !enemy.IsTargetable)
                 {
                     continue;

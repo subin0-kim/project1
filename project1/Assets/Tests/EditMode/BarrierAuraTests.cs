@@ -55,6 +55,19 @@ namespace Mukseon.Tests.EditMode
         }
 
         [Test]
+        public void Apply_SkipsDeadEnemies()
+        {
+            EnemyHealth enemy = CreateEnemy("Dead", new Vector3(0.5f, 0f, 0f));
+            enemy.ApplyDamage(100f, this); // 적 사망 → IsAlive=false
+            Assert.That(enemy.IsAlive, Is.False);
+
+            var enemies = new List<EnemyHealth> { enemy };
+            int hit = BarrierTickDamage.Apply(Vector2.zero, 2f, 5f, enemies, this);
+
+            Assert.That(hit, Is.EqualTo(0));
+        }
+
+        [Test]
         public void Apply_ZeroRadiusOrDamage_DoesNothing()
         {
             EnemyHealth enemy = CreateEnemy("In", new Vector3(0.5f, 0f, 0f));

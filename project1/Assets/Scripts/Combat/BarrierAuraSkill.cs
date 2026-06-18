@@ -78,6 +78,13 @@ namespace Mukseon.Gameplay.Combat
             }
         }
 
+        private void Start()
+        {
+            // OnEnable 시점에는 캐릭터를 생성한 측의 스케일 조정(player.localScale = ...)이
+            // 아직 반영되지 않았을 수 있다. 초기화가 끝난 Start에서 한 번 더 동기화해 범위 표시기 스케일을 보정한다.
+            SyncVisualRadius();
+        }
+
         private void OnEnable()
         {
             if (_playerLevelSystem != null)
@@ -109,8 +116,16 @@ namespace Mukseon.Gameplay.Combat
         /// <summary>레벨을 직접 설정한다(이벤트 핸들러 및 테스트에서 사용). [0, MaxLevel]로 클램프, 반경 비주얼 동기화.</summary>
         public void ApplyLevel(int level)
         {
+            int previousLevel = _level;
             _level = Mathf.Clamp(level, 0, MaxLevel);
-            _tickTimer = 0f;
+
+            // 최초 획득(0 → 보유)일 때만 타이머를 리셋해 깔끔하게 첫 인터벌을 시작한다.
+            // 레벨업이나 재활성화(OnEnable) 시에는 기존 틱 주기를 유지해 첫 틱이 지연되지 않게 한다.
+            if (previousLevel < 1 && _level >= 1)
+            {
+                _tickTimer = 0f;
+            }
+
             SyncVisualRadius();
         }
 
@@ -134,8 +149,8 @@ namespace Mukseon.Gameplay.Combat
 
         private void DoTick()
         {
-            Vector2 origin = _origin != null ? (Vector2)_origin.position : (Vector2)transform.position;
-            BarrierTickDamage.Apply(origin, CurrentRadius, CurrentTickDamage, EnemyHealth.ActiveEnemies, this);
+            // _origin은 Awake에서 transform으로 보정되므로 항상 non-null이다.
+            BarrierTickDamage.Apply((Vector2)_origin.position, CurrentRadius, CurrentTickDamage, EnemyHealth.ActiveEnemies, this);
         }
 
         private void SyncVisualRadius()
