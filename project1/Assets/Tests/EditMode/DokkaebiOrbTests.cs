@@ -281,5 +281,18 @@ namespace Mukseon.Tests.EditMode
             Assert.That(clock.Remaining, Is.EqualTo(0f));
             Assert.That(clock.Tick(1f, false, 3f), Is.False);
         }
+
+        [Test]
+        public void Elapse_CarriesOvershoot_WhenStillCharging()
+        {
+            var clock = new DokkaebiOrbResummonClock();
+
+            clock.Tick(2f, true, 3f);                          // start (timer=3, 시작 프레임 미차감)
+            Assert.That(clock.Tick(2f, true, 3f), Is.False);   // 3 → 1
+            Assert.That(clock.Tick(2f, true, 3f), Is.True);    // 1 → -1 : fire, 이월 → timer = -1 + 3 = 2
+
+            // 오버슈트(-1)가 버려지지 않고 이월되어 다음 주기가 2초로 시작된다(주기 누적 밀림 방지).
+            Assert.That(clock.Remaining, Is.EqualTo(2f).Within(1e-4f));
+        }
     }
 }

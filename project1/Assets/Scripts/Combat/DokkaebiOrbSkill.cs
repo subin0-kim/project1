@@ -75,7 +75,7 @@ namespace Mukseon.Gameplay.Combat
         public int Level => _level;
 
         /// <summary>현재 레벨의 도깨비불 수(미보유=0).</summary>
-        public int CurrentDroneCount => _level < 1 ? 0 : Mathf.Max(0, GetPerLevelInt(_droneCountPerLevel, _level, 0));
+        public int CurrentDroneCount => _level < 1 ? 0 : Mathf.Max(0, GetPerLevel(_droneCountPerLevel, _level, 0));
 
         /// <summary>현재 탐지 반경(미보유=0).</summary>
         public float CurrentDetectRange => _level < 1 ? 0f : _baseDetectRange * GetPerLevel(_detectRangeMultiplierPerLevel, _level, 1f);
@@ -316,18 +316,9 @@ namespace Mukseon.Gameplay.Combat
             }
         }
 
-        private static float GetPerLevel(float[] perLevel, int level, float fallback)
-        {
-            if (level < 1 || perLevel == null || perLevel.Length == 0)
-            {
-                return fallback;
-            }
-
-            int index = Mathf.Clamp(level - 1, 0, perLevel.Length - 1);
-            return perLevel[index];
-        }
-
-        private static int GetPerLevelInt(int[] perLevel, int level, int fallback)
+        // 레벨별 배열에서 현재 레벨 값을 읽는다(미보유=fallback, 범위 초과 시 마지막 값으로 클램프).
+        // float/int 등 타입에 무관하게 동작하도록 제네릭으로 통합한다.
+        private static T GetPerLevel<T>(T[] perLevel, int level, T fallback)
         {
             if (level < 1 || perLevel == null || perLevel.Length == 0)
             {

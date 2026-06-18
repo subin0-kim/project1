@@ -156,8 +156,9 @@ namespace Mukseon.Gameplay.Combat
                 return;
             }
 
-            Vector2 step = toTarget.normalized * (_skill.ChargeSpeed * dt);
-            transform.position = new Vector3(dronePos.x + step.x, dronePos.y + step.y, transform.position.z);
+            // MoveTowards로 목표 위치를 초과하지 않게 이동을 제한한다(저프레임/고속 돌진 시 오버슈트·진동 방지).
+            Vector2 newPos = Vector2.MoveTowards(dronePos, _chargeTargetPos, _skill.ChargeSpeed * dt);
+            transform.position = new Vector3(newPos.x, newPos.y, transform.position.z);
         }
 
         private void Detonate()
@@ -206,14 +207,8 @@ namespace Mukseon.Gameplay.Combat
                 transform.position.z);
         }
 
-        private Vector2 OrbitCenterPosition
-        {
-            get
-            {
-                Transform center = _skill.OrbitCenter;
-                return center != null ? (Vector2)center.position : (Vector2)transform.position;
-            }
-        }
+        // _skill.OrbitCenter는 항상 non-null이다(스킬이 미지정 시 자기 transform으로 폴백).
+        private Vector2 OrbitCenterPosition => _skill.OrbitCenter.position;
 
         private void SetVisible(bool visible)
         {

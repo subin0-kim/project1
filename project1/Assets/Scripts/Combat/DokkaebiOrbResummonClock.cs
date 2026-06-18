@@ -48,7 +48,8 @@ namespace Mukseon.Gameplay.Combat
             // 쿨타임 경과 — 일괄 재소환 신호. 아직 비행 중인 드론이 있으면 다음 주기를 잇고, 없으면 멈춘다.
             if (anyDroneCharging)
             {
-                _timer = cooldown;
+                // 음수로 누적된 오버슈트(저프레임 등 deltaTime이 쿨타임을 초과)를 이월해 장기적으로 주기가 밀리지 않게 한다.
+                _timer += cooldown;
             }
             else
             {
