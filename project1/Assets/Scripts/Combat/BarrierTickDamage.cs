@@ -4,9 +4,8 @@ using UnityEngine;
 namespace Mukseon.Gameplay.Combat
 {
     /// <summary>
-    /// 항마의 결계(#73)의 틱 데미지 적용 — 순수 로직.
-    /// 원점 기준 반경 내의 살아있고 타격 가능한 적 전체에 데미지를 적용한다(범위 밖 적은 영향 없음).
-    /// 물리 충돌 대신 거리 비교(sqrMagnitude)를 사용해 기존 타겟팅(SwipeAttackTargeting 등)과 일관성을 맞춘다.
+    /// 항마의 결계(#73)의 틱 데미지 적용 — 결계 전용 진입점.
+    /// 실제 반경 데미지 로직은 공용 <see cref="RadialDamage.ApplyInRadius"/>에 위임한다.
     /// </summary>
     public static class BarrierTickDamage
     {
@@ -20,35 +19,7 @@ namespace Mukseon.Gameplay.Combat
             IReadOnlyList<EnemyHealth> enemies,
             object source)
         {
-            if (enemies == null || radius <= 0f || damage <= 0f || enemies.Count == 0)
-            {
-                return 0;
-            }
-
-            // ApplyDamage로 적이 사망하면 EnemyHealth.ActiveEnemies에서 즉시 제거되어
-            // 순회 중 컬렉션이 변경(인덱스 밀림 → 다음 적 스킵)될 수 있다. 스냅샷을 떠서 순회한다.
-            var targets = new List<EnemyHealth>(enemies);
-            float sqrRadius = radius * radius;
-            int hitCount = 0;
-
-            for (int i = 0; i < targets.Count; i++)
-            {
-                EnemyHealth enemy = targets[i];
-                if (enemy == null || !enemy.IsAlive || !enemy.IsTargetable)
-                {
-                    continue;
-                }
-
-                if (((Vector2)enemy.transform.position - origin).sqrMagnitude > sqrRadius)
-                {
-                    continue;
-                }
-
-                enemy.ApplyDamage(damage, source);
-                hitCount++;
-            }
-
-            return hitCount;
+            return RadialDamage.ApplyInRadius(origin, radius, damage, enemies, source);
         }
     }
 }

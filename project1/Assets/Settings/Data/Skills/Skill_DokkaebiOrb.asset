@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c108d14243300c4b992897d5c4b7f43, type: 3}
+  m_Name: Skill_DokkaebiOrb
+  m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.Progression.SkillData
+  _skillId: dokkaebi_orb
+  _displayName: "도깨비불 소환"
+  _description: "플레이어 주변을 궤도 비행하는
+    도깨비불을 소환. 탐지 범위 내
+    가장 가까운 적을 향해 돌진해 자폭하고,
+    일정 쿨타임 후 재소환된다."
+  _effectType: 10
+  _statType: 0
+  _value: 1
+  _maxLevel: 5
+  _icon: {fileID: 0}
