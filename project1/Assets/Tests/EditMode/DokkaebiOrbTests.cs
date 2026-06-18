@@ -223,50 +223,65 @@ namespace Mukseon.Tests.EditMode
     public class DokkaebiOrbResummonClockTests
     {
         [Test]
-        public void NoCharging_NeverFires_StaysStopped()
+        public void NotPending_NeverFires_StaysStopped()
         {
             var clock = new DokkaebiOrbResummonClock();
             for (int i = 0; i < 10; i++)
             {
-                Assert.That(clock.Tick(1f, anyDroneCharging: false, cooldown: 3f), Is.False);
+                Assert.That(clock.Tick(1f, replenishPending: false, cooldown: 3f), Is.False);
             }
 
             Assert.That(clock.IsRunning, Is.False);
         }
 
         [Test]
-        public void StartsOnCharge_FiresAfterCooldown_ThenStopsWhenNoneCharging()
+        public void StartsWhenPending_FiresAfterCooldown_ThenStopsWhenFilled()
         {
             var clock = new DokkaebiOrbResummonClock();
 
-            // 돌진 시작 → 쿨타임 시작(시작 프레임은 차감하지 않음).
-            Assert.That(clock.Tick(1f, anyDroneCharging: true, cooldown: 3f), Is.False);
+            // 정원 부족 → 쿨타임 시작(시작 프레임은 차감하지 않음).
+            Assert.That(clock.Tick(1f, replenishPending: true, cooldown: 3f), Is.False);
             Assert.That(clock.IsRunning, Is.True);
 
-            // 드론이 자폭해 더는 돌진하지 않음(소비됨). 쿨타임 경과까지 카운트다운.
-            Assert.That(clock.Tick(1f, false, 3f), Is.False); // 3 → 2
-            Assert.That(clock.Tick(1f, false, 3f), Is.False); // 2 → 1
-            Assert.That(clock.Tick(1f, false, 3f), Is.True);  // 1 → 0 : 일괄 재소환 신호
+            Assert.That(clock.Tick(1f, true, 3f), Is.False); // 3 → 2
+            Assert.That(clock.Tick(1f, true, 3f), Is.False); // 2 → 1
+            Assert.That(clock.Tick(1f, true, 3f), Is.True);  // 1 → 0 : 정원 보충 신호
+            Assert.That(clock.IsRunning, Is.False);
 
-            // 돌진 중인 드론이 없으므로 클럭은 멈춘다.
+            // 보충으로 정원이 가득 차면(부족 해제) 멈춘 상태를 유지한다.
+            Assert.That(clock.Tick(1f, false, 3f), Is.False);
+            Assert.That(clock.IsRunning, Is.False);
+        }
+
+        [Test]
+        public void PendingClearedMidCountdown_Cancels()
+        {
+            var clock = new DokkaebiOrbResummonClock();
+
+            clock.Tick(1f, true, 3f);                          // start (timer=3)
+            Assert.That(clock.IsRunning, Is.True);
+
+            // 카운트다운 도중 정원이 채워지면(레벨업 등) 발화 없이 취소된다.
+            Assert.That(clock.Tick(1f, false, 3f), Is.False);
             Assert.That(clock.IsRunning, Is.False);
             Assert.That(clock.Tick(1f, false, 3f), Is.False);
         }
 
         [Test]
-        public void KeepsCadence_WhileDronesStillCharging()
+        public void RestartsIfStillPendingAfterFire()
         {
             var clock = new DokkaebiOrbResummonClock();
 
-            clock.Tick(1f, true, 3f);                          // start (timer=3)
+            clock.Tick(1f, true, 3f);                          // start
             Assert.That(clock.Tick(1f, true, 3f), Is.False);   // 3 → 2
             Assert.That(clock.Tick(1f, true, 3f), Is.False);   // 2 → 1
-            Assert.That(clock.Tick(1f, true, 3f), Is.True);    // 1 → 0 : fire, restart (still charging)
-            Assert.That(clock.IsRunning, Is.True);
+            Assert.That(clock.Tick(1f, true, 3f), Is.True);    // fire #1
 
+            // 보충 후에도 여전히 부족하면(예: 비행 중 드론이 남아 정원 미달) 다음 주기를 새로 시작한다.
+            Assert.That(clock.Tick(1f, true, 3f), Is.False);   // restart, timer=3
             Assert.That(clock.Tick(1f, true, 3f), Is.False);   // 3 → 2
             Assert.That(clock.Tick(1f, true, 3f), Is.False);   // 2 → 1
-            Assert.That(clock.Tick(1f, true, 3f), Is.True);    // fires again
+            Assert.That(clock.Tick(1f, true, 3f), Is.True);    // fire #2
         }
 
         [Test]
@@ -280,19 +295,6 @@ namespace Mukseon.Tests.EditMode
             Assert.That(clock.IsRunning, Is.False);
             Assert.That(clock.Remaining, Is.EqualTo(0f));
             Assert.That(clock.Tick(1f, false, 3f), Is.False);
-        }
-
-        [Test]
-        public void Elapse_CarriesOvershoot_WhenStillCharging()
-        {
-            var clock = new DokkaebiOrbResummonClock();
-
-            clock.Tick(2f, true, 3f);                          // start (timer=3, 시작 프레임 미차감)
-            Assert.That(clock.Tick(2f, true, 3f), Is.False);   // 3 → 1
-            Assert.That(clock.Tick(2f, true, 3f), Is.True);    // 1 → -1 : fire, 이월 → timer = -1 + 3 = 2
-
-            // 오버슈트(-1)가 버려지지 않고 이월되어 다음 주기가 2초로 시작된다(주기 누적 밀림 방지).
-            Assert.That(clock.Remaining, Is.EqualTo(2f).Within(1e-4f));
         }
     }
 }

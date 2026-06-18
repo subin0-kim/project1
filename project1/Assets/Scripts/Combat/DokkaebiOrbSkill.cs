@@ -7,8 +7,11 @@ namespace Mukseon.Gameplay.Combat
 {
     /// <summary>
     /// 도깨비불 소환(#72) — 발동 방식 ② 쿨타임 자동 발동(공용 스킬).
-    /// 플레이어 주변을 궤도 비행하는 도깨비불 드론(<see cref="DokkaebiOrbDrone"/>)을 레벨별 개수만큼 소환한다.
-    /// 각 드론은 독립적으로 탐지·돌진·자폭하며, 자폭 후 해당 드론만 재소환 쿨타임을 거쳐 재소환된다.
+    /// 플레이어 주변을 궤도 비행하는 도깨비불 드론(<see cref="DokkaebiOrbDrone"/>)을 레벨별 개수(궤도 정원)만큼 소환한다.
+    /// 각 드론은 독립적으로 탐지·돌진·자폭한다. 한번 돌진을 시작한 드론은 squad에서 빠진 일회성 발사체로 간주되어
+    /// 자폭 후 풀로 회수되고, 궤도 정원은 공유 쿨타임(<see cref="DokkaebiOrbResummonClock"/>)이 경과할 때마다
+    /// <b>한 번에 보충</b>된다. 보충 수량은 "정원 − 현재 궤도 드론 수"이며, 비행 중인 드론은 이미 나간 것으로 보고 정원 계산에서 제외한다.
+    /// 따라서 두 개가 자폭하고 한 개가 비행 중이어도, 쿨타임 경과 시 정원(예: 3)이 가득 차도록 보충한다.
     ///
     /// 이 컴포넌트는 레벨 추적과 드론 풀 관리를 담당하고, 개별 드론의 이동/탐지/폭발은
     /// <see cref="DokkaebiOrbDrone"/>이 이 컴포넌트의 현재 수치(반경·데미지·쿨타임 등)를 실시간 조회해 처리한다.
@@ -67,10 +70,15 @@ namespace Mukseon.Gameplay.Combat
         public const int MaxLevel = 5;
 
         private int _level;
+
+        // 소유 중인 모든 드론(궤도 + 비행 중). 비행 중 드론은 자폭 시 NotifyDroneDetonated로 회수된다.
         private readonly List<DokkaebiOrbDrone> _drones = new List<DokkaebiOrbDrone>(MaxLevel);
 
-        // 공유 재소환 쿨타임 — 드론별 개별 쿨타임 대신, 돌진 시작 시 시작해 경과하면 소비된 드론을 일괄 재소환한다.
+        // 공유 재소환 쿨타임 — 궤도 정원이 부족해지면 시작하고, 경과 시 정원까지 한 번에 보충한다.
         private readonly DokkaebiOrbResummonClock _resummonClock = new DokkaebiOrbResummonClock();
+
+        // 다음 스폰 드론의 궤도 시작 위상(도). 스폰마다 한 슬롯씩 진행해, 기존 드론을 이동시키지 않고 분산 배치한다.
+        private float _nextSpawnPhaseDeg;
 
         public int Level => _level;
 
@@ -136,38 +144,43 @@ namespace Mukseon.Gameplay.Combat
                 return;
             }
 
-            // 드론이 처음 돌진을 시작하면 공유 쿨타임이 시작되고, 경과 시 소비된 드론만 일괄 재소환한다.
-            // 아직 날아가는 중인 드론은 건드리지 않는다(그대로 날아가 자폭).
-            if (_resummonClock.Tick(Time.deltaTime, AnyDroneCharging(), CurrentResummonCooldown))
+            // 궤도 정원이 부족하면(드론이 돌진해 나갔거나 자폭으로 소멸) 공유 쿨타임을 돌린다.
+            // 경과하면 정원까지 한 번에 보충한다. 비행 중 드론은 이미 나간 것으로 보고 정원 계산에서 제외된다.
+            bool replenishPending = OrbitingDroneCount() < CurrentDroneCount;
+            if (_resummonClock.Tick(Time.deltaTime, replenishPending, CurrentResummonCooldown))
             {
-                ResummonConsumedDrones();
+                SyncDrones();
             }
         }
 
-        private bool AnyDroneCharging()
+        /// <summary>비행 중 드론이 자폭했을 때 호출 — 추적 목록에서 제거하고 풀로 회수한다(일회성).</summary>
+        public void NotifyDroneDetonated(DokkaebiOrbDrone drone)
         {
-            for (int i = 0; i < _drones.Count; i++)
+            if (drone == null)
             {
-                DokkaebiOrbDrone drone = _drones[i];
-                if (drone != null && drone.State == DokkaebiOrbDrone.DroneState.Charging)
-                {
-                    return true;
-                }
+                return;
             }
 
-            return false;
+            if (_drones.Remove(drone))
+            {
+                ReleaseGameObject(drone.gameObject);
+            }
         }
 
-        private void ResummonConsumedDrones()
+        /// <summary>궤도 상태(squad 구성원) 드론 수. 비행 중(Charging) 드론은 제외한다.</summary>
+        private int OrbitingDroneCount()
         {
+            int count = 0;
             for (int i = 0; i < _drones.Count; i++)
             {
                 DokkaebiOrbDrone drone = _drones[i];
-                if (drone != null && drone.State == DokkaebiOrbDrone.DroneState.Consumed)
+                if (drone != null && drone.State == DokkaebiOrbDrone.DroneState.Orbit)
                 {
-                    drone.Resummon();
+                    count++;
                 }
             }
+
+            return count;
         }
 
         private void HandleSkillEffectPending(SkillData skill, int nextLevel)
@@ -192,34 +205,50 @@ namespace Mukseon.Gameplay.Combat
             }
         }
 
-        /// <summary>현재 레벨의 도깨비불 수에 맞춰 드론을 스폰/회수하고, 궤도 위상을 균등 분배한다.</summary>
+        /// <summary>
+        /// 궤도 드론 수를 정원(<see cref="CurrentDroneCount"/>)에 맞춘다.
+        /// 비행 중(Charging) 드론은 정원 계산에서 제외되며 건드리지 않는다(그대로 날아가 자폭).
+        /// 부족하면 새로 소환하고, 초과하면(레벨 하향) 궤도 드론만 회수한다.
+        /// </summary>
         private void SyncDrones()
         {
             PruneDestroyedDrones();
 
             int desired = CurrentDroneCount;
 
-            // 부족하면 스폰, 초과하면(레벨 하향 등) 회수.
-            while (_drones.Count < desired)
+            // 레벨 하향 등으로 궤도 드론이 과다하면 궤도 드론만 회수한다(비행 중 드론은 보존).
+            while (OrbitingDroneCount() > desired)
+            {
+                if (!ReleaseOneOrbitingDrone())
+                {
+                    break;
+                }
+            }
+
+            // 정원보다 적으면(비행/자폭으로 빠진 슬롯 + 레벨업 증가분) 정원까지 새로 소환한다.
+            while (OrbitingDroneCount() < desired)
             {
                 if (!TrySpawnDrone())
                 {
                     break;
                 }
             }
+        }
 
-            while (_drones.Count > desired)
+        /// <summary>궤도 상태 드론 하나를 회수한다. 회수했으면 true, 궤도 드론이 없으면 false.</summary>
+        private bool ReleaseOneOrbitingDrone()
+        {
+            for (int i = _drones.Count - 1; i >= 0; i--)
             {
-                ReleaseDrone(_drones.Count - 1);
+                DokkaebiOrbDrone drone = _drones[i];
+                if (drone != null && drone.State == DokkaebiOrbDrone.DroneState.Orbit)
+                {
+                    ReleaseDrone(i);
+                    return true;
+                }
             }
 
-            // 드론들을 궤도에 균등 분배한다(개수 변동 시 재배치).
-            int count = _drones.Count;
-            for (int i = 0; i < count; i++)
-            {
-                float phaseDeg = count > 0 ? (360f / count) * i : 0f;
-                _drones[i].SetOrbitPhase(phaseDeg);
-            }
+            return false;
         }
 
         private bool TrySpawnDrone()
@@ -251,7 +280,9 @@ namespace Mukseon.Gameplay.Combat
                 return false;
             }
 
-            drone.Initialize(this, 0f);
+            // 기존 드론을 이동시키지 않고 분산되도록, 스폰마다 한 슬롯씩 진행한 시작 위상을 부여한다.
+            drone.Initialize(this, _nextSpawnPhaseDeg);
+            _nextSpawnPhaseDeg = Mathf.Repeat(_nextSpawnPhaseDeg + 360f / Mathf.Max(1, CurrentDroneCount), 360f);
             go.SetActive(true);
             _drones.Add(drone);
             return true;

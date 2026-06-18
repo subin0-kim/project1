@@ -4,12 +4,13 @@ namespace Mukseon.Gameplay.Combat
     /// 도깨비불 소환(#72)의 공유 재소환 쿨타임 클럭 — 순수 로직(테스트 가능).
     ///
     /// 규칙:
-    /// - 드론이 처음 돌진을 시작(타깃 락온)하면 쿨타임이 시작된다.
-    /// - 쿨타임이 경과하면 "소비된(자폭 후 숨김)" 드론을 한 번에 재소환해야 함을 알린다(<see cref="Tick"/> 반환 true).
-    /// - 경과 시점에 아직 돌진 중인 드론이 있으면 다음 주기를 이어가, 그 드론들이 자폭한 뒤에도 재소환되게 한다.
-    /// - 돌진 중인 드론이 없으면 클럭을 멈춘다(주변에 적이 없어 전체가 궤도만 돌면 재소환하지 않음).
+    /// - 궤도 정원이 부족해지면(드론이 돌진해 나갔거나 자폭으로 소멸) 쿨타임이 시작된다.
+    /// - 쿨타임이 경과하면 궤도 정원까지 한 번에 보충해야 함을 알린다(<see cref="Tick"/> 반환 true).
+    /// - 보충으로 정원이 다시 채워지면(부족 상태 해제) 클럭은 멈춘다.
+    ///   주변에 적이 없어 전체가 궤도만 돌면(= 정원이 가득 차 보충이 필요 없으면) 시작하지 않는다.
     ///
-    /// 실제 어떤 드론을 재소환할지(소비된 드론만)는 호출자가 결정한다. 이 클럭은 "언제 일괄 재소환할지"만 판정한다.
+    /// 어떤 드론을/몇 개를 보충할지는 호출자가 결정한다(비행 중인 드론은 정원 계산에서 제외).
+    /// 이 클럭은 "언제 정원을 보충할지"만 판정한다.
     /// </summary>
     public sealed class DokkaebiOrbResummonClock
     {
@@ -21,21 +22,24 @@ namespace Mukseon.Gameplay.Combat
 
         /// <summary>
         /// 한 프레임 진행한다.
-        /// <paramref name="anyDroneCharging"/>: 현재 돌진(비행) 중인 드론이 하나라도 있는지.
+        /// <paramref name="replenishPending"/>: 궤도 정원이 부족해 보충이 필요한지(궤도 드론 수 &lt; 정원).
         /// <paramref name="cooldown"/>: 현재 레벨의 재소환 쿨타임(초).
-        /// 반환값이 true면 소비된 드론을 일괄 재소환해야 한다.
+        /// 반환값이 true면 궤도 정원까지 보충해야 한다.
         /// </summary>
-        public bool Tick(float deltaTime, bool anyDroneCharging, float cooldown)
+        public bool Tick(float deltaTime, bool replenishPending, float cooldown)
         {
+            // 보충할 필요가 없으면(정원이 가득) 클럭을 멈춘다. 부족해지는 순간 다시 시작한다.
+            if (!replenishPending)
+            {
+                _running = false;
+                return false;
+            }
+
             if (!_running)
             {
-                // 첫 교전(돌진 시작) 시 쿨타임을 시작한다. 시작 프레임에는 차감하지 않는다.
-                if (anyDroneCharging)
-                {
-                    _timer = cooldown;
-                    _running = true;
-                }
-
+                // 정원이 처음 부족해진 시점에 쿨타임을 시작한다(시작 프레임은 차감하지 않는다).
+                _timer = cooldown;
+                _running = true;
                 return false;
             }
 
@@ -45,17 +49,8 @@ namespace Mukseon.Gameplay.Combat
                 return false;
             }
 
-            // 쿨타임 경과 — 일괄 재소환 신호. 아직 비행 중인 드론이 있으면 다음 주기를 잇고, 없으면 멈춘다.
-            if (anyDroneCharging)
-            {
-                // 음수로 누적된 오버슈트(저프레임 등 deltaTime이 쿨타임을 초과)를 이월해 장기적으로 주기가 밀리지 않게 한다.
-                _timer += cooldown;
-            }
-            else
-            {
-                _running = false;
-            }
-
+            // 쿨타임 경과 — 보충 신호. 발화 후 정지하며, 보충 뒤에도 여전히 부족하면 다음 프레임에 재시작한다.
+            _running = false;
             return true;
         }
 

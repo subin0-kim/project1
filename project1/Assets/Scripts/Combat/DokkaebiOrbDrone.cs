@@ -8,13 +8,13 @@ namespace Mukseon.Gameplay.Combat
     /// 소유 스킬(<see cref="DokkaebiOrbSkill"/>)이 풀에서 꺼내 <see cref="Initialize"/>로 설정한 뒤 활성화한다.
     ///
     /// 상태:
-    /// - <b>Orbit</b>: 플레이어(궤도 중심) 주변을 원형으로 비행하며 탐지 범위 내 가장 가까운 적을 탐색한다.
-    /// - <b>Charging</b>: 타깃을 향해 돌진한다. 근접 도달 시 자폭.
+    /// - <b>Orbit</b>: 플레이어(궤도 중심) 주변을 원형으로 비행하며 탐지 범위 내 가장 가까운 적을 탐색한다(= squad 구성원).
+    /// - <b>Charging</b>: 타깃을 향해 돌진한다(= squad에서 분리되어 날아가는 일회성 발사체). 근접 도달 시 자폭.
     ///   돌진 중 타깃이 사라지면 <b>드론 위치 기준</b>으로 다른 적을 재탐색하고, 없으면 마지막 타깃 위치까지
     ///   계속 날아가 그 자리에서 자폭한다(궤도로 되돌아가지 않는다 — 여러 드론이 한 적을 노릴 때의 순간이동 방지).
-    /// - <b>Consumed</b>: 자폭 후 모습을 감춘 채 스킬의 일괄 재소환(<see cref="Resummon"/>)을 기다린다.
     ///
-    /// 재소환 쿨타임은 개별 드론이 아니라 스킬이 공유 클럭으로 관리한다(돌진 시작 시 시작, 경과 시 소비된 드론 일괄 재소환).
+    /// 한번 돌진을 시작한 드론은 squad에서 빠진 것으로 간주된다. 자폭하면 스킬에 알려 풀로 회수되며,
+    /// 궤도 정원은 스킬이 공유 쿨타임으로 한 번에 보충한다(비행 중인 드론은 정원 계산에서 제외).
     /// 반경·데미지 등 수치는 매 프레임 소유 스킬에서 실시간 조회하므로 스킬 레벨업이 즉시 반영된다.
     /// 폭발 데미지는 공용 <see cref="RadialDamage.ApplyInRadius"/>로 적용한다.
     /// </summary>
@@ -25,7 +25,6 @@ namespace Mukseon.Gameplay.Combat
         {
             Orbit,
             Charging,
-            Consumed,
         }
 
         [SerializeField, Tooltip("자폭 시 생성할 폭발 VFX 프리팹(선택). 풀링 대상.")]
@@ -37,10 +36,7 @@ namespace Mukseon.Gameplay.Combat
         private EnemyHealth _target;
         private Vector2 _chargeTargetPos;
 
-        private SpriteRenderer[] _renderers;
-        private bool _renderersCached;
-
-        /// <summary>현재 드론 상태. 스킬이 공유 쿨타임/일괄 재소환 판정에 사용한다.</summary>
+        /// <summary>현재 드론 상태. 스킬이 궤도 정원(보충 대상) 판정에 사용한다.</summary>
         public DroneState State => _state;
 
         /// <summary>
@@ -53,22 +49,6 @@ namespace Mukseon.Gameplay.Combat
             _state = DroneState.Orbit;
             _target = null;
 
-            SetVisible(true);
-            SnapToOrbit();
-        }
-
-        /// <summary>소유 스킬이 드론 수 변동 시 궤도 위상을 균등 분배하기 위해 호출한다.</summary>
-        public void SetOrbitPhase(float phaseDeg)
-        {
-            _phaseDeg = phaseDeg;
-        }
-
-        /// <summary>스킬이 공유 쿨타임 경과로 일괄 재소환할 때 호출 — 소비된 드론을 궤도로 되돌린다.</summary>
-        public void Resummon()
-        {
-            _target = null;
-            _state = DroneState.Orbit;
-            SetVisible(true);
             SnapToOrbit();
         }
 
@@ -88,7 +68,7 @@ namespace Mukseon.Gameplay.Combat
 
             float dt = Time.deltaTime;
 
-            // 궤도 각도는 항상 진행시켜, 재소환 위치가 자연스럽게 분산되도록 한다.
+            // 궤도 각도는 항상 진행시킨다.
             _phaseDeg = Mathf.Repeat(_phaseDeg + _skill.OrbitAngularSpeedDeg * dt, 360f);
 
             switch (_state)
@@ -98,9 +78,6 @@ namespace Mukseon.Gameplay.Combat
                     break;
                 case DroneState.Charging:
                     TickCharging(dt);
-                    break;
-                case DroneState.Consumed:
-                    // 스킬의 일괄 재소환을 기다린다(자체 쿨타임 없음).
                     break;
             }
         }
@@ -174,8 +151,9 @@ namespace Mukseon.Gameplay.Combat
             SpawnExplosionVfx(explosionCenter);
 
             _target = null;
-            _state = DroneState.Consumed;
-            SetVisible(false);
+            // 비행 중 드론은 일회성이다 — 자폭 후 스킬에 알려 풀로 회수한다.
+            // (궤도 정원 보충은 스킬이 공유 쿨타임으로 한 번에 처리한다.)
+            _skill.NotifyDroneDetonated(this);
         }
 
         private void SpawnExplosionVfx(Vector2 position)
@@ -209,27 +187,5 @@ namespace Mukseon.Gameplay.Combat
 
         // _skill.OrbitCenter는 항상 non-null이다(스킬이 미지정 시 자기 transform으로 폴백).
         private Vector2 OrbitCenterPosition => _skill.OrbitCenter.position;
-
-        private void SetVisible(bool visible)
-        {
-            if (!_renderersCached)
-            {
-                _renderers = GetComponentsInChildren<SpriteRenderer>(true);
-                _renderersCached = true;
-            }
-
-            if (_renderers == null)
-            {
-                return;
-            }
-
-            for (int i = 0; i < _renderers.Length; i++)
-            {
-                if (_renderers[i] != null)
-                {
-                    _renderers[i].enabled = visible;
-                }
-            }
-        }
     }
 }
