@@ -1,5 +1,6 @@
 using System.Reflection;
 using Mukseon.Gameplay.Combat;
+using Mukseon.Gameplay.Progression;
 using Mukseon.Gameplay.Stats;
 using NUnit.Framework;
 using UnityEngine;
@@ -56,6 +57,59 @@ namespace Mukseon.Tests.EditMode
 
             _skill.ApplyLevel(-3);
             Assert.That(_skill.Level, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void HandleSkillEffectPending_HealthRegenType_UpdatesLevel()
+        {
+            SkillData skill = MakeSkill(LevelUpSkillEffectType.HealthRegen);
+            try
+            {
+                InvokeHandleSkillEffectPending(_skill, skill, 2);
+                Assert.That(_skill.Level, Is.EqualTo(2));
+            }
+            finally
+            {
+                Object.DestroyImmediate(skill);
+            }
+        }
+
+        [Test]
+        public void HandleSkillEffectPending_OtherType_IsIgnored()
+        {
+            SkillData skill = MakeSkill(LevelUpSkillEffectType.BarrierRadiusExpand);
+            try
+            {
+                InvokeHandleSkillEffectPending(_skill, skill, 2);
+                Assert.That(_skill.Level, Is.EqualTo(0));
+            }
+            finally
+            {
+                Object.DestroyImmediate(skill);
+            }
+        }
+
+        [Test]
+        public void HandleSkillEffectPending_NullSkill_IsIgnored()
+        {
+            InvokeHandleSkillEffectPending(_skill, null, 2);
+            Assert.That(_skill.Level, Is.EqualTo(0));
+        }
+
+        private static SkillData MakeSkill(LevelUpSkillEffectType effectType)
+        {
+            SkillData skill = ScriptableObject.CreateInstance<SkillData>();
+            FieldInfo field = typeof(SkillData).GetField("_effectType", BindingFlags.NonPublic | BindingFlags.Instance);
+            Assert.That(field, Is.Not.Null, "SkillData._effectType field not found");
+            field.SetValue(skill, effectType);
+            return skill;
+        }
+
+        private static void InvokeHandleSkillEffectPending(HealthRegenSkill skill, SkillData data, int nextLevel)
+        {
+            MethodInfo method = typeof(HealthRegenSkill).GetMethod("HandleSkillEffectPending", BindingFlags.NonPublic | BindingFlags.Instance);
+            Assert.That(method, Is.Not.Null, "HealthRegenSkill.HandleSkillEffectPending method not found");
+            method.Invoke(skill, new object[] { data, nextLevel });
         }
     }
 
