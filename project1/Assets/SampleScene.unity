@@ -173,6 +173,7 @@ GameObject:
   - component: {fileID: 187285042}
   - component: {fileID: 187285043}
   - component: {fileID: 187285044}
+  - component: {fileID: 187285045}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -522,6 +523,25 @@ MonoBehaviour:
   - 1
   - 0.9
   - 0.8
+--- !u!114 &187285045
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 187285028}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1e5d65ccf6e44cb48832b63bbf0f67d3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.Combat.HealthRegenSkill
+  _playerLevelSystem: {fileID: 0}
+  _playerHealth: {fileID: 0}
+  _skillId: health_regen
+  _regenPerSecondByLevel:
+  - 2
+  - 4
+  - 7
 --- !u!1 &275740323
 GameObject:
   m_ObjectHideFlags: 0
