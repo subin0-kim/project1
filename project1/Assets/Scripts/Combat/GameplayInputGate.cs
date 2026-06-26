@@ -23,6 +23,14 @@ namespace Mukseon.Gameplay.Combat
         private const string RootObjectName = "GameplayInputGateRuntime";
         private const float ResolveRetryInterval = 0.5f;
 
+        // 비게임플레이 씬(메뉴/로비/로딩)에는 GameOverHandler·PlayerLevelSystem이 없어 NeedsResolve가
+        // 영구히 true가 된다. 그 경우 매 프레임 FindFirstObjectByType를 반복하지 않도록, 일정 횟수
+        // (≈ MaxResolveRetries × ResolveRetryInterval 초) 시도 후 폴링을 멈춘다. 씬이 새로 로드되면
+        // ResolveAndReset에서 다시 초기화되어 게임플레이 씬에서 정상적으로 재해석된다.
+        private const int MaxResolveRetries = 6;
+
+        private static GameplayInputGate _instance;
+
         private readonly InputSuppressionState _suppression = new InputSuppressionState();
 
         private SwipeInputDetector _swipeInputDetector;
@@ -31,6 +39,8 @@ namespace Mukseon.Gameplay.Combat
         private PlayerLevelSystem _playerLevelSystem;
 
         private float _resolveRetryTimer;
+        private int _resolveRetryCount;
+        private bool _stopPolling;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void EnsureGate()
@@ -55,6 +65,15 @@ namespace Mukseon.Gameplay.Combat
 
         private void Awake()
         {
+            // 수동 씬 배치나 예기치 못한 경로로 인스턴스가 중복 생성되면 이벤트 구독이 중복되므로,
+            // 기존 인스턴스가 있으면 새로 생긴 쪽을 파괴한다(EnsureGate의 1차 방어에 대한 안전망).
+            if (_instance != null && _instance != this)
+            {
+                Destroy(gameObject);
+                return;
+            }
+
+            _instance = this;
             DontDestroyOnLoad(gameObject);
             SceneManager.sceneLoaded += HandleSceneLoaded;
             ResolveAndReset();
@@ -62,14 +81,20 @@ namespace Mukseon.Gameplay.Combat
 
         private void OnDestroy()
         {
+            if (_instance == this)
+            {
+                _instance = null;
+            }
+
             SceneManager.sceneLoaded -= HandleSceneLoaded;
             UnsubscribeAll();
         }
 
         private void Update()
         {
-            // 모든 참조가 해석되면 더 이상 할 일이 없으므로 매 프레임 비용을 들이지 않는다.
-            if (!NeedsResolve())
+            // 모든 참조가 해석됐거나(NeedsResolve == false) 재시도 한도에 도달하면(_stopPolling)
+            // 매 프레임 비용을 들이지 않는다.
+            if (_stopPolling || !NeedsResolve())
             {
                 return;
             }
@@ -80,6 +105,12 @@ namespace Mukseon.Gameplay.Combat
                 _resolveRetryTimer = ResolveRetryInterval;
                 ResolveSources();
                 ApplyToDetectors();
+
+                _resolveRetryCount++;
+                if (_resolveRetryCount >= MaxResolveRetries)
+                {
+                    _stopPolling = true;
+                }
             }
         }
 
@@ -98,6 +129,8 @@ namespace Mukseon.Gameplay.Combat
             _playerLevelSystem = null;
             _suppression.Clear();
             _resolveRetryTimer = 0f;
+            _resolveRetryCount = 0;
+            _stopPolling = false;
             ResolveSources();
             ApplyToDetectors();
         }
