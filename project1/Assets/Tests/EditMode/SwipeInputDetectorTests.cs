@@ -40,5 +40,40 @@ namespace Mukseon.Tests.EditMode
                 UnityEngine.Object.DestroyImmediate(go);
             }
         }
+
+        [Test]
+        public void IsInputEnabled_DefaultsToTrue()
+        {
+            var go = new GameObject("SwipeInputDetectorTest");
+            try
+            {
+                var detector = go.AddComponent<SwipeInputDetector>();
+                Assert.That(detector.IsInputEnabled, Is.True);
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(go);
+            }
+        }
+
+        [Test]
+        public void SetInputEnabled_TogglesIsInputEnabled()
+        {
+            var go = new GameObject("SwipeInputDetectorTest");
+            try
+            {
+                var detector = go.AddComponent<SwipeInputDetector>();
+
+                detector.SetInputEnabled(false);
+                Assert.That(detector.IsInputEnabled, Is.False);
+
+                detector.SetInputEnabled(true);
+                Assert.That(detector.IsInputEnabled, Is.True);
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(go);
+            }
+        }
     }
 }

@@ -109,6 +109,10 @@ namespace Mukseon.Gameplay.Progression
             {
                 ResumeGameTime();
                 IsSelectionOpen = false;
+                // 선택지가 열린 채 비활성화되면 닫힘 이벤트를 발화해, 이를 구독하는 측(예: 입력 비활성화
+                // 게이트, HUD)이 억제/표시 상태를 정리하도록 한다. 이벤트가 없으면 씬 전환 없는 재시작
+                // 등에서 입력이 영구 차단될 수 있다(#42).
+                OnLevelSelectionClosed?.Invoke(CurrentLevel);
             }
         }
 
