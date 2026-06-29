@@ -53,7 +53,10 @@ namespace Mukseon.Core.Input
 
             // 직전 탭과의 간격이 더블 탭 허용 범위 안이면 더블 탭 확정.
             // (_lastTapTime이 음의 무한대인 첫 탭은 간격이 +무한대가 되어 이 분기를 타지 않는다.)
-            if (endTime - _lastTapTime <= _doubleTapInterval)
+            // 시간이 역전되어(시각 리셋·비단조적 시각 주입 등) elapsed가 음수가 되면 더블 탭으로 오인하지
+            // 않도록 0 이상인지도 함께 확인한다.
+            float elapsed = endTime - _lastTapTime;
+            if (elapsed >= 0f && elapsed <= _doubleTapInterval)
             {
                 // 더블 탭 확정 후에는 추적을 끊어, 세 번째 탭이 또다시 더블 탭으로 이어지지 않게 한다.
                 _lastTapTime = float.NegativeInfinity;

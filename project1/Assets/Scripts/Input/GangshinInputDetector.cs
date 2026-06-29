@@ -46,8 +46,8 @@ namespace Mukseon.Core.Input
             _inputEnabled = enabled;
             if (!enabled)
             {
+                // 누름·더블 탭 추적 리셋은 CancelPress가 함께 처리한다.
                 CancelPress();
-                _recognizer?.Reset();
             }
         }
 
@@ -140,7 +140,10 @@ namespace Mukseon.Core.Input
 
         private void CancelPress()
         {
+            // 누름 추적과 더블 탭 추적을 함께 끊는다. 터치 취소(TouchPhase.Canceled)나 입력 비활성화(#42) 시,
+            // 취소 이전의 첫 탭이 이후 탭과 묶여 더블 탭으로 오인되지 않도록 한다.
             _isPressing = false;
+            _recognizer?.Reset();
         }
     }
 }

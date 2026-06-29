@@ -108,5 +108,18 @@ namespace Mukseon.Tests.EditMode
 
             Assert.That(result, Is.EqualTo(TapGestureRecognizer.Gesture.Tap));
         }
+
+        // 시간이 역전되어 두 번째 탭의 시각이 더 과거이면(비단조적 시각 주입), 음수 간격을 더블 탭으로 오인하지 않는다.
+        [Test]
+        public void NonMonotonicTime_DoesNotProduceDoubleTap()
+        {
+            var recognizer = CreateRecognizer();
+
+            Assert.That(recognizer.RegisterPress(Vector2.zero, Vector2.zero, 5.0f),
+                Is.EqualTo(TapGestureRecognizer.Gesture.Tap));
+            // 두 번째 탭이 더 과거 시각(1.0초)으로 들어와도 더블 탭이 아니라 단일 탭으로 처리되어야 한다.
+            Assert.That(recognizer.RegisterPress(Vector2.zero, Vector2.zero, 1.0f),
+                Is.EqualTo(TapGestureRecognizer.Gesture.Tap));
+        }
     }
 }

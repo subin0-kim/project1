@@ -599,8 +599,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 76326102252468148bbc337f030e9e4e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.Combat.GangshinInvincibilityLink
-  _gangshinController: {fileID: 0}
-  _playerHealth: {fileID: 0}
+  _gangshinController: {fileID: 187285048}
+  _playerHealth: {fileID: 187285038}
 --- !u!114 &187285048
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -613,8 +613,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b22f6c7a1a8671e4881d8b1233a7418e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.Combat.GangshinController
-  _inputDetector: {fileID: 0}
-  _playerStatSystem: {fileID: 0}
+  _inputDetector: {fileID: 187285049}
+  _playerStatSystem: {fileID: 187285037}
   _maxGauge: 100
   _gaugePerKill: 20
   _activeDuration: 6
