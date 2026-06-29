@@ -175,6 +175,9 @@ GameObject:
   - component: {fileID: 187285044}
   - component: {fileID: 187285045}
   - component: {fileID: 187285046}
+  - component: {fileID: 187285049}
+  - component: {fileID: 187285048}
+  - component: {fileID: 187285047}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -584,6 +587,57 @@ MonoBehaviour:
   - 4.5
   - 4
   - 3.5
+--- !u!114 &187285047
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 187285028}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 76326102252468148bbc337f030e9e4e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.Combat.GangshinInvincibilityLink
+  _gangshinController: {fileID: 0}
+  _playerHealth: {fileID: 0}
+--- !u!114 &187285048
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 187285028}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b22f6c7a1a8671e4881d8b1233a7418e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.Combat.GangshinController
+  _inputDetector: {fileID: 0}
+  _playerStatSystem: {fileID: 0}
+  _maxGauge: 100
+  _gaugePerKill: 20
+  _activeDuration: 6
+  _cooldownDuration: 10
+  _activeTimeScale: 0.7
+  _dealActivationPulse: 1
+  _activationPulseDamage: 999
+  _buffAttackPowerWhileActive: 1
+  _attackPowerBonusPercent: 1
+--- !u!114 &187285049
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 187285028}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bcd87213526dd4c4f9953be4c8a87ec3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Mukseon.Core::Mukseon.Core.Input.GangshinInputDetector
+  _doubleTapInterval: 0.3
+  _maxTapTravel: 20
 --- !u!1 &275740323
 GameObject:
   m_ObjectHideFlags: 0
