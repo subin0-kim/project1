@@ -77,12 +77,22 @@ namespace Mukseon.Gameplay.Combat
             if (_pendingDelay > 0f)
             {
                 _pendingDelay -= deltaTime;
-                if (_pendingDelay <= 0f && _wavesRemaining > 0)
+                if (_pendingDelay > 0f)
                 {
-                    StartWave();
+                    return; // 아직 대기 중.
                 }
 
-                return;
+                if (_wavesRemaining <= 0)
+                {
+                    _pendingDelay = 0f;
+                    return;
+                }
+
+                // 대기 종료. 딜레이를 초과한 시간(-_pendingDelay)을 새 파동의 진행 시간으로 이월해
+                // 프레임 레이트가 낮아도 2번째 파동 시작 타이밍이 밀리지 않게 한다(프레임 독립).
+                deltaTime = -_pendingDelay;
+                _pendingDelay = 0f;
+                StartWave();
             }
 
             if (!_waveActive)
@@ -152,9 +162,10 @@ namespace Mukseon.Gameplay.Combat
             }
 
             // 부모(플레이어) 스케일을 보정해 월드 지름이 정확히 2*반경이 되도록 한다.
+            // 좌우 반전(lossyScale.x < 0) 시 스케일이 음수가 되면 렌더링에 부작용이 생기므로 절댓값을 쓴다.
             Transform parent = _waveRing.transform.parent;
-            float parentScale = parent != null ? parent.lossyScale.x : 1f;
-            if (Mathf.Abs(parentScale) < 0.0001f)
+            float parentScale = parent != null ? Mathf.Abs(parent.lossyScale.x) : 1f;
+            if (parentScale < 0.0001f)
             {
                 parentScale = 1f;
             }

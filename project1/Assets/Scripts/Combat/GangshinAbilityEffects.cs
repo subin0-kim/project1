@@ -25,13 +25,13 @@ namespace Mukseon.Gameplay.Combat
             }
 
             // ApplyDamage로 적이 사망하면 ActiveEnemies에서 즉시 제거되어 순회 중 컬렉션이 변경될 수 있다.
-            // 스냅샷을 떠서 순회한다(RadialDamage와 동일한 방어).
-            var targets = new List<EnemyHealth>(enemies);
+            // 역순으로 순회하면 사망한 적(현재 인덱스)이 제거돼도 앞쪽 인덱스가 밀리지 않아,
+            // 리스트 복사(GC 할당) 없이 안전하다. 화면 전체 타격은 순서가 무관하다.
             int hitCount = 0;
 
-            for (int i = 0; i < targets.Count; i++)
+            for (int i = enemies.Count - 1; i >= 0; i--)
             {
-                if (TryHit(targets[i], damage, stunDuration, source))
+                if (TryHit(enemies[i], damage, stunDuration, source))
                 {
                     hitCount++;
                 }
@@ -59,13 +59,14 @@ namespace Mukseon.Gameplay.Combat
                 return 0;
             }
 
-            var targets = new List<EnemyHealth>(enemies);
+            // 파동은 확장하는 동안 매 프레임 호출된다. 리스트 복사 대신 역순 순회로 GC 할당을 제거한다
+            // (사망한 적은 현재 인덱스에서 제거되므로 앞쪽 인덱스가 밀리지 않아 안전하다).
             float sqrRadius = outerRadius * outerRadius;
             int hitCount = 0;
 
-            for (int i = 0; i < targets.Count; i++)
+            for (int i = enemies.Count - 1; i >= 0; i--)
             {
-                EnemyHealth enemy = targets[i];
+                EnemyHealth enemy = enemies[i];
                 if (enemy == null || alreadyHit.Contains(enemy))
                 {
                     continue;

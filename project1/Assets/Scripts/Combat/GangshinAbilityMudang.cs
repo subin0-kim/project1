@@ -38,8 +38,17 @@ namespace Mukseon.Gameplay.Combat
                 return;
             }
 
+            // 지속시간이 0 이하면 타이머 기반 자동 비활성화가 동작하지 않아 VFX가 영구히 남는다.
+            // 이 경우 켜지 않고 즉시 꺼둔다(설정 실수 방어).
+            if (_sweepVfxDuration <= 0f)
+            {
+                _sweepVfx.SetActive(false);
+                _vfxHideTimer = 0f;
+                return;
+            }
+
             _sweepVfx.SetActive(true);
-            _vfxHideTimer = Mathf.Max(0f, _sweepVfxDuration);
+            _vfxHideTimer = _sweepVfxDuration;
         }
 
         private void Update()

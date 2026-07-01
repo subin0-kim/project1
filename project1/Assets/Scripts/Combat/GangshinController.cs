@@ -87,6 +87,23 @@ namespace Mukseon.Gameplay.Combat
             NotifyGaugeChanged();
         }
 
+#if UNITY_EDITOR
+        // 인스펙터에서 _abilityLevel을 장착 Ability의 레벨 테이블 범위 밖으로 설정하면 GetLevel이 조용히
+        // 마지막 레벨로 클램프된다(예: Lv3 기대 → Lv1 수치). 실수를 조기에 발견하도록 경고만 남긴다(#59 전 임시 필드).
+        private void OnValidate()
+        {
+            if (_equippedAbility != null && _equippedAbility.Data != null
+                && _abilityLevel > _equippedAbility.Data.MaxLevel)
+            {
+                Debug.LogWarning(
+                    $"[GangshinController] _abilityLevel({_abilityLevel})이 " +
+                    $"{_equippedAbility.Data.name}의 MaxLevel({_equippedAbility.Data.MaxLevel})을 초과합니다. " +
+                    "GetLevel이 최대 레벨로 클램프됩니다.",
+                    this);
+            }
+        }
+#endif
+
         private void OnEnable()
         {
             if (_inputDetector != null)
