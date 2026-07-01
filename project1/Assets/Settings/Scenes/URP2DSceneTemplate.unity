@@ -769,9 +769,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bcd87213526dd4c4f9953be4c8a87ec3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Mukseon.Core::Mukseon.Core.Input.GangshinInputDetector
-  _holdDuration: 0.45
   _doubleTapInterval: 0.3
-  _maxTapTravel: 24
+  _maxTapTravel: 20
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

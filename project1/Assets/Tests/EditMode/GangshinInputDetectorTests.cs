@@ -41,28 +41,33 @@ namespace Mukseon.Tests.EditMode
             }
         }
 
-        // 비활성화 → 재활성화 시 더블 탭 추적 상태(_lastTapTime)가 리셋되는지 검증한다.
-        // 리셋이 없으면 일시정지 직전 들어온 탭이 재개 직후 첫 탭만으로 더블 탭 조건을 충족해
-        // 강신이 오발동될 수 있다(#42). _lastTapTime은 private이므로 리플렉션으로 확인한다.
+        // 비활성화 시 더블 탭 추적이 리셋되는지 검증한다(#42). 리셋이 없으면 일시정지 직전 들어온 탭이
+        // 재개 직후 첫 탭만으로 더블 탭 조건을 충족해 강신이 오발동될 수 있다.
+        // 더블 탭 판정은 TapGestureRecognizer가 담당하므로, EditMode에서 Awake가 호출되지 않는 점을 감안해
+        // 인식기를 리플렉션으로 주입한 뒤 동작으로 리셋 여부를 확인한다.
         [Test]
-        public void SetInputEnabled_False_ResetsLastTapTime()
+        public void SetInputEnabled_False_ResetsDoubleTapTracking()
         {
             var go = new GameObject("GangshinInputDetectorTest");
             try
             {
                 var detector = go.AddComponent<GangshinInputDetector>();
 
+                var recognizer = new TapGestureRecognizer(20f, 0.3f);
                 var field = typeof(GangshinInputDetector).GetField(
-                    "_lastTapTime",
+                    "_recognizer",
                     System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-                Assert.That(field, Is.Not.Null, "_lastTapTime 필드를 찾을 수 없습니다.");
+                Assert.That(field, Is.Not.Null, "_recognizer 필드를 찾을 수 없습니다.");
+                field.SetValue(detector, recognizer);
 
-                // 직전 탭 시각이 기록된 상황을 모사한다.
-                field.SetValue(detector, 5f);
+                // 첫 탭으로 더블 탭 후보 상태를 만든다.
+                recognizer.RegisterPress(Vector2.zero, Vector2.zero, 1f);
 
                 detector.SetInputEnabled(false);
 
-                Assert.That((float)field.GetValue(detector), Is.EqualTo(float.NegativeInfinity));
+                // 리셋되었으므로 곧바로 들어온 탭은 더블 탭이 아니라 단일 탭이어야 한다.
+                var result = recognizer.RegisterPress(Vector2.zero, Vector2.zero, 1.1f);
+                Assert.That(result, Is.EqualTo(TapGestureRecognizer.Gesture.Tap));
             }
             finally
             {
