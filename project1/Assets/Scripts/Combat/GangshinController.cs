@@ -34,8 +34,15 @@ namespace Mukseon.Gameplay.Combat
         [SerializeField, Range(0.05f, 1f)]
         private float _activeTimeScale = 0.7f;
 
-        [Header("Effects")]
-        [SerializeField]
+        [Header("Ability")]
+        [SerializeField, Tooltip("발동 시 실행할 강신 필살기(#30). 미지정 시 아래 레거시 펄스로 대체.")]
+        private GangshinAbilityBase _equippedAbility;
+
+        [SerializeField, Min(1), Tooltip("발동 레벨(1-based). 슬롯/강화 카드 시스템(#59, #66) 연동 전까지 임시로 사용.")]
+        private int _abilityLevel = 1;
+
+        [Header("Effects (Legacy Fallback)")]
+        [SerializeField, Tooltip("장착 Ability가 없을 때만 사용하는 레거시 전체 펄스.")]
         private bool _dealActivationPulse = true;
 
         [SerializeField, Min(0f)]
@@ -183,6 +190,22 @@ namespace Mukseon.Gameplay.Combat
                 _playerStatSystem.AddModifier(
                     StatType.AttackPower,
                     new StatModifier(_attackPowerBonusPercent, StatModifierType.Percent, this));
+            }
+
+            ActivateEquippedAbility();
+        }
+
+        /// <summary>
+        /// 장착된 강신 필살기(#30)를 발동한다. 미장착 시 레거시 전체 펄스로 대체한다.
+        /// 대상 적 목록으로 현재 활성 적 전체를 전달한다.
+        /// </summary>
+        private void ActivateEquippedAbility()
+        {
+            if (_equippedAbility != null)
+            {
+                _equippedAbility.Activate(new GangshinSlotContext(
+                    transform.position, _abilityLevel, this, EnemyHealth.ActiveEnemies));
+                return;
             }
 
             if (_dealActivationPulse)

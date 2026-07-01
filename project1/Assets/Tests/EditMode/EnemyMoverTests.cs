@@ -135,5 +135,51 @@ namespace Mukseon.Tests.EditMode
             _mover.SetMovePattern(EnemyMovePattern.TrackPlayer);
             Assert.That(_mover.MovePattern, Is.EqualTo(EnemyMovePattern.TrackPlayer));
         }
+
+        [Test]
+        public void Stun_StopsMovement_ThenResumesAfterDuration()
+        {
+            var playerGo = new GameObject("Player");
+
+            try
+            {
+                playerGo.transform.position = new Vector3(10f, 0f, 0f);
+                _enemyGo.transform.position = Vector3.zero;
+                _enemyHealth.SetMoveSpeed(5f);
+                _mover.SetMovePattern(EnemyMovePattern.TrackPlayer);
+                _mover.SetPlayerTarget(playerGo.transform);
+
+                _mover.ApplyStun(0.25f);
+                Assert.That(_mover.IsStunned, Is.True);
+
+                // 기절 중에는 이동하지 않는다.
+                _mover.Tick(DeltaTime); // 0.10s 소비
+                _mover.Tick(DeltaTime); // 0.20s 소비
+                Assert.That(_enemyGo.transform.position, Is.EqualTo(Vector3.zero));
+
+                // 기절이 끝나면 이동을 재개한다.
+                _mover.Tick(DeltaTime); // 0.30s → 기절 해제
+                Assert.That(_mover.IsStunned, Is.False);
+                _mover.Tick(DeltaTime);
+                Assert.That(_enemyGo.transform.position.x, Is.GreaterThan(0f));
+            }
+            finally
+            {
+                Object.DestroyImmediate(playerGo);
+            }
+        }
+
+        [Test]
+        public void ApplyStun_KeepsLongerRemainingDuration()
+        {
+            _mover.ApplyStun(1.0f);
+            _mover.Tick(0.3f); // 남은 0.7s
+
+            // 더 짧은 기절을 부여해도 남은 시간이 줄어들지 않는다.
+            _mover.ApplyStun(0.2f);
+            _mover.Tick(0.5f); // 남은 0.2s → 아직 기절 중
+
+            Assert.That(_mover.IsStunned, Is.True);
+        }
     }
 }
