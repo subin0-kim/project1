@@ -194,5 +194,39 @@ namespace Mukseon.Tests.EditMode
             Assert.That(state.Slots[1].Gauge, Is.EqualTo(40f), "다른 슬롯 게이지는 보존되어야 한다.");
             Assert.That(state.Count, Is.EqualTo(GangshinSlotState.DefaultCapacity));
         }
+
+        [Test]
+        public void ReplaceSlot_Fails_OnUnoccupiedSlot()
+        {
+            var state = NewState();
+            state.AddSlot(null, 100f); // slot 0만 점유
+
+            bool replaced = state.ReplaceSlot(2, null, 100f); // 빈 슬롯 교체 시도
+
+            Assert.That(replaced, Is.False, "빈 슬롯은 ReplaceSlot 대상이 될 수 없어야 한다.");
+            Assert.That(state.Slots[2].IsOccupied, Is.False);
+            Assert.That(state.Count, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void AddSlot_StoresLevel()
+        {
+            var state = NewState();
+
+            int index = state.AddSlot(null, 100f, level: 3);
+
+            Assert.That(state.Slots[index].Level, Is.EqualTo(3), "발동 레벨이 슬롯에 보존되어야 한다.");
+        }
+
+        [Test]
+        public void ReplaceSlot_UpdatesLevel()
+        {
+            var state = NewState();
+            state.AddSlot(null, 100f, level: 1);
+
+            state.ReplaceSlot(0, null, 90f, level: 2);
+
+            Assert.That(state.Slots[0].Level, Is.EqualTo(2));
+        }
     }
 }

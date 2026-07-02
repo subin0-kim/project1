@@ -18,6 +18,9 @@ namespace Mukseon.Gameplay.Combat
         /// <summary>발동에 필요한 게이지. 0이면 패시브 전용(게이지 없음).</summary>
         public float RequiredGauge { get; internal set; }
 
+        /// <summary>장착 시점의 발동 레벨(1-based). Activate 호출 시 GangshinSlotContext.Level로 전달된다.</summary>
+        public int Level { get; internal set; } = 1;
+
         /// <summary>슬롯이 점유(강신 보유) 상태인지.</summary>
         public bool IsOccupied { get; internal set; }
 

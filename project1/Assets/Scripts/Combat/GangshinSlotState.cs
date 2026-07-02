@@ -85,9 +85,9 @@ namespace Mukseon.Gameplay.Combat
 
         /// <summary>
         /// 빈 슬롯에 강신을 추가한다. 성공 시 슬롯 인덱스, 슬롯이 모두 차 있으면 -1을 반환한다.
-        /// 첫 강신이 추가되면 자동으로 장착 슬롯이 된다.
+        /// 첫 강신이 추가되면 자동으로 장착 슬롯이 된다. <paramref name="level"/>은 발동 시 사용할 레벨.
         /// </summary>
-        public int AddSlot(GangshinAbilityBase ability, float requiredGauge)
+        public int AddSlot(GangshinAbilityBase ability, float requiredGauge, int level = 1)
         {
             int index = FindFreeIndex();
             if (index < 0)
@@ -98,6 +98,7 @@ namespace Mukseon.Gameplay.Combat
             GangshinSlot slot = _slots[index];
             slot.Ability = ability;
             slot.RequiredGauge = Mathf.Max(0f, requiredGauge);
+            slot.Level = Mathf.Max(1, level);
             slot.Gauge = 0f;
             slot.IsOccupied = true;
 
@@ -113,11 +114,14 @@ namespace Mukseon.Gameplay.Combat
 
         /// <summary>
         /// 슬롯이 모두 찼을 때(레벨업) 기존 강신을 교체한다. 교체된 슬롯의 게이지는 0으로 초기화된다.
+        /// 빈 슬롯은 <see cref="AddSlot"/>로 채워야 하므로 점유된 슬롯만 대상으로 한다.
         /// 발동(Active) 중인 장착 슬롯은 교체할 수 없다.
         /// </summary>
-        public bool ReplaceSlot(int index, GangshinAbilityBase ability, float requiredGauge)
+        public bool ReplaceSlot(int index, GangshinAbilityBase ability, float requiredGauge, int level = 1)
         {
-            if (index < 0 || index >= _slots.Length)
+            // 비어 있는 슬롯을 교체 대상으로 넘기면 IsOccupied=true인데 ActiveIndex가 갱신되지 않는 등
+            // 상태 불일치가 생길 수 있으므로, 점유된 슬롯만 허용한다(빈 슬롯은 AddSlot 사용).
+            if (index < 0 || index >= _slots.Length || !_slots[index].IsOccupied)
             {
                 return false;
             }
@@ -131,6 +135,7 @@ namespace Mukseon.Gameplay.Combat
             GangshinSlot slot = _slots[index];
             slot.Ability = ability;
             slot.RequiredGauge = Mathf.Max(0f, requiredGauge);
+            slot.Level = Mathf.Max(1, level);
             slot.Gauge = 0f;
             slot.IsOccupied = true;
 

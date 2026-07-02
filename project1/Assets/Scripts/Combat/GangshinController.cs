@@ -69,6 +69,7 @@ namespace Mukseon.Gameplay.Combat
         private GangshinPassiveApplier _passiveApplier;
         private GangshinActivationEffects _activationEffects;
         private GangshinState _lastState;
+        private bool _hasStarted;
 
         public GangshinState CurrentState => _slotState != null ? _slotState.CurrentState : GangshinState.Idle;
         public float CurrentGauge => _slotState != null ? _slotState.ActiveGauge : 0f;
@@ -116,12 +117,20 @@ namespace Mukseon.Gameplay.Combat
                 _activeTimeScale, _dealActivationPulse, _activationPulseDamage);
 
             // 캐릭터 기본 강신을 슬롯 1에 시드한다. 어빌리티가 없어도 슬롯을 채워(필요치 = _maxGauge)
-            // 레거시 전체 펄스 동작을 보존한다.
-            _slotState.AddSlot(_equippedAbility, ResolveRequiredGauge(_equippedAbility, _abilityLevel));
-            SyncActivePassives();
+            // 레거시 전체 펄스 동작을 보존한다. 발동 레벨도 슬롯에 함께 저장한다.
+            _slotState.AddSlot(_equippedAbility, ResolveRequiredGauge(_equippedAbility, _abilityLevel), _abilityLevel);
 
+            // 패시브 적용은 Start에서 수행한다: PlayerStatSystem.Awake(스탯 초기화)와의 Awake 순서가
+            // 보장되지 않아, Awake에서 AddModifier를 호출하면 조용히 무시될 수 있다.
             _lastState = _slotState.CurrentState;
             NotifyGaugeChanged();
+        }
+
+        // 모든 컴포넌트의 Awake 이후에 패시브를 적용한다(초기화 순서 안전). 재활성화 복원은 OnEnable이 담당.
+        private void Start()
+        {
+            _hasStarted = true;
+            SyncActivePassives();
         }
 
 #if UNITY_EDITOR
@@ -149,6 +158,13 @@ namespace Mukseon.Gameplay.Combat
             }
 
             EnemyHealth.AnyEnemyDied += HandleAnyEnemyDied;
+
+            // 비활성→재활성 시 OnDisable에서 해제한 패시브를 복원한다. 최초 활성화(Start 이전)는
+            // 초기화 순서 안전을 위해 여기서 적용하지 않고 Start에서 적용한다.
+            if (_hasStarted)
+            {
+                SyncActivePassives();
+            }
         }
 
         private void OnDisable()
@@ -170,7 +186,10 @@ namespace Mukseon.Gameplay.Combat
                 return;
             }
 
-            if (_slotState.Tick(Time.unscaledDeltaTime))
+            // 일시정지(timeScale 0: 레벨업/일시정지 메뉴, 또는 히트스톱) 중에는 발동/쿨다운 타이머를
+            // 진행하지 않는다. unscaledDeltaTime으로 틱하면 정지 중에도 타이머가 흘러, 만료 시 Exit가
+            // timeScale을 1로 복원해 게임이 멋대로 재개되는 버그가 생긴다.
+            if (Time.timeScale > 0f && _slotState.Tick(Time.unscaledDeltaTime))
             {
                 HandleStateTransition();
             }
@@ -213,7 +232,7 @@ namespace Mukseon.Gameplay.Combat
                 return -1;
             }
 
-            int index = _slotState.AddSlot(ability, ResolveRequiredGauge(ability, level));
+            int index = _slotState.AddSlot(ability, ResolveRequiredGauge(ability, level), level);
             if (index < 0)
             {
                 return -1;
@@ -229,7 +248,7 @@ namespace Mukseon.Gameplay.Combat
         /// <summary>슬롯이 모두 찼을 때 지정 슬롯의 강신을 교체한다(레벨업 연동 — 후속 PR에서 호출).</summary>
         public bool TryReplaceAbility(int slotIndex, GangshinAbilityBase ability, int level = 1)
         {
-            if (_slotState == null || !_slotState.ReplaceSlot(slotIndex, ability, ResolveRequiredGauge(ability, level)))
+            if (_slotState == null || !_slotState.ReplaceSlot(slotIndex, ability, ResolveRequiredGauge(ability, level), level))
             {
                 return false;
             }
@@ -287,7 +306,10 @@ namespace Mukseon.Gameplay.Combat
             if (currentState == GangshinState.Active)
             {
                 // 발동 원점은 플레이어(중앙) 위치. 대상 적/레거시 펄스는 헬퍼가 처리한다.
-                _activationEffects?.Enter(_slotState?.ActiveSlot?.Ability, transform.position, _abilityLevel);
+                // 레벨은 장착 슬롯에 저장된 값을 우선 사용(슬롯별로 다른 레벨의 강신이 들어올 수 있음).
+                GangshinSlot activeSlot = _slotState?.ActiveSlot;
+                int level = activeSlot != null ? activeSlot.Level : _abilityLevel;
+                _activationEffects?.Enter(activeSlot?.Ability, transform.position, level);
             }
 
             _lastState = currentState;
