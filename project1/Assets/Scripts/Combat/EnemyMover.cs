@@ -40,7 +40,14 @@ namespace Mukseon.Gameplay.Combat
         // Tick에서 소비 후 1로 리셋한다. 매 프레임 가장 강한 슬로우(가장 작은 값)만 반영된다.
         private float _slowThisFrame = 1f;
 
+        // 기절(Stun) 남은 시간(초). 0보다 크면 이동을 완전히 정지한다. 강신 파천의 징(#30) 등이 부여한다.
+        // 슬로우와 달리 지속 시간 동안 상태가 유지되며, Tick에서 deltaTime만큼 감소한다.
+        private float _stunTimer;
+
         public EnemyMovePattern MovePattern => _movePattern;
+
+        /// <summary>기절 상태 여부. 기절 중에는 이동을 정지한다.</summary>
+        public bool IsStunned => _stunTimer > 0f;
 
         private void Awake()
         {
@@ -49,8 +56,9 @@ namespace Mukseon.Gameplay.Combat
 
         private void OnEnable()
         {
-            // 풀 재사용 가드: 슬로우 상태로 사망하면 Tick의 조기 반환으로 리셋이 누락되므로 여기서 초기화한다.
+            // 풀 재사용 가드: 슬로우/기절 상태로 사망하면 Tick의 조기 반환으로 리셋이 누락되므로 여기서 초기화한다.
             _slowThisFrame = 1f;
+            _stunTimer = 0f;
             _spawnPosition = transform.position;
 
             if (_playerTarget == null)
@@ -84,6 +92,14 @@ namespace Mukseon.Gameplay.Combat
                 return;
             }
 
+            // 기절 중에는 타이머만 감소시키고 이동은 정지한다. 슬로우 요청은 이번 프레임에 소비된 것으로 처리한다.
+            if (_stunTimer > 0f)
+            {
+                _stunTimer = Mathf.Max(0f, _stunTimer - Mathf.Max(0f, deltaTime));
+                _slowThisFrame = 1f;
+                return;
+            }
+
             float step = _enemyHealth.MoveSpeed * Mathf.Max(0f, deltaTime) * _slowThisFrame;
 
             switch (_movePattern)
@@ -113,6 +129,20 @@ namespace Mukseon.Gameplay.Combat
         public void RequestSlow(float multiplier)
         {
             _slowThisFrame = Mathf.Min(_slowThisFrame, Mathf.Clamp01(multiplier));
+        }
+
+        /// <summary>
+        /// 기절(Stun)을 부여한다. 지속 시간 동안 이동이 정지된다(강신 파천의 징 #30).
+        /// 이미 기절 중이면 남은 시간과 요청 시간 중 더 긴 값을 사용해 기절이 짧아지지 않게 한다.
+        /// </summary>
+        public void ApplyStun(float duration)
+        {
+            if (duration <= 0f)
+            {
+                return;
+            }
+
+            _stunTimer = Mathf.Max(_stunTimer, duration);
         }
 
         /// <summary>플레이어 방향으로 직선 이동 (창귀)</summary>

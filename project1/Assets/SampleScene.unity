@@ -620,6 +620,8 @@ MonoBehaviour:
   _activeDuration: 6
   _cooldownDuration: 10
   _activeTimeScale: 0.7
+  _equippedAbility: {fileID: 0}
+  _abilityLevel: 1
   _dealActivationPulse: 1
   _activationPulseDamage: 999
   _buffAttackPowerWhileActive: 1

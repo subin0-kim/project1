@@ -34,8 +34,15 @@ namespace Mukseon.Gameplay.Combat
         [SerializeField, Range(0.05f, 1f)]
         private float _activeTimeScale = 0.7f;
 
-        [Header("Effects")]
-        [SerializeField]
+        [Header("Ability")]
+        [SerializeField, Tooltip("발동 시 실행할 강신 필살기(#30). 미지정 시 아래 레거시 펄스로 대체.")]
+        private GangshinAbilityBase _equippedAbility;
+
+        [SerializeField, Min(1), Tooltip("발동 레벨(1-based). 슬롯/강화 카드 시스템(#59, #66) 연동 전까지 임시로 사용.")]
+        private int _abilityLevel = 1;
+
+        [Header("Effects (Legacy Fallback)")]
+        [SerializeField, Tooltip("장착 Ability가 없을 때만 사용하는 레거시 전체 펄스.")]
         private bool _dealActivationPulse = true;
 
         [SerializeField, Min(0f)]
@@ -79,6 +86,23 @@ namespace Mukseon.Gameplay.Combat
             _lastState = _runtime.CurrentState;
             NotifyGaugeChanged();
         }
+
+#if UNITY_EDITOR
+        // 인스펙터에서 _abilityLevel을 장착 Ability의 레벨 테이블 범위 밖으로 설정하면 GetLevel이 조용히
+        // 마지막 레벨로 클램프된다(예: Lv3 기대 → Lv1 수치). 실수를 조기에 발견하도록 경고만 남긴다(#59 전 임시 필드).
+        private void OnValidate()
+        {
+            if (_equippedAbility != null && _equippedAbility.Data != null
+                && _abilityLevel > _equippedAbility.Data.MaxLevel)
+            {
+                Debug.LogWarning(
+                    $"[GangshinController] _abilityLevel({_abilityLevel})이 " +
+                    $"{_equippedAbility.Data.name}의 MaxLevel({_equippedAbility.Data.MaxLevel})을 초과합니다. " +
+                    "GetLevel이 최대 레벨로 클램프됩니다.",
+                    this);
+            }
+        }
+#endif
 
         private void OnEnable()
         {
@@ -183,6 +207,22 @@ namespace Mukseon.Gameplay.Combat
                 _playerStatSystem.AddModifier(
                     StatType.AttackPower,
                     new StatModifier(_attackPowerBonusPercent, StatModifierType.Percent, this));
+            }
+
+            ActivateEquippedAbility();
+        }
+
+        /// <summary>
+        /// 장착된 강신 필살기(#30)를 발동한다. 미장착 시 레거시 전체 펄스로 대체한다.
+        /// 대상 적 목록으로 현재 활성 적 전체를 전달한다.
+        /// </summary>
+        private void ActivateEquippedAbility()
+        {
+            if (_equippedAbility != null)
+            {
+                _equippedAbility.Activate(new GangshinSlotContext(
+                    transform.position, _abilityLevel, this, EnemyHealth.ActiveEnemies));
+                return;
             }
 
             if (_dealActivationPulse)
