@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Mukseon.Gameplay.Combat
@@ -27,11 +28,24 @@ namespace Mukseon.Gameplay.Combat
             new GangshinAbilityLevel(500f, 100f, 0f, false),
         };
 
+        [SerializeField, Min(0f), Tooltip("게이지 충전 배율(기본 충전량 대비). 1 = 기본, 2 = 2배 충전.")]
+        private float _gaugeChargeMultiplier = 1f;
+
+        [SerializeField, Tooltip("장착 중 항상 적용되는 패시브 효과. 없을 수 있음(빈 배열).")]
+        private GangshinPassiveEffect[] _passiveEffects = new GangshinPassiveEffect[0];
+
         public string AbilityId => string.IsNullOrWhiteSpace(_abilityId) ? name : _abilityId;
         public string DisplayName => string.IsNullOrWhiteSpace(_displayName) ? name : _displayName;
         public string Description => _description;
         public Sprite Icon => _icon;
         public int MaxLevel => _levels != null && _levels.Length > 0 ? _levels.Length : 1;
+
+        /// <summary>게이지 충전 배율(기본 충전량 대비). 음수 방지 위해 0으로 클램프.</summary>
+        public float GaugeChargeMultiplier => Mathf.Max(0f, _gaugeChargeMultiplier);
+
+        /// <summary>장착 중 적용할 패시브 효과 목록(없으면 빈 목록).</summary>
+        public IReadOnlyList<GangshinPassiveEffect> PassiveEffects =>
+            _passiveEffects ?? System.Array.Empty<GangshinPassiveEffect>();
 
         /// <summary>
         /// 지정 레벨(1-based)의 수치를 반환한다. 범위를 벗어나면 최소 / 최대 레벨로 클램프한다.
