@@ -20,12 +20,20 @@
 
 ## 6.3 세이브 및 로드 (Save & Load)
 신당(로비)에서의 영구 성장 요소 저장을 위한 구조입니다.
-- **저장 방식**: 빠르고 쉬운 구현을 위해 `JSON` 직렬화 후 `Application.persistentDataPath`에 저장합니다.
+- **저장 방식**: 빠르고 쉬운 구현을 위해 `JSON` 직렬화(`JsonUtility`) 후 `Application.persistentDataPath`에 저장합니다.
+  - `JsonUtility`는 `Dictionary`를 직렬화하지 못하므로, `UpgradeLevels`는 직렬화 가능한 키-값 리스트 래퍼(`SerializableStringIntMap`)로 저장합니다.
+  - 저장은 임시 파일에 먼저 기록한 뒤 교체(원자적 쓰기)하여 쓰기 중단 시 손상을 방지합니다.
+- **네이밍**: 메타 재화 '영혼'은 인런 EXP '혼불'(코드 토큰 `Soul*`)과 충돌하므로 `Spirit` 토큰으로 분리합니다.
 - **저장 데이터 모델 (`SaveData.cs`)**:
+  - `SaveDataVersion` (마이그레이션 대비 스키마 버전)
   - `TotalGold` (누적 금화)
-  - `TotalSouls` (누적 영혼)
-  - `UpgradeLevels` (Dictionary 형태, 예: `{"MaxHP": 3, "MagnetRadius": 1}`)
+  - `TotalSpirit` (누적 영혼)
+  - `UpgradeLevels` (`SerializableStringIntMap`, 예: `{"MaxHP": 3, "MagnetRadius": 1}`)
   - `UnlockedCharacters` (무당 기본 활성화, 박수 구매 여부 등)
+  - `UnlockedSkills` (영혼으로 해금된 신규 스킬 ID 목록, 기본 11종 제외)
+  - `TutorialCompleted` (튜토리얼 완료 플래그, #39)
+- **구성 요소**: `SaveData`(모델) / `ISaveStorage`·`JsonSaveStorage`(파일 IO) / `SaveMigration`(버전 승격·정규화) / `SaveService`(로드·저장·`OnChanged`).
+- **범위(#33)**: 순수 저장 레이어까지만 담당하며, 실제 저장 트리거(신당 구매·결과 적립·해금·튜토리얼)는 각 소유 이슈(#34/#36/#61/#39)가 연결합니다.
  
 ## 6.4 적 AI 아키텍처 (Enemy AI Architecture)
 
