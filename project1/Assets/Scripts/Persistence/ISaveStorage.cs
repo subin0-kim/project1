@@ -12,8 +12,8 @@ namespace Mukseon.Core.Persistence
         /// <summary>저장 데이터를 읽어 반환한다. 파일이 없거나 읽을 수 없으면 null을 반환한다.</summary>
         SaveData Load();
 
-        /// <summary>저장 데이터를 영속화한다(원자적 쓰기).</summary>
-        void Save(SaveData data);
+        /// <summary>저장 데이터를 영속화한다(원자적 쓰기). 성공 여부를 반환한다.</summary>
+        bool Save(SaveData data);
 
         /// <summary>저장 파일을 삭제한다(존재하지 않으면 무시).</summary>
         void Delete();

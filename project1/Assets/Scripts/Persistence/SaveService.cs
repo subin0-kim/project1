@@ -34,16 +34,22 @@ namespace Mukseon.Core.Persistence
             return Current;
         }
 
-        /// <summary>Current를 저장소에 영속화하고 OnChanged를 발행한다.</summary>
-        public void Save()
+        /// <summary>Current를 저장소에 영속화한다. 저장에 성공한 경우에만 OnChanged를 발행하고, 성공 여부를 반환한다.</summary>
+        public bool Save()
         {
             if (Current == null)
             {
                 Current = SaveData.CreateDefault();
             }
 
-            _storage.Save(Current);
-            OnChanged?.Invoke(Current);
+            // 저장 실패 시 OnChanged를 발행하지 않아, UI/구독자가 저장 성공으로 오인하지 않게 한다.
+            bool success = _storage.Save(Current);
+            if (success)
+            {
+                OnChanged?.Invoke(Current);
+            }
+
+            return success;
         }
     }
 }

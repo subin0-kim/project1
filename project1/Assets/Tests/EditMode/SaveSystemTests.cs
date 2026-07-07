@@ -166,11 +166,18 @@ namespace Mukseon.Tests.EditMode
 
             SaveData second = SaveData.CreateDefault();
             second.TotalGold = 999;
-            _storage.Save(second); // 기존 파일 위에 다시 저장 → File.Replace 경로
+            bool saved = _storage.Save(second); // 기존 파일 위에 다시 저장 → File.Replace 경로
 
             SaveData loaded = _storage.Load();
+            Assert.That(saved, Is.True);
             Assert.That(loaded.TotalGold, Is.EqualTo(999));
             Assert.That(File.Exists(_tempPath + ".tmp"), Is.False, "임시 파일이 남아있으면 안 된다.");
+        }
+
+        [Test]
+        public void Storage_Save_ReturnsFalse_ForNullData()
+        {
+            Assert.That(_storage.Save(null), Is.False);
         }
 
         // ---- 서비스 저장/로드 통합 + OnChanged ----
@@ -186,14 +193,45 @@ namespace Mukseon.Tests.EditMode
 
             service.Current.TotalSpirit = 7;
             service.Current.UnlockedSkills.Add("skill.unlocked");
-            service.Save();
+            bool saved = service.Save();
 
             var reloaded = new SaveService(_storage);
             reloaded.Load();
 
-            Assert.That(changedCount, Is.EqualTo(1), "Save() 시 OnChanged가 1회 발행돼야 한다.");
+            Assert.That(saved, Is.True);
+            Assert.That(changedCount, Is.EqualTo(1), "Save() 성공 시 OnChanged가 1회 발행돼야 한다.");
             Assert.That(reloaded.Current.TotalSpirit, Is.EqualTo(7));
             Assert.That(reloaded.Current.UnlockedSkills, Does.Contain("skill.unlocked"));
+        }
+
+        [Test]
+        public void Service_Save_DoesNotRaiseOnChanged_WhenStorageFails()
+        {
+            var failing = new FailingStorage();
+            var service = new SaveService(failing);
+            service.Load();
+
+            int changedCount = 0;
+            service.OnChanged += _ => changedCount++;
+
+            bool saved = service.Save();
+
+            Assert.That(saved, Is.False, "저장소가 실패하면 Save()는 false를 반환해야 한다.");
+            Assert.That(changedCount, Is.EqualTo(0), "저장 실패 시 OnChanged가 발행되면 안 된다.");
+        }
+
+        /// <summary>저장이 항상 실패하는 테스트용 저장소.</summary>
+        private sealed class FailingStorage : ISaveStorage
+        {
+            public bool Exists() => false;
+
+            public SaveData Load() => null;
+
+            public bool Save(SaveData data) => false;
+
+            public void Delete()
+            {
+            }
         }
     }
 }

@@ -14,33 +14,46 @@ namespace Mukseon.Core.Persistence
         private const string DefaultFileName = "save.json";
         private const string TempSuffix = ".tmp";
 
-        private readonly string _filePath;
+        // Application.persistentDataPath는 메인 스레드에서만 접근 가능하므로, 생성자에서 즉시 참조하지 않고
+        // 실제 IO가 일어나는 시점(FilePath 접근)까지 경로 결정을 지연한다(DI/백그라운드 스레드/정적 초기화 안전).
+        private readonly string _customFilePath;
+        private string _resolvedFilePath;
 
         public JsonSaveStorage()
-            : this(Path.Combine(Application.persistentDataPath, DefaultFileName))
         {
         }
 
         /// <summary>저장 경로를 직접 지정한다(테스트에서 임시 경로 주입용).</summary>
         public JsonSaveStorage(string filePath)
         {
-            _filePath = filePath;
+            _customFilePath = filePath;
         }
 
-        public string FilePath => _filePath;
+        public string FilePath
+        {
+            get
+            {
+                if (_resolvedFilePath == null)
+                {
+                    _resolvedFilePath = _customFilePath ?? Path.Combine(Application.persistentDataPath, DefaultFileName);
+                }
 
-        public bool Exists() => File.Exists(_filePath);
+                return _resolvedFilePath;
+            }
+        }
+
+        public bool Exists() => File.Exists(FilePath);
 
         public SaveData Load()
         {
-            if (!File.Exists(_filePath))
+            if (!File.Exists(FilePath))
             {
                 return null;
             }
 
             try
             {
-                string json = File.ReadAllText(_filePath);
+                string json = File.ReadAllText(FilePath);
                 if (string.IsNullOrWhiteSpace(json))
                 {
                     return null;
@@ -55,41 +68,67 @@ namespace Mukseon.Core.Persistence
             }
         }
 
-        public void Save(SaveData data)
+        public bool Save(SaveData data)
         {
             if (data == null)
             {
-                return;
+                return false;
             }
 
-            string directory = Path.GetDirectoryName(_filePath);
-            if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+            string tempPath = FilePath + TempSuffix;
+            try
             {
-                Directory.CreateDirectory(directory);
+                string directory = Path.GetDirectoryName(FilePath);
+                if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+                {
+                    Directory.CreateDirectory(directory);
+                }
+
+                string json = JsonUtility.ToJson(data, prettyPrint: true);
+
+                // 임시 파일에 먼저 완전히 기록한 뒤 원자적으로 교체한다.
+                File.WriteAllText(tempPath, json);
+
+                if (File.Exists(FilePath))
+                {
+                    // File.Replace는 대상이 존재해야 하며, 교체를 원자적으로 수행한다.
+                    File.Replace(tempPath, FilePath, null);
+                }
+                else
+                {
+                    File.Move(tempPath, FilePath);
+                }
+
+                return true;
             }
-
-            string json = JsonUtility.ToJson(data, prettyPrint: true);
-            string tempPath = _filePath + TempSuffix;
-
-            // 임시 파일에 먼저 완전히 기록한 뒤 원자적으로 교체한다.
-            File.WriteAllText(tempPath, json);
-
-            if (File.Exists(_filePath))
+            catch (Exception exception)
             {
-                // File.Replace는 대상이 존재해야 하며, 교체를 원자적으로 수행한다.
-                File.Replace(tempPath, _filePath, null);
-            }
-            else
-            {
-                File.Move(tempPath, _filePath);
+                // Load()와 대칭적으로 IO 실패를 방어한다. 저장 트리거가 게임플레이 핸들러 한복판에서
+                // 호출되더라도(#34/#36/#61/#39) 저장 실패가 예외로 전파되지 않도록 한다.
+                Debug.LogError($"[JsonSaveStorage] 저장 파일을 저장하지 못했습니다: {exception.Message}");
+
+                // 실패 시 남은 임시 파일을 정리한다(2차 예외는 무시).
+                if (File.Exists(tempPath))
+                {
+                    try
+                    {
+                        File.Delete(tempPath);
+                    }
+                    catch
+                    {
+                        // 정리 실패는 무시한다.
+                    }
+                }
+
+                return false;
             }
         }
 
         public void Delete()
         {
-            if (File.Exists(_filePath))
+            if (File.Exists(FilePath))
             {
-                File.Delete(_filePath);
+                File.Delete(FilePath);
             }
         }
     }
