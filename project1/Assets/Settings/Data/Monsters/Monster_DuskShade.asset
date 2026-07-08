@@ -19,5 +19,6 @@ MonoBehaviour:
   _randomizeSequence: 0
   _maxHealth: 4
   _moveSpeed: 1.5
+  _contactDamagePerSecond: 0
   _soulDropCount: 2
   _experiencePerOrb: 1

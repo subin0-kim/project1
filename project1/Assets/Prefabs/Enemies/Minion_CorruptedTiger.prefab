@@ -14,6 +14,7 @@ GameObject:
   - component: {fileID: 6774789542255169904}
   - component: {fileID: 4023560501918882999}
   - component: {fileID: 598596981575195040}
+  - component: {fileID: 7422338194335434088}
   m_Layer: 0
   m_Name: Minion_CorruptedTiger
   m_TagString: Untagged
@@ -194,3 +195,18 @@ MonoBehaviour:
   _imminentBlinkSpeed: 9
   _imminentBlinkAmount: 0.7
   _convertFlashDuration: 0.25
+--- !u!114 &7422338194335434088
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2361037789781864666}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c05d2c5a591c5d646907c7fd1e1f8d0c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.Combat.EnemyContactDamage
+  _contactRadius: 0.6
+  _tickInterval: 1
+  _damagePerTick: 10
