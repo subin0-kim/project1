@@ -39,13 +39,16 @@ namespace Mukseon.Gameplay.Combat
 
         private void OnEnable()
         {
-            // 풀 재사용 가드: 이전 생애의 틱 타이머가 남지 않도록 초기화한다.
-            _tickTimer = 0f;
+            ResetForReuse();
+        }
 
-            if (_playerHealth == null)
-            {
-                _playerHealth = FindAnyObjectByType<PlayerHealth>();
-            }
+        /// <summary>
+        /// 풀 재사용 가드: 이전 생애의 틱 타이머가 남지 않도록 초기화한다.
+        /// OnEnable에서 호출되며, EditMode 테스트에서는 SetActive로 OnEnable이 불리지 않으므로 직접 호출한다.
+        /// </summary>
+        internal void ResetForReuse()
+        {
+            _tickTimer = 0f;
         }
 
         private void Update()
@@ -69,13 +72,27 @@ namespace Mukseon.Gameplay.Combat
             // 닿았다 떨어졌다를 반복해도 최대 초당 1틱을 넘지 않게 하기 위함이다.
             _tickTimer = Mathf.Max(0f, _tickTimer - Mathf.Max(0f, deltaTime));
 
-            if (_playerHealth == null || !_playerHealth.IsAlive)
+            // 플레이어 참조는 매 틱 지연 해석한다. 파괴된 참조는 유니티 pseudo-null로 걸러지므로,
+            // 플레이어가 적보다 늦게 생성되거나 재생성되는 경우에도 새 인스턴스를 다시 찾는다.
+            if (_playerHealth == null)
+            {
+                _playerHealth = FindAnyObjectByType<PlayerHealth>();
+                if (_playerHealth == null)
+                {
+                    return;
+                }
+            }
+
+            if (!_playerHealth.IsAlive)
             {
                 return;
             }
 
             // 거리 판정: 플레이어 고정(중앙) 전제이므로 sqrMagnitude 비교면 충분하다.
-            float sqrDistance = (transform.position - _playerHealth.transform.position).sqrMagnitude;
+            // 스프라이트 정렬 등으로 Z 오프셋이 생겨도 판정이 틀어지지 않도록 2D(XY) 거리만 사용한다.
+            Vector2 enemyPosition = transform.position;
+            Vector2 playerPosition = _playerHealth.transform.position;
+            float sqrDistance = (enemyPosition - playerPosition).sqrMagnitude;
             bool inContact = sqrDistance <= _contactRadius * _contactRadius;
 
             if (inContact && _tickTimer <= 0f)

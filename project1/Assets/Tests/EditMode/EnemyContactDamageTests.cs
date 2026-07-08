@@ -143,6 +143,34 @@ namespace Mukseon.Tests.EditMode
         }
 
         [Test]
+        public void Reenable_ResetsTickTimer()
+        {
+            _enemyGo.transform.position = _playerGo.transform.position;
+
+            // 1틱 소모 — 다음 틱까지 아직 간격이 남아 있는 상태를 만든다.
+            _contactDamage.Tick(0.016f);
+
+            // 풀 재사용 흉내: 런타임에는 OnEnable이 ResetForReuse를 호출한다.
+            // EditMode에서는 SetActive로 OnEnable이 불리지 않으므로 직접 호출한다.
+            _contactDamage.ResetForReuse();
+
+            _contactDamage.Tick(0.016f);
+
+            Assert.That(_playerHealth.CurrentHealth, Is.EqualTo(100f - DamagePerTick * 2f).Within(0.01f));
+        }
+
+        [Test]
+        public void ZAxisOffset_DoesNotAffectContact()
+        {
+            // 스프라이트 정렬 등으로 Z 오프셋이 있어도 XY 평면 거리만으로 접촉을 판정해야 한다.
+            _enemyGo.transform.position = _playerGo.transform.position + new Vector3(0f, 0f, 5f);
+
+            _contactDamage.Tick(0.016f);
+
+            Assert.That(_playerHealth.CurrentHealth, Is.EqualTo(100f - DamagePerTick).Within(0.01f));
+        }
+
+        [Test]
         public void DeadPlayer_DoesNotReceiveDamage()
         {
             _enemyGo.transform.position = _playerGo.transform.position;
