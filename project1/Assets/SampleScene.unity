@@ -1651,6 +1651,7 @@ GameObject:
   - component: {fileID: 1453966977}
   - component: {fileID: 1453966979}
   - component: {fileID: 1453966980}
+  - component: {fileID: 1453966981}
   m_Layer: 0
   m_Name: WaveSystem
   m_TagString: Untagged
@@ -1792,6 +1793,22 @@ MonoBehaviour:
   m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.Progression.GuaranteedSkillSelector
   _miniBossSpawner: {fileID: 1453966979}
   _playerLevelSystem: {fileID: 187285035}
+--- !u!114 &1453966981
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1453966975}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b3a2b7b5cb3c3664192a950edb76caf3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.Combat.GameOverHandler
+  _playerHealth: {fileID: 187285038}
+  _waveCombatDirector: {fileID: 1453966977}
+  _pauseTimeOnGameOver: 1
+  _showDebugLogs: 0
 --- !u!1 &1477472083
 GameObject:
   m_ObjectHideFlags: 0

@@ -479,6 +479,12 @@ namespace Mukseon.Gameplay.Combat
                 soulDropper.ApplyMonsterData(runtimeEntry.Entry.MonsterData);
             }
 
+            EnemyContactDamage contactDamage = spawnedEnemy.GetComponent<EnemyContactDamage>();
+            if (contactDamage != null)
+            {
+                contactDamage.ApplyMonsterData(runtimeEntry.Entry.MonsterData);
+            }
+
             spawnedEnemy.OnDeath += HandleSpawnedEnemyDeath;
             _aliveEnemies.Add(spawnedEnemy);
             _enemySpeciesKey[spawnedEnemy] = runtimeEntry.SpeciesKey;

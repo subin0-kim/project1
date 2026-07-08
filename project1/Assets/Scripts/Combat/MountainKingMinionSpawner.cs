@@ -184,6 +184,12 @@ namespace Mukseon.Gameplay.Combat
             {
                 soulDropper.ApplyMonsterData(_minionMonsterData);
             }
+
+            EnemyContactDamage contactDamage = go.GetComponent<EnemyContactDamage>();
+            if (contactDamage != null)
+            {
+                contactDamage.ApplyMonsterData(_minionMonsterData);
+            }
         }
 
         /// <summary>생존 부하로 추적하고 사망 시 전멸 감지를 위해 구독한다. (테스트에서도 사용)</summary>

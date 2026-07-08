@@ -33,6 +33,11 @@ namespace Mukseon.Gameplay.Combat
         [SerializeField, Min(0f)]
         private float _moveSpeed = 1f;
 
+        // 접촉 데미지는 '닿아있는 동안 매초 지속 데미지' 방식(enemy_design.md).
+        // 0이면 접촉 데미지를 주지 않는 기믹 적(어둑시니/목귀 등)이다.
+        [SerializeField, Min(0f)]
+        private float _contactDamagePerSecond = 10f;
+
         [SerializeField, Min(1)]
         private int _soulDropCount = 1;
 
@@ -47,6 +52,7 @@ namespace Mukseon.Gameplay.Combat
         public bool RandomizeSequence => _randomizeSequence;
         public float MaxHealth => Mathf.Max(1f, _maxHealth);
         public float MoveSpeed => Mathf.Max(0f, _moveSpeed);
+        public float ContactDamagePerSecond => Mathf.Max(0f, _contactDamagePerSecond);
         public int SoulDropCount => Mathf.Max(1, _soulDropCount);
         public int ExperiencePerOrb => Mathf.Max(1, _experiencePerOrb);
 
