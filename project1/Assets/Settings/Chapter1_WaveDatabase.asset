@@ -178,7 +178,7 @@ MonoBehaviour:
       _enemyPrefab: {fileID: 0}
       _minAliveCount: 2
       _moveSpeed: 1.6
-  - _waveName: 8:00-9:00 +Maegu
+  - _waveName: 8:00-9:00 Dureoksini/BrambleIdol/Dokkaebibul/Maegu
     _durationSeconds: 60
     _spawnIntervalSeconds: 1
     _maxAliveEnemies: 18
