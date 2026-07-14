@@ -128,7 +128,7 @@ MonoBehaviour:
       _enemyPrefab: {fileID: 0}
       _minAliveCount: 2
       _moveSpeed: 1.5
-  - _waveName: 6:00-7:00 +Dureoksini (TODO Dokkaebi-bul)
+  - _waveName: 6:00-7:00 +Dureoksini/Dokkaebibul
     _durationSeconds: 60
     _spawnIntervalSeconds: 1.5
     _maxAliveEnemies: 16
@@ -148,7 +148,12 @@ MonoBehaviour:
       _enemyPrefab: {fileID: 0}
       _minAliveCount: 2
       _moveSpeed: 0.7
-  - _waveName: 7:00-8:00 +BrambleIdol (TODO Dokkaebi-bul)
+    - _enemyType: Dokkaebibul
+      _monsterData: {fileID: 11400000, guid: 6871f23fb6aa420f8bcc706b3f6c6cfd, type: 2}
+      _enemyPrefab: {fileID: 0}
+      _minAliveCount: 2
+      _moveSpeed: 1.6
+  - _waveName: 7:00-8:00 +BrambleIdol/Dokkaebibul
     _durationSeconds: 60
     _spawnIntervalSeconds: 1.5
     _maxAliveEnemies: 18
@@ -168,7 +173,12 @@ MonoBehaviour:
       _enemyPrefab: {fileID: 0}
       _minAliveCount: 2
       _moveSpeed: 0.85
-  - _waveName: 8:00-9:00 Dureoksini/BrambleIdol (TODO Dokkaebi-bul, Maegu)
+    - _enemyType: Dokkaebibul
+      _monsterData: {fileID: 11400000, guid: 6871f23fb6aa420f8bcc706b3f6c6cfd, type: 2}
+      _enemyPrefab: {fileID: 0}
+      _minAliveCount: 2
+      _moveSpeed: 1.6
+  - _waveName: 8:00-9:00 +Maegu
     _durationSeconds: 60
     _spawnIntervalSeconds: 1
     _maxAliveEnemies: 18
@@ -183,7 +193,17 @@ MonoBehaviour:
       _enemyPrefab: {fileID: 0}
       _minAliveCount: 2
       _moveSpeed: 0.85
-  - _waveName: 9:00-10:00 All enemies (TODO Dokkaebi-bul, Maegu)
+    - _enemyType: Dokkaebibul
+      _monsterData: {fileID: 11400000, guid: 6871f23fb6aa420f8bcc706b3f6c6cfd, type: 2}
+      _enemyPrefab: {fileID: 0}
+      _minAliveCount: 2
+      _moveSpeed: 1.6
+    - _enemyType: Maegu
+      _monsterData: {fileID: 11400000, guid: bd890c0541c5445d8225e7789bea10b2, type: 2}
+      _enemyPrefab: {fileID: 0}
+      _minAliveCount: 1
+      _moveSpeed: 1.1
+  - _waveName: 9:00-10:00 All enemies
     _durationSeconds: 60
     _spawnIntervalSeconds: 1
     _maxAliveEnemies: 24
@@ -223,3 +243,13 @@ MonoBehaviour:
       _enemyPrefab: {fileID: 0}
       _minAliveCount: 1
       _moveSpeed: 0.85
+    - _enemyType: Dokkaebibul
+      _monsterData: {fileID: 11400000, guid: 6871f23fb6aa420f8bcc706b3f6c6cfd, type: 2}
+      _enemyPrefab: {fileID: 0}
+      _minAliveCount: 1
+      _moveSpeed: 1.6
+    - _enemyType: Maegu
+      _monsterData: {fileID: 11400000, guid: bd890c0541c5445d8225e7789bea10b2, type: 2}
+      _enemyPrefab: {fileID: 0}
+      _minAliveCount: 1
+      _moveSpeed: 1.1
