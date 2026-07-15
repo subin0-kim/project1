@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.Combat.MonsterData
   _monsterId: monster.dusk_shade
   _displayName: Dusk Shade
-  _enemyPrefab: {fileID: 4368540737326870438, guid: 4d75fb8dd84b9fb40bbaace1f8a21592, type: 3}
+  _enemyPrefab: {fileID: 8264697197640977571, guid: 597a0226d050bd343a3209f00c1ee752, type: 3}
   _swipeDirectionSequence:
   _randomizeSequence: 0
   _maxHealth: 4

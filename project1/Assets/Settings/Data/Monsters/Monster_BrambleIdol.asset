@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.Combat.MonsterData
   _monsterId: monster.bramble_idol
   _displayName: Bramble Idol
-  _enemyPrefab: {fileID: 1475677598667535634, guid: dd3d8ac0cb439f64bbbaa2bbe5d1ccc0, type: 3}
+  _enemyPrefab: {fileID: 8322485774661296830, guid: 17229571043f4af43a98eb688f1a83e5, type: 3}
   _swipeDirectionSequence:
   _randomizeSequence: 0
   _maxHealth: 5
