@@ -161,8 +161,8 @@ MonoBehaviour:
   _destroyOnDeath: 1
   _disableCollidersOnDeath: 1
   _swipeDirection: 1
-  _monsterData: {fileID: 0}
-  _moveSpeed: 1
+  _monsterData: {fileID: 11400000, guid: fb24fd5e38994de6a94055af52dc5df6, type: 2}
+  _moveSpeed: 1.3
 --- !u!114 &8930110949059020394
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -179,7 +179,7 @@ MonoBehaviour:
   _dropCount: 1
   _experiencePerOrb: 1
   _dropRadius: 0.25
-  _monsterData: {fileID: 0}
+  _monsterData: {fileID: 11400000, guid: fb24fd5e38994de6a94055af52dc5df6, type: 2}
 --- !u!114 &753179079726369400
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -254,6 +254,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c05d2c5a591c5d646907c7fd1e1f8d0c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.Combat.EnemyContactDamage
-  _contactRadius: 0.6
+  _contactRadius: 1.3
   _tickInterval: 1
-  _damagePerTick: 10
+  _damagePerTick: 5
