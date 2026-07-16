@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Character_Mudang
   m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.Stats.CharacterData
   _characterId: character.mudang
-  _displayName: Mudang
+  _displayName: 무당
   _initialStats: {fileID: 11400000, guid: 87b756e7ffa3a8c49b92e91dec05512b, type: 2}
   _baseAttackDamage: 1.5
   _targetsPerAttack: 1

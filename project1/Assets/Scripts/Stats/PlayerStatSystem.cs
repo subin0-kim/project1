@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Mukseon.Core;
 using UnityEngine;
 
 namespace Mukseon.Gameplay.Stats
@@ -15,8 +16,18 @@ namespace Mukseon.Gameplay.Stats
 
         private readonly Dictionary<StatType, RuntimeStat> _runtimeStats = new Dictionary<StatType, RuntimeStat>();
 
+        // 이번 런에 실제로 적용된 캐릭터. InitializeFromDefinition에서 확정된다(#36).
+        private CharacterData _activeCharacter;
+
         public event Action<StatType, float> OnStatChanged;
-        public CharacterData CharacterData => _characterData;
+
+        /// <summary>
+        /// 이번 런에 적용된 캐릭터. 선택 화면을 거쳤으면 선택된 캐릭터, 아니면 씬에 직렬화된 캐릭터다.
+        /// 스탯뿐 아니라 기본 공격력(<see cref="Combat.SwipeAttackEventListener"/>)과
+        /// 시작·레벨업 스킬 풀(<see cref="Progression.PlayerLevelSystem"/>)도 이 값을 읽으므로,
+        /// 스탯과 같은 출처로 해석되어야 캐릭터가 반쪽만 바뀌는 일이 없다.
+        /// </summary>
+        public CharacterData CharacterData => _activeCharacter != null ? _activeCharacter : _characterData;
 
         private void Awake()
         {
@@ -26,6 +37,7 @@ namespace Mukseon.Gameplay.Stats
         public void InitializeFromDefinition()
         {
             _runtimeStats.Clear();
+            _activeCharacter = ResolveCharacterData();
 
             PlayerStatsDefinition sourceDefinition = ResolveInitialStatsDefinition();
             if (sourceDefinition == null)
@@ -41,17 +53,27 @@ namespace Mukseon.Gameplay.Stats
             }
         }
 
+        /// <summary>
+        /// 선택 화면에서 고른 캐릭터를 우선하고, 없으면 씬에 직렬화된 캐릭터로 폴백한다.
+        /// 폴백 덕분에 게임플레이 씬을 에디터에서 단독 실행해도 종전처럼 동작한다(#36).
+        /// </summary>
+        private CharacterData ResolveCharacterData()
+        {
+            return RunContext.SelectedCharacter != null ? RunContext.SelectedCharacter : _characterData;
+        }
+
         private PlayerStatsDefinition ResolveInitialStatsDefinition()
         {
-            if (_characterData != null)
+            CharacterData character = CharacterData;
+            if (character != null)
             {
-                if (_characterData.InitialStats == null)
+                if (character.InitialStats == null)
                 {
-                    Debug.LogWarning($"[PlayerStatSystem] CharacterData '{_characterData.name}' is missing InitialStats.");
+                    Debug.LogWarning($"[PlayerStatSystem] CharacterData '{character.name}' is missing InitialStats.");
                 }
                 else
                 {
-                    return _characterData.InitialStats;
+                    return character.InitialStats;
                 }
             }
 
