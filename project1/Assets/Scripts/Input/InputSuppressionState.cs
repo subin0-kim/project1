@@ -12,6 +12,9 @@ namespace Mukseon.Core.Input
         None = 0,
         GameOver = 1 << 0,
         LevelUpSelection = 1 << 1,
+
+        /// <summary>결과 화면 표시 중(정화 성공 포함). 게임오버가 아니어도 조작을 막아야 한다(#36).</summary>
+        ResultScreen = 1 << 2,
     }
 
     /// <summary>

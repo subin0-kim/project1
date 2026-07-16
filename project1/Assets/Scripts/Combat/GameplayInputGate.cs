@@ -90,6 +90,27 @@ namespace Mukseon.Gameplay.Combat
             UnsubscribeAll();
         }
 
+        /// <summary>
+        /// 외부에서 억제 원인을 직접 켜고 끈다(#36 결과 화면).
+        ///
+        /// 게임오버·레벨업은 게이트가 씬에서 찾아 구독하는 pull 방식이지만, 결과 화면처럼 표시/숨김을
+        /// 스스로 아는 UI는 밀어 넣는 편이 낫다. 게이트가 UI 계층을 알 필요가 없고, 매 프레임 재해석
+        /// 폴링(<see cref="NeedsResolve"/>) 대상도 늘지 않는다.
+        /// 씬이 새로 로드되면 <see cref="ResolveAndReset"/>이 억제를 초기화하므로 원인이 새어 남지 않는다.
+        /// </summary>
+        public static void SetSuppression(InputSuppressionReason reason, bool active)
+        {
+            if (_instance == null)
+            {
+                return;
+            }
+
+            if (_instance._suppression.SetReason(reason, active))
+            {
+                _instance.ApplyToDetectors();
+            }
+        }
+
         private void Update()
         {
             // 모든 참조가 해석됐거나(NeedsResolve == false) 재시도 한도에 도달하면(_stopPolling)
