@@ -1,3 +1,4 @@
+using Mukseon.Core;
 using Mukseon.Gameplay.Stats;
 using UnityEngine;
 
@@ -16,8 +17,6 @@ namespace Mukseon.Gameplay.Combat
         private readonly float _activeTimeScale;
         private readonly bool _dealPulse;
         private readonly float _pulseDamage;
-
-        private float _timeScaleBeforeActive = 1f;
 
         public GangshinActivationEffects(
             PlayerStatSystem statSystem,
@@ -43,8 +42,7 @@ namespace Mukseon.Gameplay.Combat
         /// </summary>
         public void Enter(GangshinAbilityBase ability, Vector2 origin, int level)
         {
-            _timeScaleBeforeActive = Time.timeScale;
-            Time.timeScale = Mathf.Clamp(_activeTimeScale, 0.05f, 1f);
+            TimeScaleService.SetRate(_activeTimeScale);
 
             if (_buffAttackPower && _statSystem != null && _attackBonusPercent > 0f)
             {
@@ -63,7 +61,11 @@ namespace Mukseon.Gameplay.Combat
             }
         }
 
-        /// <summary>발동 종료/취소: 공격력 버프 제거 + 시간 배율 복원.</summary>
+        /// <summary>
+        /// 발동 종료/취소: 공격력 버프 제거 + 시간 배율 등속 복원.
+        /// 게임오버·레벨업으로 정지 중이라면 <see cref="TimeScaleService"/>가 정지를 우선하므로,
+        /// 여기서 등속을 복원해도 정지가 풀리지 않는다(#109).
+        /// </summary>
         public void Exit()
         {
             if (_statSystem != null)
@@ -71,10 +73,7 @@ namespace Mukseon.Gameplay.Combat
                 _statSystem.RemoveModifiersFromSource(StatType.AttackPower, _source);
             }
 
-            if (Mathf.Approximately(Time.timeScale, _activeTimeScale) || Time.timeScale < 1f)
-            {
-                Time.timeScale = _timeScaleBeforeActive <= 0f ? 1f : _timeScaleBeforeActive;
-            }
+            TimeScaleService.SetRate(TimeScaleController.MaxRate);
         }
 
         private void ApplyActivationPulse()

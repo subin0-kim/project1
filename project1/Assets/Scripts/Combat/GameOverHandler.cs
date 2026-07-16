@@ -1,4 +1,5 @@
 using System;
+using Mukseon.Core;
 using UnityEngine;
 
 namespace Mukseon.Gameplay.Combat
@@ -40,6 +41,13 @@ namespace Mukseon.Gameplay.Combat
             {
                 _playerHealth.OnDied -= HandlePlayerDied;
             }
+
+            // 게임오버로 정지를 건 채 비활성화되면(플레이 중지, 씬 언로드) 정지 원인이 영구히 남는다.
+            // 소유자가 사라지는 시점에 스스로 해제해야 다음 런이 정지 상태로 시작되지 않는다(#109).
+            if (_isGameOver && _pauseTimeOnGameOver)
+            {
+                TimeScaleService.SetPause(PauseReason.GameOver, false);
+            }
         }
 
         private void HandlePlayerDied()
@@ -65,7 +73,7 @@ namespace Mukseon.Gameplay.Combat
 
             if (_pauseTimeOnGameOver)
             {
-                Time.timeScale = 0f;
+                TimeScaleService.SetPause(PauseReason.GameOver, true);
             }
 
             OnGameOver?.Invoke();
@@ -77,7 +85,7 @@ namespace Mukseon.Gameplay.Combat
 
             if (_pauseTimeOnGameOver)
             {
-                Time.timeScale = 1f;
+                TimeScaleService.SetPause(PauseReason.GameOver, false);
             }
         }
     }

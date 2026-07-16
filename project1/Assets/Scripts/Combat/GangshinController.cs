@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Mukseon.Core;
 using Mukseon.Core.Input;
 using Mukseon.Gameplay.Stats;
 using UnityEngine;
@@ -186,10 +187,10 @@ namespace Mukseon.Gameplay.Combat
                 return;
             }
 
-            // 일시정지(timeScale 0: 레벨업/일시정지 메뉴, 또는 히트스톱) 중에는 발동/쿨다운 타이머를
-            // 진행하지 않는다. unscaledDeltaTime으로 틱하면 정지 중에도 타이머가 흘러, 만료 시 Exit가
-            // timeScale을 1로 복원해 게임이 멋대로 재개되는 버그가 생긴다.
-            if (Time.timeScale > 0f && _slotState.Tick(Time.unscaledDeltaTime))
+            // 정지(게임오버/레벨업/화면 전환) 중에는 발동·쿨다운 타이머를 진행하지 않는다.
+            // unscaledDeltaTime으로 틱하면 정지 중에도 타이머가 흘러 만료 시 Exit가 호출되는데,
+            // 그러면 강신 연출이 플레이어가 보지 못한 채 소모된다.
+            if (!TimeScaleService.IsPaused && _slotState.Tick(Time.unscaledDeltaTime))
             {
                 HandleStateTransition();
             }
