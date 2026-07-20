@@ -39,10 +39,15 @@ namespace Mukseon.Dev
         private readonly List<EnemyHealth> _killBuffer = new List<EnemyHealth>(64);
 
         private DemoCheatOverlay _overlay;
-        private bool _isInvincible;
 
-        /// <summary>무적 치트가 켜져 있는지. 오버레이 표시에 사용.</summary>
-        public bool IsInvincible => _isInvincible;
+        /// <summary>
+        /// 무적 치트가 켜져 있는지. 오버레이 표시에 사용.
+        ///
+        /// 별도 bool을 캐시하지 않고 <see cref="PlayerHealth.IsInvincible"/>을 그대로 읽는다 —
+        /// 상태를 두 곳에 두면 어긋날 수 있고, 실제 무적 여부의 소유자는 PlayerHealth다.
+        /// 여기서는 지연 해석을 하지 않는다(오버레이가 매 프레임 호출하므로 씬 탐색이 반복되면 안 된다).
+        /// </summary>
+        public bool IsInvincible => _playerHealth != null && _playerHealth.IsInvincible;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void EnsureController()
@@ -85,14 +90,17 @@ namespace Mukseon.Dev
         }
 
         // 씬이 바뀌면 이전 씬의 참조가 전부 무효해지므로 다시 해석한다.
-        // 무적 상태도 새 런에 자동으로 따라가지 않게 해제한다 — 시연자가 껐다고 착각하는 편이 위험하다.
+        //
+        // 무적 상태를 여기서 따로 끄지 않는 이유: 무적 여부의 소유자가 PlayerHealth이고 이 컨트롤러는
+        // 캐시를 두지 않으므로, 새 씬의 PlayerHealth는 애초에 무적이 아닌 상태로 시작한다.
+        // 애디티브 로드로 이전 플레이어가 살아남는 경우에도 IsInvincible이 실제 상태를 그대로 보고하므로
+        // 표시와 실제가 어긋나지 않는다.
         private void HandleSceneLoaded(Scene scene, LoadSceneMode mode)
         {
             _playerHealth = null;
             _playerLevelSystem = null;
             _gangshinController = null;
             _waveCombatDirector = null;
-            _isInvincible = false;
             ResolveSources();
         }
 
@@ -102,6 +110,28 @@ namespace Mukseon.Dev
             _playerLevelSystem = SceneObjectFinder.Find<PlayerLevelSystem>();
             _gangshinController = SceneObjectFinder.Find<GangshinController>();
             _waveCombatDirector = SceneObjectFinder.Find<WaveCombatDirector>();
+        }
+
+        // 치트 실행 시점의 지연 재해석용 접근자(PR #113 리뷰 반영).
+        //
+        // 씬 로드 직후에 해석해 캐시하지만, 플레이어나 디렉터가 씬 로드 이후에 동적으로 생성되면
+        // 캐시가 비어 있는 채로 남아 치트가 조용히 먹지 않는다. 실제로 눌렀을 때 한 번 더 찾아본다.
+        //
+        // Unity의 == 오버로드가 파괴된 오브젝트도 null로 판정하므로, 이전 참조가 파괴된 경우에도
+        // 자동으로 다시 해석된다. 비용은 캐시가 비었을 때(=어차피 no-op이었을 때)만 발생한다.
+        private PlayerHealth Health => ResolveLazily(ref _playerHealth);
+        private PlayerLevelSystem Levels => ResolveLazily(ref _playerLevelSystem);
+        private GangshinController Gangshin => ResolveLazily(ref _gangshinController);
+        private WaveCombatDirector Waves => ResolveLazily(ref _waveCombatDirector);
+
+        private static T ResolveLazily<T>(ref T cached) where T : Object
+        {
+            if (cached == null)
+            {
+                cached = SceneObjectFinder.Find<T>();
+            }
+
+            return cached;
         }
 
         // 게임이 정지(timeScale 0)돼 있어도 치트는 먹어야 하므로 Update에서 직접 키를 읽는다.
@@ -149,25 +179,27 @@ namespace Mukseon.Dev
 
         private void ToggleInvincible()
         {
-            if (_playerHealth == null)
+            PlayerHealth health = Health;
+            if (health == null)
             {
                 return;
             }
 
-            _isInvincible = !_isInvincible;
-            _playerHealth.SetInvincible(_isInvincible);
+            // 현재 값을 PlayerHealth에서 직접 읽어 뒤집는다 — 별도 캐시를 두지 않으므로 어긋날 여지가 없다.
+            health.SetInvincible(!health.IsInvincible);
         }
 
         private void LevelUp()
         {
-            if (_playerLevelSystem == null)
+            PlayerLevelSystem levels = Levels;
+            if (levels == null)
             {
                 return;
             }
 
             // 임계치까지 남은 만큼만 넣어 정확히 1레벨만 오르게 한다(큰 값을 넣으면 여러 번 겹쳐 오른다).
-            float remaining = _playerLevelSystem.CurrentThreshold - _playerLevelSystem.CurrentExperience;
-            _playerLevelSystem.AddExperience(Mathf.Max(0f, remaining) + LevelUpExperienceMargin);
+            float remaining = levels.CurrentThreshold - levels.CurrentExperience;
+            levels.AddExperience(Mathf.Max(0f, remaining) + LevelUpExperienceMargin);
         }
 
         private void KillEnemies()
@@ -190,19 +222,21 @@ namespace Mukseon.Dev
 
         private void ActivateGangshin()
         {
-            if (_gangshinController == null)
+            GangshinController gangshin = Gangshin;
+            if (gangshin == null)
             {
                 return;
             }
 
-            _gangshinController.AddGauge(_gangshinController.MaxGauge);
-            _gangshinController.TryActivate();
+            gangshin.AddGauge(gangshin.MaxGauge);
+            gangshin.TryActivate();
         }
 
         // 강신 어빌리티는 SO가 아니라 씬에 배치된 MonoBehaviour라, 씬에서 찾아 미장착인 것을 슬롯에 넣는다.
         private void GrantGangshinSlot()
         {
-            if (_gangshinController == null || !_gangshinController.HasFreeSlot)
+            GangshinController gangshin = Gangshin;
+            if (gangshin == null || !gangshin.HasFreeSlot)
             {
                 return;
             }
@@ -212,21 +246,22 @@ namespace Mukseon.Dev
 
             for (int i = 0; i < abilities.Length; i++)
             {
-                if (IsEquipped(abilities[i]))
+                // 같은 프레임에 파괴된 오브젝트가 섞여 올 수 있어 null 판정을 먼저 한다.
+                if (abilities[i] == null || IsEquipped(gangshin, abilities[i]))
                 {
                     continue;
                 }
 
-                if (_gangshinController.TryAddAbility(abilities[i]) >= 0)
+                if (gangshin.TryAddAbility(abilities[i]) >= 0)
                 {
                     return;
                 }
             }
         }
 
-        private bool IsEquipped(GangshinAbilityBase ability)
+        private static bool IsEquipped(GangshinController gangshin, GangshinAbilityBase ability)
         {
-            IReadOnlyList<GangshinSlot> slots = _gangshinController.Slots;
+            IReadOnlyList<GangshinSlot> slots = gangshin.Slots;
             if (slots == null)
             {
                 return false;
@@ -245,7 +280,11 @@ namespace Mukseon.Dev
 
         private void SkipToBoss()
         {
-            _waveCombatDirector?.SkipToBossPhase();
+            WaveCombatDirector waves = Waves;
+            if (waves != null)
+            {
+                waves.SkipToBossPhase();
+            }
         }
     }
 }
