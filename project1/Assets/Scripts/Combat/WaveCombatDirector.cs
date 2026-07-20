@@ -96,6 +96,9 @@ namespace Mukseon.Gameplay.Combat
         public float TimelineElapsedSeconds => _timelineElapsedSeconds;
         public bool IsBossPhase => _bossPhaseStarted;
 
+        /// <summary>보스 진입 분 마크. 0 이하이면 보스 마크가 없다.</summary>
+        public float BossMinuteMark => _bossMinuteMark;
+
         public event Action<int, WaveDefinition> OnWaveStarted;
         public event Action<int, WaveEndReason> OnWaveEnded;
         public event Action<int, int> OnRemainingEnemyCountChanged;
@@ -181,6 +184,69 @@ namespace Mukseon.Gameplay.Combat
         {
             CleanupAliveEnemies(true);
             NotifyRemainingEnemyCountChanged();
+        }
+
+        /// <summary>
+        /// 타임라인을 지정 시각으로 즉시 진행시킨다(시연/디버그용 #111).
+        ///
+        /// 되감기는 지원하지 않는다 — 이미 발행된 마크 이벤트를 취소할 방법이 없어 되감으면
+        /// 같은 마크가 두 번 발행되거나 보스 페이즈가 어긋난 상태로 남는다. 과거 시각을 넘기면 무시한다.
+        ///
+        /// <paramref name="fireSkippedMarks"/>가 false(기본)면 건너뛴 미니 보스 마크를 발행 없이 소진 처리한다.
+        /// 챕터 1 기준 미니 보스 마크가 3·6·9분이고 보스가 10분이라, 0분에서 보스로 점프하면 그대로
+        /// 세 마크가 같은 프레임에 발행되어 미니 보스 3마리가 한꺼번에 쏟아진다. 시연에서 필요한 건
+        /// 깨끗한 보스전이므로 억제가 기본이고, 미니 보스 자체를 확인하려면 true로 부른다.
+        ///
+        /// 주의: 웨이브 진행(스폰 구성)은 앞당기지 않고 타임라인 마크만 처리한다. 보스 점프는
+        /// <see cref="EnterBossPhase"/>가 웨이브를 종료시키므로 문제되지 않지만, 중간 시각으로
+        /// 점프하면 웨이브 인덱스가 타임라인보다 뒤처진 상태로 남는다.
+        /// </summary>
+        public void SkipTimelineTo(float targetSeconds, bool fireSkippedMarks = false)
+        {
+            if (!_isRunning || targetSeconds <= _timelineElapsedSeconds)
+            {
+                return;
+            }
+
+            _timelineElapsedSeconds = targetSeconds;
+
+            if (!fireSkippedMarks)
+            {
+                SuppressMiniBossMarksBefore(targetSeconds);
+            }
+
+            CheckTimelineMarks();
+        }
+
+        /// <summary>
+        /// 보스 구간으로 즉시 점프한다(시연/디버그용 #111). 보스 마크가 없거나 이미 보스 페이즈면 false.
+        /// </summary>
+        public bool SkipToBossPhase()
+        {
+            if (!_isRunning || _bossPhaseStarted || _bossMinuteMark <= 0f)
+            {
+                return false;
+            }
+
+            SkipTimelineTo(_bossMinuteMark * 60f);
+            return _bossPhaseStarted;
+        }
+
+        // 지정 시각 이하의 미니 보스 마크를 '발행하지 않고' 소진 처리한다.
+        private void SuppressMiniBossMarksBefore(float seconds)
+        {
+            if (_miniBossMinuteMarks == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < _miniBossMinuteMarks.Count && i < _miniBossMarkFired.Count; i++)
+            {
+                if (_miniBossMinuteMarks[i] * 60f <= seconds)
+                {
+                    _miniBossMarkFired[i] = true;
+                }
+            }
         }
 
         internal void Tick(float deltaTime)
