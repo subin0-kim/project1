@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Mukseon.Core;
 using Mukseon.Gameplay.Combat;
 using Mukseon.Gameplay.Stats;
 using UnityEngine;
@@ -57,7 +58,6 @@ namespace Mukseon.Gameplay.Progression
         private readonly Dictionary<string, int> _skillLevels = new Dictionary<string, int>();
 
         private LevelProgressionModel _progressionModel;
-        private float _timeScaleBeforePause = 1f;
         private bool _startingSkillsGranted;
 
         public event Action<int, float, float> OnExperienceChanged;
@@ -395,9 +395,7 @@ namespace Mukseon.Gameplay.Progression
                 return;
             }
 
-            // 히트스톱 중(0.05 등)에 레벨업하면 느린 값이 저장되므로, 최소 1f로 보정
-            _timeScaleBeforePause = Mathf.Max(Time.timeScale, 1f);
-            Time.timeScale = 0f;
+            TimeScaleService.SetPause(PauseReason.LevelUpSelection, true);
         }
 
         private void ResumeGameTime()
@@ -407,8 +405,7 @@ namespace Mukseon.Gameplay.Progression
                 return;
             }
 
-            Time.timeScale = _timeScaleBeforePause <= 0f ? 1f : _timeScaleBeforePause;
-            _timeScaleBeforePause = 1f;
+            TimeScaleService.SetPause(PauseReason.LevelUpSelection, false);
         }
     }
 }

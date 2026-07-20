@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Mukseon.Core;
 using Mukseon.Core.Input;
 using Mukseon.Gameplay.Progression;
 using UnityEngine;
@@ -56,11 +57,7 @@ namespace Mukseon.Gameplay.Combat
 
         private static GameplayInputGate FindExisting()
         {
-#if UNITY_2023_1_OR_NEWER
-            return FindFirstObjectByType<GameplayInputGate>(FindObjectsInactive.Include);
-#else
-            return FindObjectOfType<GameplayInputGate>();
-#endif
+            return SceneObjectFinder.Find<GameplayInputGate>();
         }
 
         private void Awake()
@@ -88,6 +85,27 @@ namespace Mukseon.Gameplay.Combat
 
             SceneManager.sceneLoaded -= HandleSceneLoaded;
             UnsubscribeAll();
+        }
+
+        /// <summary>
+        /// 외부에서 억제 원인을 직접 켜고 끈다(#36 결과 화면).
+        ///
+        /// 게임오버·레벨업은 게이트가 씬에서 찾아 구독하는 pull 방식이지만, 결과 화면처럼 표시/숨김을
+        /// 스스로 아는 UI는 밀어 넣는 편이 낫다. 게이트가 UI 계층을 알 필요가 없고, 매 프레임 재해석
+        /// 폴링(<see cref="NeedsResolve"/>) 대상도 늘지 않는다.
+        /// 씬이 새로 로드되면 <see cref="ResolveAndReset"/>이 억제를 초기화하므로 원인이 새어 남지 않는다.
+        /// </summary>
+        public static void SetSuppression(InputSuppressionReason reason, bool active)
+        {
+            if (_instance == null)
+            {
+                return;
+            }
+
+            if (_instance._suppression.SetReason(reason, active))
+            {
+                _instance.ApplyToDetectors();
+            }
         }
 
         private void Update()
@@ -139,17 +157,17 @@ namespace Mukseon.Gameplay.Combat
         {
             if (_swipeInputDetector == null)
             {
-                _swipeInputDetector = FindSceneObject<SwipeInputDetector>();
+                _swipeInputDetector = SceneObjectFinder.Find<SwipeInputDetector>();
             }
 
             if (_gangshinInputDetector == null)
             {
-                _gangshinInputDetector = FindSceneObject<GangshinInputDetector>();
+                _gangshinInputDetector = SceneObjectFinder.Find<GangshinInputDetector>();
             }
 
             if (_gameOverHandler == null)
             {
-                _gameOverHandler = FindSceneObject<GameOverHandler>();
+                _gameOverHandler = SceneObjectFinder.Find<GameOverHandler>();
                 if (_gameOverHandler != null)
                 {
                     _gameOverHandler.OnGameOver += HandleGameOver;
@@ -163,7 +181,7 @@ namespace Mukseon.Gameplay.Combat
 
             if (_playerLevelSystem == null)
             {
-                _playerLevelSystem = FindSceneObject<PlayerLevelSystem>();
+                _playerLevelSystem = SceneObjectFinder.Find<PlayerLevelSystem>();
                 if (_playerLevelSystem != null)
                 {
                     _playerLevelSystem.OnLevelSelectionOpened += HandleSelectionOpened;
@@ -237,15 +255,6 @@ namespace Mukseon.Gameplay.Combat
             {
                 _gangshinInputDetector.SetInputEnabled(enabled);
             }
-        }
-
-        private static T FindSceneObject<T>() where T : UnityEngine.Object
-        {
-#if UNITY_2023_1_OR_NEWER
-            return FindFirstObjectByType<T>(FindObjectsInactive.Include);
-#else
-            return FindObjectOfType<T>();
-#endif
         }
     }
 }

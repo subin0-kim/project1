@@ -20,7 +20,7 @@ public static class SpriteSetupTool
     const string EnemyRefPath    = "Assets/Art/Characters/Enemies/Reference/zombie_reference.png";
     const string EnemyWalkPath   = "Assets/Art/Characters/Enemies/Sprites/zombie_walk_sheet.png";
     const string EnemyAtkPath    = "Assets/Art/Characters/Enemies/Sprites/zombie_attack_sheet.png";
-    const string ScenePath       = "Assets/Scenes/SampleScene.unity";
+    const string ScenePath       = "Assets/SampleScene.unity";
 
     static readonly string[] EnemyPrefabPaths =
     {

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Mukseon.Core;
 using Mukseon.Core.Input;
 using Mukseon.Gameplay.Combat;
 using Mukseon.Gameplay.Progression;
@@ -93,6 +94,13 @@ namespace Mukseon.Gameplay.UI
         private float _resolveRetryTimer;
         private Camera _cachedCamera;
 
+        // 비게임플레이 씬(타이틀/캐릭터선택)에는 플레이어·웨이브가 없어 NeedsRuntimeReferenceRefresh가
+        // 영구히 true가 된다. 상한이 없으면 0.5초마다 Find와 경고 로그를 영원히 반복하므로,
+        // GameplayInputGate와 동일하게 일정 횟수 후 폴링을 멈춘다. 씬이 새로 로드되면 다시 초기화된다(#36).
+        private const int MaxResolveRetries = 6;
+        private int _resolveRetryCount;
+        private bool _stopPolling;
+
         // 패턴 인디케이터 오브(#69): 적 머리 위 색 오브와 동일한 HUD 요소를, 보스 패턴 텔레그래프
         // 위치 상단에 띄운다. 접근성(화살표) 모드는 적 오브와 같은 ApplyOrb/Arrow 경로로 함께 처리된다(#83).
         private Label _patternOrb;
@@ -122,20 +130,7 @@ namespace Mukseon.Gameplay.UI
 
         private static GameplayHudBootstrapper FindBootstrapper()
         {
-#if UNITY_2023_1_OR_NEWER
-            return FindFirstObjectByType<GameplayHudBootstrapper>(FindObjectsInactive.Include);
-#else
-            return FindObjectOfType<GameplayHudBootstrapper>();
-#endif
-        }
-
-        private static T FindSceneObject<T>() where T : UnityEngine.Object
-        {
-#if UNITY_2023_1_OR_NEWER
-            return FindFirstObjectByType<T>(FindObjectsInactive.Include);
-#else
-            return FindObjectOfType<T>();
-#endif
+            return SceneObjectFinder.Find<GameplayHudBootstrapper>();
         }
 
         private void Awake()
@@ -166,11 +161,21 @@ namespace Mukseon.Gameplay.UI
 
         private void Update()
         {
-            _resolveRetryTimer -= Time.unscaledDeltaTime;
-            if (_resolveRetryTimer <= 0f && NeedsRuntimeReferenceRefresh())
+            if (!_stopPolling && NeedsRuntimeReferenceRefresh())
             {
-                _resolveRetryTimer = 0.5f;
-                TryResolveSources();
+                _resolveRetryTimer -= Time.unscaledDeltaTime;
+                if (_resolveRetryTimer <= 0f)
+                {
+                    _resolveRetryTimer = 0.5f;
+                    TryResolveSources();
+                    ApplyHudVisibility();
+
+                    _resolveRetryCount++;
+                    if (_resolveRetryCount >= MaxResolveRetries)
+                    {
+                        _stopPolling = true;
+                    }
+                }
             }
 
             SyncEnemies();
@@ -204,8 +209,26 @@ namespace Mukseon.Gameplay.UI
             _bossEnemy = null;
             _cachedCamera = Camera.main;
             _resolveRetryTimer = 0f;
+            _resolveRetryCount = 0;
+            _stopPolling = false;
             EnsureUi();
             TryResolveSources();
+            ApplyHudVisibility();
+        }
+
+        /// <summary>
+        /// 게임플레이 씬이 아니면 HUD 전체를 숨긴다(#36). 이 부트스트래퍼는 DontDestroyOnLoad라
+        /// 타이틀·캐릭터선택 씬까지 따라오는데, 그대로 두면 빈 체력바/웨이브 패널이 메타 화면 위에 남는다.
+        /// 플레이어의 존재를 게임플레이 씬 판정 기준으로 삼는다.
+        /// </summary>
+        private void ApplyHudVisibility()
+        {
+            if (_root == null)
+            {
+                return;
+            }
+
+            _root.style.display = _playerHealth != null ? DisplayStyle.Flex : DisplayStyle.None;
         }
 
         private void EnsureUi()
@@ -368,36 +391,28 @@ namespace Mukseon.Gameplay.UI
 
             if (_playerHealth == null)
             {
-                _playerHealth = FindSceneObject<PlayerHealth>();
+                _playerHealth = SceneObjectFinder.Find<PlayerHealth>();
                 if (_playerHealth != null)
                 {
                     _playerHealth.OnHealthChanged += HandlePlayerHealthChanged;
                     RefreshHealth();
                 }
-                else
-                {
-                    Debug.LogWarning("[GameplayHudBootstrapper] PlayerHealth를 찾을 수 없습니다. 체력 HUD가 표시되지 않습니다.");
-                }
             }
 
             if (_gangshinController == null)
             {
-                _gangshinController = FindSceneObject<GangshinController>();
+                _gangshinController = SceneObjectFinder.Find<GangshinController>();
                 if (_gangshinController != null)
                 {
                     _gangshinController.OnGaugeChanged += HandleGangshinGaugeChanged;
                     _gangshinController.OnStateChanged += HandleGangshinStateChanged;
                     RefreshGangshin();
                 }
-                else
-                {
-                    Debug.LogWarning("[GameplayHudBootstrapper] GangshinController를 찾을 수 없습니다. 강신 게이지 HUD가 표시되지 않습니다.");
-                }
             }
 
             if (_playerLevelSystem == null)
             {
-                _playerLevelSystem = FindSceneObject<PlayerLevelSystem>();
+                _playerLevelSystem = SceneObjectFinder.Find<PlayerLevelSystem>();
                 if (_playerLevelSystem != null)
                 {
                     _playerLevelSystem.OnExperienceChanged += HandleExperienceChanged;
@@ -406,15 +421,11 @@ namespace Mukseon.Gameplay.UI
                     RefreshExperience();
                     RefreshLevelUp();
                 }
-                else
-                {
-                    Debug.LogWarning("[GameplayHudBootstrapper] PlayerLevelSystem을 찾을 수 없습니다. 경험치 HUD 및 레벨업 패널이 표시되지 않습니다.");
-                }
             }
 
             if (_waveCombatDirector == null)
             {
-                _waveCombatDirector = FindSceneObject<WaveCombatDirector>();
+                _waveCombatDirector = SceneObjectFinder.Find<WaveCombatDirector>();
                 if (_waveCombatDirector != null)
                 {
                     _waveCombatDirector.OnWaveStarted += HandleWaveStarted;
@@ -423,10 +434,45 @@ namespace Mukseon.Gameplay.UI
                     _waveCombatDirector.OnAllWavesCompleted += HandleAllWavesCompleted;
                     RefreshWave();
                 }
-                else
-                {
-                    Debug.LogWarning("[GameplayHudBootstrapper] WaveCombatDirector를 찾을 수 없습니다. 웨이브 HUD가 표시되지 않습니다.");
-                }
+            }
+
+            WarnMissingSources();
+        }
+
+        /// <summary>
+        /// 빠진 HUD 소스를 알린다. 단, 4종이 <b>전부</b> 없으면 비게임플레이 씬(타이틀/캐릭터선택)이라는
+        /// 뜻이므로 침묵한다 — 이 부트스트래퍼는 DontDestroyOnLoad라 메타 화면까지 따라오는데, 거기서
+        /// 소스가 없는 건 정상이다. 일부만 빠진 경우에만 게임플레이 씬의 배선 오류로 보고 경고한다(#36).
+        /// </summary>
+        private void WarnMissingSources()
+        {
+            bool anyResolved = _playerHealth != null ||
+                               _gangshinController != null ||
+                               _playerLevelSystem != null ||
+                               _waveCombatDirector != null;
+            if (!anyResolved)
+            {
+                return;
+            }
+
+            if (_playerHealth == null)
+            {
+                Debug.LogWarning("[GameplayHudBootstrapper] PlayerHealth를 찾을 수 없습니다. 체력 HUD가 표시되지 않습니다.");
+            }
+
+            if (_gangshinController == null)
+            {
+                Debug.LogWarning("[GameplayHudBootstrapper] GangshinController를 찾을 수 없습니다. 강신 게이지 HUD가 표시되지 않습니다.");
+            }
+
+            if (_playerLevelSystem == null)
+            {
+                Debug.LogWarning("[GameplayHudBootstrapper] PlayerLevelSystem을 찾을 수 없습니다. 경험치 HUD 및 레벨업 패널이 표시되지 않습니다.");
+            }
+
+            if (_waveCombatDirector == null)
+            {
+                Debug.LogWarning("[GameplayHudBootstrapper] WaveCombatDirector를 찾을 수 없습니다. 웨이브 HUD가 표시되지 않습니다.");
             }
         }
 
