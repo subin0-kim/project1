@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Mukseon.Core;
 using Mukseon.Core.Input;
 using Mukseon.Gameplay.Progression;
 using UnityEngine;
@@ -56,11 +57,7 @@ namespace Mukseon.Gameplay.Combat
 
         private static GameplayInputGate FindExisting()
         {
-#if UNITY_2023_1_OR_NEWER
-            return FindFirstObjectByType<GameplayInputGate>(FindObjectsInactive.Include);
-#else
-            return FindObjectOfType<GameplayInputGate>();
-#endif
+            return SceneObjectFinder.Find<GameplayInputGate>();
         }
 
         private void Awake()
@@ -160,17 +157,17 @@ namespace Mukseon.Gameplay.Combat
         {
             if (_swipeInputDetector == null)
             {
-                _swipeInputDetector = FindSceneObject<SwipeInputDetector>();
+                _swipeInputDetector = SceneObjectFinder.Find<SwipeInputDetector>();
             }
 
             if (_gangshinInputDetector == null)
             {
-                _gangshinInputDetector = FindSceneObject<GangshinInputDetector>();
+                _gangshinInputDetector = SceneObjectFinder.Find<GangshinInputDetector>();
             }
 
             if (_gameOverHandler == null)
             {
-                _gameOverHandler = FindSceneObject<GameOverHandler>();
+                _gameOverHandler = SceneObjectFinder.Find<GameOverHandler>();
                 if (_gameOverHandler != null)
                 {
                     _gameOverHandler.OnGameOver += HandleGameOver;
@@ -184,7 +181,7 @@ namespace Mukseon.Gameplay.Combat
 
             if (_playerLevelSystem == null)
             {
-                _playerLevelSystem = FindSceneObject<PlayerLevelSystem>();
+                _playerLevelSystem = SceneObjectFinder.Find<PlayerLevelSystem>();
                 if (_playerLevelSystem != null)
                 {
                     _playerLevelSystem.OnLevelSelectionOpened += HandleSelectionOpened;
@@ -258,15 +255,6 @@ namespace Mukseon.Gameplay.Combat
             {
                 _gangshinInputDetector.SetInputEnabled(enabled);
             }
-        }
-
-        private static T FindSceneObject<T>() where T : UnityEngine.Object
-        {
-#if UNITY_2023_1_OR_NEWER
-            return FindFirstObjectByType<T>(FindObjectsInactive.Include);
-#else
-            return FindObjectOfType<T>();
-#endif
         }
     }
 }

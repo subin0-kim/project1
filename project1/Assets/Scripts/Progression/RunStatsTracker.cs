@@ -1,3 +1,4 @@
+using Mukseon.Core;
 using Mukseon.Gameplay.Combat;
 using UnityEngine;
 
@@ -41,16 +42,17 @@ namespace Mukseon.Gameplay.Progression
                 return;
             }
 
-#if UNITY_2023_1_OR_NEWER
-            _soulCollector = FindFirstObjectByType<SoulCollector>(FindObjectsInactive.Include);
-#else
-            _soulCollector = FindObjectOfType<SoulCollector>();
-#endif
+            _soulCollector = SceneObjectFinder.Find<SoulCollector>();
 
             if (_soulCollector != null)
             {
                 _soulCollector.OnSoulCollected += HandleSoulCollected;
+                return;
             }
+
+            // 이 컴포넌트는 게임플레이 씬에만 배치되고, 그 씬에는 혼불 수집기가 반드시 있어야 한다.
+            // 없으면 배선 오류이며, 조용히 넘어가면 결과 화면의 혼불 수치만 0으로 나와 원인을 찾기 어렵다.
+            Debug.LogWarning("[RunStatsTracker] SoulCollector를 찾을 수 없습니다. 혼불 수집 집계가 동작하지 않습니다.", this);
         }
 
         // Time.deltaTime은 timeScale이 반영된 값이라, 게임오버·레벨업·화면 전환으로 정지된 동안에는

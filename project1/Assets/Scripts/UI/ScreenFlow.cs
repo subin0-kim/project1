@@ -56,11 +56,7 @@ namespace Mukseon.UI
                 return _instance;
             }
 
-#if UNITY_2023_1_OR_NEWER
-            return Object.FindFirstObjectByType<ScreenFlow>(FindObjectsInactive.Include);
-#else
-            return Object.FindObjectOfType<ScreenFlow>();
-#endif
+            return SceneObjectFinder.Find<ScreenFlow>();
         }
 
         private void Awake()

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Mukseon.Core;
 using Mukseon.Core.Input;
 using Mukseon.Gameplay.Combat;
 using Mukseon.Gameplay.Progression;
@@ -129,20 +130,7 @@ namespace Mukseon.Gameplay.UI
 
         private static GameplayHudBootstrapper FindBootstrapper()
         {
-#if UNITY_2023_1_OR_NEWER
-            return FindFirstObjectByType<GameplayHudBootstrapper>(FindObjectsInactive.Include);
-#else
-            return FindObjectOfType<GameplayHudBootstrapper>();
-#endif
-        }
-
-        private static T FindSceneObject<T>() where T : UnityEngine.Object
-        {
-#if UNITY_2023_1_OR_NEWER
-            return FindFirstObjectByType<T>(FindObjectsInactive.Include);
-#else
-            return FindObjectOfType<T>();
-#endif
+            return SceneObjectFinder.Find<GameplayHudBootstrapper>();
         }
 
         private void Awake()
@@ -403,7 +391,7 @@ namespace Mukseon.Gameplay.UI
 
             if (_playerHealth == null)
             {
-                _playerHealth = FindSceneObject<PlayerHealth>();
+                _playerHealth = SceneObjectFinder.Find<PlayerHealth>();
                 if (_playerHealth != null)
                 {
                     _playerHealth.OnHealthChanged += HandlePlayerHealthChanged;
@@ -413,7 +401,7 @@ namespace Mukseon.Gameplay.UI
 
             if (_gangshinController == null)
             {
-                _gangshinController = FindSceneObject<GangshinController>();
+                _gangshinController = SceneObjectFinder.Find<GangshinController>();
                 if (_gangshinController != null)
                 {
                     _gangshinController.OnGaugeChanged += HandleGangshinGaugeChanged;
@@ -424,7 +412,7 @@ namespace Mukseon.Gameplay.UI
 
             if (_playerLevelSystem == null)
             {
-                _playerLevelSystem = FindSceneObject<PlayerLevelSystem>();
+                _playerLevelSystem = SceneObjectFinder.Find<PlayerLevelSystem>();
                 if (_playerLevelSystem != null)
                 {
                     _playerLevelSystem.OnExperienceChanged += HandleExperienceChanged;
@@ -437,7 +425,7 @@ namespace Mukseon.Gameplay.UI
 
             if (_waveCombatDirector == null)
             {
-                _waveCombatDirector = FindSceneObject<WaveCombatDirector>();
+                _waveCombatDirector = SceneObjectFinder.Find<WaveCombatDirector>();
                 if (_waveCombatDirector != null)
                 {
                     _waveCombatDirector.OnWaveStarted += HandleWaveStarted;

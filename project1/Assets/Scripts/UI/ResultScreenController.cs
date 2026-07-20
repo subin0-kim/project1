@@ -97,17 +97,17 @@ namespace Mukseon.UI
         {
             if (_gameOverHandler == null)
             {
-                _gameOverHandler = FindSceneObject<GameOverHandler>();
+                _gameOverHandler = SceneObjectFinder.Find<GameOverHandler>();
             }
 
             if (_bossEncounterDirector == null)
             {
-                _bossEncounterDirector = FindSceneObject<BossEncounterDirector>();
+                _bossEncounterDirector = SceneObjectFinder.Find<BossEncounterDirector>();
             }
 
             if (_runStatsTracker == null)
             {
-                _runStatsTracker = FindSceneObject<RunStatsTracker>();
+                _runStatsTracker = SceneObjectFinder.Find<RunStatsTracker>();
             }
         }
 
@@ -188,15 +188,6 @@ namespace Mukseon.UI
             }
 
             ScreenFlow.LoadTitle();
-        }
-
-        private static T FindSceneObject<T>() where T : Object
-        {
-#if UNITY_2023_1_OR_NEWER
-            return FindFirstObjectByType<T>(FindObjectsInactive.Include);
-#else
-            return FindObjectOfType<T>();
-#endif
         }
     }
 }

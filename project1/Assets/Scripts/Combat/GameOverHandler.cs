@@ -79,6 +79,11 @@ namespace Mukseon.Gameplay.Combat
             OnGameOver?.Invoke();
         }
 
+        /// <summary>
+        /// 게임오버 상태를 제자리에서 되돌린다. 현재 재도전 경로(<c>ScreenFlow.ReloadGameplay</c>)는 씬을
+        /// 통째로 리로드해 새 인스턴스가 <c>_isGameOver == false</c>로 시작하므로 호출자가 없다.
+        /// 씬 리로드 없이 런을 재시작하는 경로가 생기면 그때 쓰인다(PR #110 리뷰 지적).
+        /// </summary>
         public void ResetGameOver()
         {
             _isGameOver = false;
