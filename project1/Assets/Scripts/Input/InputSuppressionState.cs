@@ -15,6 +15,9 @@ namespace Mukseon.Core.Input
 
         /// <summary>결과 화면 표시 중(정화 성공 포함). 게임오버가 아니어도 조작을 막아야 한다(#36).</summary>
         ResultScreen = 1 << 2,
+
+        /// <summary>조작 안내 카드 표시 중(#112). 카드가 떠 있는 동안 스와이프·더블탭이 먹으면 안 된다.</summary>
+        GuideOverlay = 1 << 3,
     }
 
     /// <summary>
