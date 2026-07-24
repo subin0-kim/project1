@@ -1,0 +1,61 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a4b7fda7b2bf2fd47b67ee3d8057b97d, type: 3}
+  m_Name: AudioLibrary
+  m_EditorClassIdentifier: Mukseon.Core::Mukseon.Audio.AudioLibrary
+  _cues:
+  - _cue: 1
+    _clip: {fileID: 8300000, guid: 850fb0f583d126a4db8f3758fcf964e7, type: 3}
+    _volume: 0.5
+    _pitchMin: 0.94
+    _pitchMax: 1.08
+    _minRetriggerSeconds: 0.03
+  - _cue: 2
+    _clip: {fileID: 8300000, guid: acb25b16e23e81f41bf09ab1083944bd, type: 3}
+    _volume: 0.45
+    _pitchMin: 0.9
+    _pitchMax: 1.15
+    _minRetriggerSeconds: 0.05
+  - _cue: 3
+    _clip: {fileID: 8300000, guid: 1a376564b3573cc489dbc75be5e3e3bb, type: 3}
+    _volume: 0.6
+    _pitchMin: 0.92
+    _pitchMax: 1.08
+    _minRetriggerSeconds: 0.06
+  - _cue: 4
+    _clip: {fileID: 8300000, guid: 6c55201a40fd45c49a7ee814db71a16b, type: 3}
+    _volume: 0.35
+    _pitchMin: 0.96
+    _pitchMax: 1.2
+    _minRetriggerSeconds: 0.04
+  - _cue: 5
+    _clip: {fileID: 8300000, guid: 614ae5cfd15f21544b68e4266d0c0704, type: 3}
+    _volume: 0.7
+    _pitchMin: 1
+    _pitchMax: 1
+    _minRetriggerSeconds: 0.5
+  - _cue: 6
+    _clip: {fileID: 8300000, guid: f0e66de78c7a35342bcd2a1a1816d3c7, type: 3}
+    _volume: 0.9
+    _pitchMin: 0.98
+    _pitchMax: 1.02
+    _minRetriggerSeconds: 0.3
+  _tracks:
+  - _track: 1
+    _clip: {fileID: 8300000, guid: fa5af22fe3096ff4f8c623061c49331e, type: 3}
+    _volume: 0.7
+  - _track: 2
+    _clip: {fileID: 8300000, guid: 4f2fba5b75c769d40aa17ac583a6f642, type: 3}
+    _volume: 0.8
+  - _track: 3
+    _clip: {fileID: 8300000, guid: 1dde55ed77e1a7545a2d95a843ecf6d0, type: 3}
+    _volume: 0.85
