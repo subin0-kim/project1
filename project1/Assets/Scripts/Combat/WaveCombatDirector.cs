@@ -107,6 +107,13 @@ namespace Mukseon.Gameplay.Combat
         /// <summary>지정 분 마크 도달 시 1회 발행. 인자는 도달한 분(mark) 값. 미니 보스 시스템(#71)이 구독.</summary>
         public event Action<float> OnMiniBossMarkReached;
 
+        /// <summary>
+        /// 일반 적 1마리를 스폰한 직후 발행. 인자: (스폰된 적, 종류 데이터 — 없으면 null).
+        /// 적 첫 등장 연출(#70)이 구독해 '이 종류가 이번 런에서 처음인가'를 판정한다.
+        /// 미니 보스(#71)·보스(#37)는 각자의 스포너가 소환하므로 여기서는 발행되지 않는다.
+        /// </summary>
+        public event Action<EnemyHealth, MonsterData> OnEnemySpawned;
+
         /// <summary>보스 마크 도달 시 1회 발행. 일반 스포닝은 이 시점에 중단된다. 보스 시스템(#37)이 구독.</summary>
         public event Action OnBossPhaseStarted;
 
@@ -555,6 +562,9 @@ namespace Mukseon.Gameplay.Combat
             _aliveEnemies.Add(spawnedEnemy);
             _enemySpeciesKey[spawnedEnemy] = runtimeEntry.SpeciesKey;
             IncrementAliveCount(runtimeEntry.SpeciesKey);
+
+            // 추적 등록을 모두 끝낸 뒤에 알린다 — 구독자가 이 적을 즉시 조회해도 상태가 일관되도록.
+            OnEnemySpawned?.Invoke(spawnedEnemy, runtimeEntry.Entry.MonsterData);
 
             NotifyRemainingEnemyCountChanged();
         }
