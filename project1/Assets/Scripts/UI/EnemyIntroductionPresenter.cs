@@ -177,14 +177,16 @@ namespace Mukseon.Gameplay.UI
             }
         }
 
-        private void HandleEnemySpawned(EnemyHealth enemy, MonsterData monsterData)
+        private void HandleEnemySpawned(EnemyHealth enemy, WaveEnemySpawnEntry entry)
         {
-            if (enemy == null)
+            if (enemy == null || entry == null)
             {
                 return;
             }
 
-            object speciesKey = ResolveSpeciesKey(enemy, monsterData);
+            // 키와 이름은 스포너와 같은 기준(엔트리)에서만 읽는다 — 적 인스턴스에서 유추하면
+            // 풀에서 재사용된 개체가 들고 있는 이전 종류의 MonsterData를 읽어 판정이 어긋난다.
+            object speciesKey = entry.SpeciesKey;
             if (!_tracker.TryMarkIntroduced(speciesKey))
             {
                 return;
@@ -192,7 +194,7 @@ namespace Mukseon.Gameplay.UI
 
             _queue.Add(new PendingIntroduction
             {
-                DisplayName = monsterData != null ? monsterData.DisplayName : enemy.DisplayName,
+                DisplayName = entry.DisplayName,
                 Enemy = enemy,
                 SpeciesKey = speciesKey
             });
@@ -243,9 +245,12 @@ namespace Mukseon.Gameplay.UI
         {
             EnemyHealth enemy = _current.Enemy;
 
+            // 지금 이 개체에 배정된 종류는 디렉터의 등록부에서 읽는다 — 사망·정리 시 등록이 지워지고
+            // 재사용 시 새 키로 덮이므로, 인스턴스에서 유추하는 것과 달리 스포너의 판단과 항상 일치한다.
             // 키 비교는 Equals — 폴백 키가 문자열이면 매번 새 인스턴스라 참조 비교로는 항상 어긋난다.
-            bool trackable = enemy != null && enemy.IsAlive &&
-                             Equals(ResolveSpeciesKey(enemy, enemy.MonsterData), _current.SpeciesKey);
+            bool trackable = enemy != null && enemy.IsAlive && _director != null &&
+                             _director.TryGetSpeciesKey(enemy, out object currentKey) &&
+                             Equals(currentKey, _current.SpeciesKey);
             if (!trackable)
             {
                 _view.HideMarker();
@@ -253,15 +258,6 @@ namespace Mukseon.Gameplay.UI
             }
 
             _view.UpdateMarker(_cachedCamera, enemy.transform.position);
-        }
-
-        /// <summary>
-        /// 종류 식별 키. MonsterData가 원칙이고, 없는 엔트리(프리팹만 지정)는 표시 이름으로 대체한다 —
-        /// 인스턴스를 키로 쓰면 풀에서 재사용될 때마다 '처음'이 되어 연출이 반복된다.
-        /// </summary>
-        private static object ResolveSpeciesKey(EnemyHealth enemy, MonsterData monsterData)
-        {
-            return monsterData != null ? monsterData : (object)enemy.DisplayName;
         }
 
         private void EnsureUi()
