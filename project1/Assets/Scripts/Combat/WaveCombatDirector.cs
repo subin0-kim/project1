@@ -107,6 +107,17 @@ namespace Mukseon.Gameplay.Combat
         /// <summary>지정 분 마크 도달 시 1회 발행. 인자는 도달한 분(mark) 값. 미니 보스 시스템(#71)이 구독.</summary>
         public event Action<float> OnMiniBossMarkReached;
 
+        /// <summary>
+        /// 일반 적 1마리를 스폰한 직후 발행. 인자: (스폰된 적, 이 적을 소환한 웨이브 엔트리).
+        /// 적 첫 등장 연출(#70)이 구독해 '이 종류가 이번 런에서 처음인가'를 판정한다.
+        /// 미니 보스(#71)·보스(#37)는 각자의 스포너가 소환하므로 여기서는 발행되지 않는다.
+        ///
+        /// 종류 판별 키·표시 이름은 반드시 엔트리(<see cref="WaveEnemySpawnEntry.SpeciesKey"/>,
+        /// <see cref="WaveEnemySpawnEntry.DisplayName"/>)에서 읽는다 — 적 인스턴스에서 다시 유추하면
+        /// 풀에서 재사용된 개체가 들고 있는 이전 종류의 MonsterData를 읽어 스포너의 판단과 어긋난다.
+        /// </summary>
+        public event Action<EnemyHealth, WaveEnemySpawnEntry> OnEnemySpawned;
+
         /// <summary>보스 마크 도달 시 1회 발행. 일반 스포닝은 이 시점에 중단된다. 보스 시스템(#37)이 구독.</summary>
         public event Action OnBossPhaseStarted;
 
@@ -556,6 +567,9 @@ namespace Mukseon.Gameplay.Combat
             _enemySpeciesKey[spawnedEnemy] = runtimeEntry.SpeciesKey;
             IncrementAliveCount(runtimeEntry.SpeciesKey);
 
+            // 추적 등록을 모두 끝낸 뒤에 알린다 — 구독자가 이 적을 즉시 조회해도 상태가 일관되도록.
+            OnEnemySpawned?.Invoke(spawnedEnemy, runtimeEntry.Entry);
+
             NotifyRemainingEnemyCountChanged();
         }
 
@@ -722,6 +736,26 @@ namespace Mukseon.Gameplay.Combat
             }
 
             NotifyRemainingEnemyCountChanged();
+        }
+
+        /// <summary>
+        /// 살아있는 적에게 <b>현재 배정된</b> 종류 판별 키를 조회한다(#70).
+        ///
+        /// 스폰 시 <see cref="WaveEnemySpawnEntry.SpeciesKey"/>로 등록되고 사망·정리 시 제거되므로,
+        /// 풀에서 다른 종류로 재사용된 개체는 자동으로 새 키를 돌려준다. 적 인스턴스에서 종류를 유추하는
+        /// 방식(MonsterData/표시 이름)과 달리 스포너의 판단과 항상 일치한다.
+        /// </summary>
+        /// <returns>등록되어 있으면 true. 이미 죽었거나 이 디렉터가 소환하지 않은 적이면 false.</returns>
+        public bool TryGetSpeciesKey(EnemyHealth enemy, out object speciesKey)
+        {
+            // Dictionary는 null 키를 허용하지 않는다. 파괴된 오브젝트도 == null 이 true라 여기서 걸러진다.
+            if (enemy == null)
+            {
+                speciesKey = null;
+                return false;
+            }
+
+            return _enemySpeciesKey.TryGetValue(enemy, out speciesKey);
         }
 
         private int GetAliveCount(object speciesKey)

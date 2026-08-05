@@ -49,6 +49,27 @@ namespace Mukseon.Gameplay.Combat
             }
         }
 
+        /// <summary>
+        /// UI 표시용 종류 이름. <see cref="SpeciesKey"/>와 <b>같은 우선순위</b>(MonsterData → EnemyPrefab → EnemyType)로
+        /// 결정해, 키가 가리키는 종류와 화면에 뜨는 이름이 어긋나지 않게 한다.
+        ///
+        /// 적 인스턴스(<see cref="EnemyHealth.DisplayName"/>)에서 읽지 않는 이유:
+        /// <see cref="EnemyHealth.ApplyMonsterData"/>는 인자가 null이면 기존 값을 유지하므로,
+        /// MonsterData가 없는 엔트리에 풀에서 재사용된 개체가 배정되면 이전 종류의 이름을 그대로 반환한다.
+        /// </summary>
+        public string DisplayName
+        {
+            get
+            {
+                if (_monsterData != null)
+                {
+                    return _monsterData.DisplayName;
+                }
+
+                return _enemyPrefab != null ? _enemyPrefab.name : EnemyType;
+            }
+        }
+
         public bool IsValid(out string reason)
         {
             if (_monsterData != null)
