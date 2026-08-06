@@ -1,0 +1,125 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 330c7900de17a59499547d23ba978b16, type: 3}
+  m_Name: Chapter1_Sillim
+  m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.Combat.ChapterData
+  _chapterId: chapter.1.sillim
+  _displayName: Chapter 1 - Sillim
+  _backgroundSceneName:
+  _waveDatabase: {fileID: 11400000, guid: 761c6a7730f34dde86070de259bcccd6, type: 2}
+  _enemyPool:
+  - _enemyType: monster.sonakssi
+    _monsterData: {fileID: 11400000, guid: fb24fd5e38994de6a94055af52dc5df6, type: 2}
+    _enemyPrefab: {fileID: 0}
+    _minAliveCount: 1
+    _moveSpeed: 1
+  - _enemyType: monster.ashen_claw
+    _monsterData: {fileID: 11400000, guid: 77661a277270a784b8c5751d1df4503e, type: 2}
+    _enemyPrefab: {fileID: 0}
+    _minAliveCount: 1
+    _moveSpeed: 1
+  - _enemyType: monster.mangryang
+    _monsterData: {fileID: 11400000, guid: 43506e89a63343819b87c407111527e6, type: 2}
+    _enemyPrefab: {fileID: 0}
+    _minAliveCount: 1
+    _moveSpeed: 1
+  - _enemyType: monster.sangwi
+    _monsterData: {fileID: 11400000, guid: 09e5f3c235914a7a86e707991d9982ed, type: 2}
+    _enemyPrefab: {fileID: 0}
+    _minAliveCount: 1
+    _moveSpeed: 1
+  - _enemyType: monster.dusk_shade
+    _monsterData: {fileID: 11400000, guid: 0c9e73336ec6803409b3e8030695eca2, type: 2}
+    _enemyPrefab: {fileID: 0}
+    _minAliveCount: 1
+    _moveSpeed: 1
+  - _enemyType: monster.dureoksini
+    _monsterData: {fileID: 11400000, guid: 29fa4d2c3fd292642baaf7f072b8e86e, type: 2}
+    _enemyPrefab: {fileID: 0}
+    _minAliveCount: 1
+    _moveSpeed: 1
+  - _enemyType: monster.dokkaebibul
+    _monsterData: {fileID: 11400000, guid: 6871f23fb6aa420f8bcc706b3f6c6cfd, type: 2}
+    _enemyPrefab: {fileID: 0}
+    _minAliveCount: 1
+    _moveSpeed: 1
+  - _enemyType: monster.bramble_idol
+    _monsterData: {fileID: 11400000, guid: 89dfd2a29b064fa47a88cabf39d5d41b, type: 2}
+    _enemyPrefab: {fileID: 0}
+    _minAliveCount: 1
+    _moveSpeed: 1
+  - _enemyType: monster.maegu
+    _monsterData: {fileID: 11400000, guid: bd890c0541c5445d8225e7789bea10b2, type: 2}
+    _enemyPrefab: {fileID: 0}
+    _minAliveCount: 1
+    _moveSpeed: 1
+  _miniBossCandidates:
+  - _enemyType: monster.sonakssi
+    _monsterData: {fileID: 11400000, guid: fb24fd5e38994de6a94055af52dc5df6, type: 2}
+    _enemyPrefab: {fileID: 0}
+    _minAliveCount: 1
+    _moveSpeed: 1
+  - _enemyType: monster.ashen_claw
+    _monsterData: {fileID: 11400000, guid: 77661a277270a784b8c5751d1df4503e, type: 2}
+    _enemyPrefab: {fileID: 0}
+    _minAliveCount: 1
+    _moveSpeed: 1
+  - _enemyType: monster.mangryang
+    _monsterData: {fileID: 11400000, guid: 43506e89a63343819b87c407111527e6, type: 2}
+    _enemyPrefab: {fileID: 0}
+    _minAliveCount: 1
+    _moveSpeed: 1
+  - _enemyType: monster.sangwi
+    _monsterData: {fileID: 11400000, guid: 09e5f3c235914a7a86e707991d9982ed, type: 2}
+    _enemyPrefab: {fileID: 0}
+    _minAliveCount: 1
+    _moveSpeed: 1
+  - _enemyType: monster.dureoksini
+    _monsterData: {fileID: 11400000, guid: 29fa4d2c3fd292642baaf7f072b8e86e, type: 2}
+    _enemyPrefab: {fileID: 0}
+    _minAliveCount: 1
+    _moveSpeed: 1
+  - _enemyType: monster.dusk_shade
+    _monsterData: {fileID: 11400000, guid: 0c9e73336ec6803409b3e8030695eca2, type: 2}
+    _enemyPrefab: {fileID: 0}
+    _minAliveCount: 1
+    _moveSpeed: 1
+  - _enemyType: monster.bramble_idol
+    _monsterData: {fileID: 11400000, guid: 89dfd2a29b064fa47a88cabf39d5d41b, type: 2}
+    _enemyPrefab: {fileID: 0}
+    _minAliveCount: 1
+    _moveSpeed: 1
+  _miniBossStages:
+  - _spawnMinuteMark: 3
+    _healthMultiplier: 5
+    _sizeMultiplier: 1.5
+    _knockbackThresholdRatio: 0.1
+    _moveSpeed: 0.5
+    _goldReward: 100
+    _soulCurrencyReward: 1
+  - _spawnMinuteMark: 6
+    _healthMultiplier: 8
+    _sizeMultiplier: 2
+    _knockbackThresholdRatio: 0.1
+    _moveSpeed: 0.5
+    _goldReward: 150
+    _soulCurrencyReward: 2
+  - _spawnMinuteMark: 9
+    _healthMultiplier: 12
+    _sizeMultiplier: 2.5
+    _knockbackThresholdRatio: 0.1
+    _moveSpeed: 0.5
+    _goldReward: 200
+    _soulCurrencyReward: 3
+  _bossMinuteMark: 10
+  _bossData: {fileID: 11400000, guid: d5cb2b2179043284b8598eded7b33cb6, type: 2}
+  _bossPrefab: {fileID: 2681383079461457332, guid: f6f5de12d7863c04ab83d3482bca5c6b, type: 3}

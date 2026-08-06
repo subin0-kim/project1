@@ -858,6 +858,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7dd05940247ffed4facbec1e8fc4d6b9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.Combat.BossEncounterDirector
+  _chapterData: {fileID: 11400000, guid: c6f2ea4d2fc04e32a642af5e9375557a, type: 2}
   _director: {fileID: 1453966977}
   _bossPrefab: {fileID: 2681383079461457332, guid: f6f5de12d7863c04ab83d3482bca5c6b, type: 3}
   _bossSpawnPoint: {fileID: 275740324}
@@ -1671,6 +1672,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7b7e2c7a47d44145ab1382f7783377fa, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.Combat.WaveCombatDirector
+  _chapterData: {fileID: 11400000, guid: c6f2ea4d2fc04e32a642af5e9375557a, type: 2}
   _waveDatabase: {fileID: 11400000, guid: 761c6a7730f34dde86070de259bcccd6, type: 2}
   _spawnPoints: []
   _collectSpawnPointsFromChildren: 1
@@ -1715,6 +1717,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 83ea35bc9699e0443a3f1f4aee038309, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.Combat.MiniBossSpawner
+  _chapterData: {fileID: 11400000, guid: c6f2ea4d2fc04e32a642af5e9375557a, type: 2}
   _director: {fileID: 1453966977}
   _playerTransform: {fileID: 187285032}
   _soulOrbPrefab: {fileID: 2654722044290273375, guid: 100c6736884f69344849b68ede8dffdd, type: 3}

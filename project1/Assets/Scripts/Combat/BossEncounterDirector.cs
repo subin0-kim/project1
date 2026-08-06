@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using Mukseon.Core;
 using Mukseon.Core.Pool;
 using UnityEngine;
 
@@ -20,6 +21,12 @@ namespace Mukseon.Gameplay.Combat
     [DisallowMultipleComponent]
     public class BossEncounterDirector : MonoBehaviour
     {
+        [Header("Chapter")]
+        [Tooltip("이 챕터의 메인 보스를 사용한다(#64). 비우면 아래 보스 프리팹을 그대로 쓴다. " +
+                 "런타임에는 스테이지 선택 결과(RunContext.SelectedChapter)가 이 값보다 우선한다.")]
+        [SerializeField]
+        private ChapterData _chapterData;
+
         [Header("References")]
         [SerializeField]
         private WaveCombatDirector _director;
@@ -59,6 +66,33 @@ namespace Mukseon.Gameplay.Combat
 
         /// <summary>보스 처치 + 사망 연출 종료 후 발행. 결과 화면(#36)이 구독한다.</summary>
         public event Action OnChapterCleared;
+
+        /// <summary>
+        /// 보스 프리팹은 보스 마크(기본 10분)에 가서야 읽히므로 해석 시점에 여유가 있지만,
+        /// 나머지 두 디렉터와 같은 규약을 유지해 <c>Awake</c>에서 한 번에 끝낸다.
+        /// </summary>
+        private void Awake()
+        {
+            ApplyChapterData();
+        }
+
+        private void ApplyChapterData()
+        {
+            ChapterData chapter = RunContext.SelectedChapter != null ? RunContext.SelectedChapter : _chapterData;
+            if (chapter == null)
+            {
+                return;
+            }
+
+            _chapterData = chapter;
+
+            // 프리팹이 비어 있는 챕터(2·3장 골격)가 씬의 유효한 보스를 지워버리지 않도록 있을 때만 덮어쓴다.
+            // 보스가 정말 없는 챕터는 ChapterData.BossMinuteMark를 0으로 두어 보스 페이즈 자체를 막는다.
+            if (chapter.BossPrefab != null)
+            {
+                _bossPrefab = chapter.BossPrefab;
+            }
+        }
 
         private void OnEnable()
         {

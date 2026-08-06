@@ -1,3 +1,4 @@
+using Mukseon.Gameplay.Combat;
 using Mukseon.Gameplay.Stats;
 using UnityEngine;
 
@@ -17,6 +18,12 @@ namespace Mukseon.Core
         public static CharacterData SelectedCharacter { get; set; }
 
         /// <summary>
+        /// 이번 런에 선택된 챕터(#64). null이면 게임플레이 씬의 디렉터들이 각자 직렬화된 값으로 폴백한다.
+        /// 캐릭터와 같은 규약이다 — 스테이지 선택 화면이 채우고, 웨이브·미니 보스·보스 디렉터가 읽어간다.
+        /// </summary>
+        public static ChapterData SelectedChapter { get; set; }
+
+        /// <summary>
         /// Enter Play Mode 설정에서 Domain Reload가 꺼져 있으면 static이 세션 간 유지된다.
         /// 이전 세션의 선택이 남아 다음 플레이에 새어 들어가지 않도록 진입 시 비운다.
         /// </summary>
@@ -24,6 +31,7 @@ namespace Mukseon.Core
         public static void Reset()
         {
             SelectedCharacter = null;
+            SelectedChapter = null;
         }
     }
 }
