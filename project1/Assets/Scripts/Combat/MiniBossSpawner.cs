@@ -75,6 +75,10 @@ namespace Mukseon.Gameplay.Combat
             ApplyChapterData();
         }
 
+        /// <summary>
+        /// 반영 단위는 <b>챕터 통째로</b>다 — 미완성 챕터를 필드별로 폴백시키면 다른 챕터의 적이 섞이므로,
+        /// 검증에 걸리는 챕터는 통째로 무시하고 씬 값으로 남긴다(<see cref="WaveCombatDirector"/>와 동일한 판정).
+        /// </summary>
         private void ApplyChapterData()
         {
             ChapterData chapter = RunContext.SelectedChapter != null ? RunContext.SelectedChapter : _chapterData;
@@ -83,16 +87,19 @@ namespace Mukseon.Gameplay.Combat
                 return;
             }
 
+            if (!chapter.IsValid(out string reason))
+            {
+                Debug.LogWarning(
+                    $"[MiniBossSpawner] 챕터 '{chapter.DisplayName}'가 유효하지 않아 씬 설정으로 진행합니다: {reason}");
+                return;
+            }
+
             _chapterData = chapter;
 
             // 로스터 전체가 아니라 '미니 보스 후보'를 쓴다 — 챕터가 후보를 따로 지정하지 않았으면
-            // ChapterData가 알아서 로스터 전체를 돌려준다. 비어 있으면 미니 보스가 아예 소환되지 않으므로
-            // 챕터 쪽이 비어 있는 경우엔 씬 값을 남긴다.
-            IReadOnlyList<WaveEnemySpawnEntry> candidates = chapter.MiniBossCandidates;
-            if (candidates != null && candidates.Count > 0)
-            {
-                _enemyPool = new List<WaveEnemySpawnEntry>(candidates);
-            }
+            // ChapterData가 알아서 로스터 전체를 돌려준다. 로스터가 비어 있지 않음은 IsValid가 보장하므로
+            // 후보도 반드시 1종 이상이다.
+            _enemyPool = new List<WaveEnemySpawnEntry>(chapter.MiniBossCandidates);
 
             // 차수는 WaveCombatDirector가 발행하는 마크와 짝을 이뤄야 한다. 디렉터도 같은 챕터에서
             // 마크를 파생시키므로(ChapterData.MiniBossMinuteMarks) 여기서는 그대로 반영하면 항상 일치한다.

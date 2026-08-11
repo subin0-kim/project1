@@ -76,6 +76,10 @@ namespace Mukseon.Gameplay.Combat
             ApplyChapterData();
         }
 
+        /// <summary>
+        /// 반영 단위는 <b>챕터 통째로</b>다 — 프리팹만 씬 값으로 남기면 "2장인데 보스는 1장 산군"이 되므로,
+        /// 검증에 걸리는 챕터는 통째로 무시한다(<see cref="WaveCombatDirector"/>와 동일한 판정).
+        /// </summary>
         private void ApplyChapterData()
         {
             ChapterData chapter = RunContext.SelectedChapter != null ? RunContext.SelectedChapter : _chapterData;
@@ -84,14 +88,18 @@ namespace Mukseon.Gameplay.Combat
                 return;
             }
 
+            if (!chapter.IsValid(out string reason))
+            {
+                Debug.LogWarning(
+                    $"[BossEncounterDirector] 챕터 '{chapter.DisplayName}'가 유효하지 않아 씬 설정으로 진행합니다: {reason}");
+                return;
+            }
+
             _chapterData = chapter;
 
-            // 프리팹이 비어 있는 챕터(2·3장 골격)가 씬의 유효한 보스를 지워버리지 않도록 있을 때만 덮어쓴다.
-            // 보스가 정말 없는 챕터는 ChapterData.BossMinuteMark를 0으로 두어 보스 페이즈 자체를 막는다.
-            if (chapter.BossPrefab != null)
-            {
-                _bossPrefab = chapter.BossPrefab;
-            }
+            // IsValid가 "보스 마크가 있으면 프리팹도 있다"를 보장한다. 그래도 프리팹이 비어 있다면 보스 마크가 0인
+            // 보스 없는 챕터이므로, 씬 값을 남기지 않고 그대로 비운다 — 어차피 보스 페이즈 자체가 시작되지 않는다.
+            _bossPrefab = chapter.BossPrefab;
         }
 
         private void OnEnable()

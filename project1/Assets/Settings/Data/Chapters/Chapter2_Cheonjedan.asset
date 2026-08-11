@@ -19,6 +19,6 @@ MonoBehaviour:
   _enemyPool: []
   _miniBossCandidates: []
   _miniBossStages: []
-  _bossMinuteMark: 10
+  _bossMinuteMark: 0
   _bossData: {fileID: 0}
   _bossPrefab: {fileID: 0}

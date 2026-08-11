@@ -47,7 +47,10 @@ namespace Mukseon.Tests.EditMode
             // 로스터 9종 = 웨이브에 등장하는 전체 종류. IsValid의 격리 검증이 이걸 보장한다.
             Assert.That(chapter.EnemyPool.Count, Is.EqualTo(9));
 
-            // 미니 보스 후보는 7종 — 도깨비불·매구는 씬의 기존 풀에도 없었으므로 그대로 뺀 상태를 유지한다.
+            // 미니 보스 후보는 7종 — 도깨비불·매구를 뺀 것은 누락이 아니라 의도된 제외다.
+            // 도깨비불: Explode()에서 스스로 Kill()을 불러 차수 체력 배율과 무관하게 1.5초 만에 자멸한다.
+            //           플레이어가 아무것도 안 해도 미니 보스 보상(골드·영혼·스킬 선택)이 지급된다.
+            // 매구: 거리를 벌리며 투사체를 쏘는 적이라 느려져도 스와이프 사거리로 들어오지 않는다 — 처치 기회가 안 생긴다.
             Assert.That(chapter.MiniBossCandidates.Count, Is.EqualTo(7));
         }
 
@@ -72,8 +75,20 @@ namespace Mukseon.Tests.EditMode
 
             // 2·3장은 의도적으로 골격만 있다(적 구성은 후속 기획). 목록 검증은 통과하되
             // 개별 챕터 검증은 실패하는 게 정상이며, 그래서 플레이 가능한 1장이 화면에서 사라지지 않는다.
-            ChapterData chapter2 = database.Find("chapter.2.cheonjedan");
-            Assert.That(chapter2.IsValid(out _), Is.False, "2장이 완성되면 이 테스트를 갱신할 것.");
+            //
+            // reason까지 못 박는 이유: 실패 사유가 하나씩 채워질 때 무엇이 남았는지 바로 드러나야 한다.
+            // 지금 남은 항목은 웨이브 데이터베이스이며, 이걸 채우면 다음 사유(적 풀)로 넘어간다.
+            foreach (string chapterId in new[] { "chapter.2.cheonjedan", "chapter.3.indangsu" })
+            {
+                ChapterData skeleton = database.Find(chapterId);
+                Assert.That(skeleton.IsValid(out string reason), Is.False, $"{chapterId}이 완성되면 이 테스트를 갱신할 것.");
+                Assert.That(reason, Does.Contain("웨이브"), chapterId);
+
+                // 보스 마크 0 = "보스 없음". 보스 프리팹이 없는 챕터가 마크만 들고 있으면
+                // 10분에 BossEncounterDirector가 씬(=1장)의 보스를 그대로 띄운다.
+                Assert.That(skeleton.BossMinuteMark, Is.EqualTo(0f), $"{chapterId}: 보스가 없는 챕터는 마크도 0이어야 한다.");
+            }
+
             Assert.That(database.IsValid(out _), Is.True);
         }
     }

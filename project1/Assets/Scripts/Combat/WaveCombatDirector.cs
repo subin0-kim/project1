@@ -144,6 +144,10 @@ namespace Mukseon.Gameplay.Combat
         /// <summary>
         /// 스테이지 선택에서 고른 챕터를 우선하고, 없으면 씬에 직렬화된 챕터로 폴백한다.
         /// 둘 다 없으면 아무것도 덮어쓰지 않아 종전처럼 씬 값으로 동작한다(#36의 캐릭터 해석과 같은 규약).
+        ///
+        /// 반영 단위는 <b>챕터 통째로</b>다. 필드마다 따로 폴백하면 미완성 챕터(2·3장 골격)를 골랐을 때
+        /// "웨이브·보스는 1장, 미니 보스만 없음" 같은 중간 상태가 만들어져 #64 DoD("챕터 진행 중 다른 챕터의
+        /// 적이 등장하지 않는다")가 조용히 깨진다. 세 디렉터가 각자 같은 판정을 내리므로 셋 다 함께 씬 값으로 남는다.
         /// </summary>
         private void ApplyChapterData()
         {
@@ -153,13 +157,18 @@ namespace Mukseon.Gameplay.Combat
                 return;
             }
 
-            _chapterData = chapter;
-
-            if (chapter.WaveDatabase != null)
+            if (!chapter.IsValid(out string reason))
             {
-                _waveDatabase = chapter.WaveDatabase;
+                Debug.LogWarning(
+                    $"[WaveCombatDirector] 챕터 '{chapter.DisplayName}'가 유효하지 않아 씬 설정으로 진행합니다: {reason}");
+                return;
             }
 
+            _chapterData = chapter;
+
+            // 아래 세 값은 IsValid를 통과한 챕터에서만 읽으므로 조건 없이 덮어쓴다 —
+            // 웨이브 데이터베이스가 비어 있지 않음은 검증이 보장한다.
+            _waveDatabase = chapter.WaveDatabase;
             _bossMinuteMark = chapter.BossMinuteMark;
 
             // 미니 보스 마크는 챕터의 차수 목록에서 파생된 값이다. 챕터에 차수가 없으면 마크도 없는 게 맞으므로
