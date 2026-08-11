@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using Mukseon.Core;
 using Mukseon.Core.Pool;
 using UnityEngine;
 
@@ -20,6 +21,12 @@ namespace Mukseon.Gameplay.Combat
     [DisallowMultipleComponent]
     public class BossEncounterDirector : MonoBehaviour
     {
+        [Header("Chapter")]
+        [Tooltip("이 챕터의 메인 보스를 사용한다(#64). 비우면 아래 보스 프리팹을 그대로 쓴다. " +
+                 "런타임에는 스테이지 선택 결과(RunContext.SelectedChapter)가 이 값보다 우선한다.")]
+        [SerializeField]
+        private ChapterData _chapterData;
+
         [Header("References")]
         [SerializeField]
         private WaveCombatDirector _director;
@@ -59,6 +66,41 @@ namespace Mukseon.Gameplay.Combat
 
         /// <summary>보스 처치 + 사망 연출 종료 후 발행. 결과 화면(#36)이 구독한다.</summary>
         public event Action OnChapterCleared;
+
+        /// <summary>
+        /// 보스 프리팹은 보스 마크(기본 10분)에 가서야 읽히므로 해석 시점에 여유가 있지만,
+        /// 나머지 두 디렉터와 같은 규약을 유지해 <c>Awake</c>에서 한 번에 끝낸다.
+        /// </summary>
+        private void Awake()
+        {
+            ApplyChapterData();
+        }
+
+        /// <summary>
+        /// 반영 단위는 <b>챕터 통째로</b>다 — 프리팹만 씬 값으로 남기면 "2장인데 보스는 1장 산군"이 되므로,
+        /// 검증에 걸리는 챕터는 통째로 무시한다(<see cref="WaveCombatDirector"/>와 동일한 판정).
+        /// </summary>
+        private void ApplyChapterData()
+        {
+            ChapterData chapter = RunContext.SelectedChapter != null ? RunContext.SelectedChapter : _chapterData;
+            if (chapter == null)
+            {
+                return;
+            }
+
+            if (!chapter.IsValid(out string reason))
+            {
+                Debug.LogWarning(
+                    $"[BossEncounterDirector] 챕터 '{chapter.DisplayName}'가 유효하지 않아 씬 설정으로 진행합니다: {reason}");
+                return;
+            }
+
+            _chapterData = chapter;
+
+            // IsValid가 "보스 마크가 있으면 프리팹도 있다"를 보장한다. 그래도 프리팹이 비어 있다면 보스 마크가 0인
+            // 보스 없는 챕터이므로, 씬 값을 남기지 않고 그대로 비운다 — 어차피 보스 페이즈 자체가 시작되지 않는다.
+            _bossPrefab = chapter.BossPrefab;
+        }
 
         private void OnEnable()
         {

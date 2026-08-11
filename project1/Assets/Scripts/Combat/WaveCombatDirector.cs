@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Mukseon.Core;
 using Mukseon.Core.Pool;
 using Mukseon.Gameplay.Progression;
 using UnityEngine;
@@ -21,6 +22,12 @@ namespace Mukseon.Gameplay.Combat
             public WaveEnemySpawnEntry Entry;
             public object SpeciesKey;
         }
+
+        [Header("Chapter")]
+        [Tooltip("이 챕터의 웨이브 목록과 타임라인 마크를 사용한다(#64). 비우면 아래 값들을 그대로 쓴다. " +
+                 "런타임에는 스테이지 선택 결과(RunContext.SelectedChapter)가 이 값보다 우선한다.")]
+        [SerializeField]
+        private ChapterData _chapterData;
 
         [Header("References")]
         [SerializeField]
@@ -99,6 +106,9 @@ namespace Mukseon.Gameplay.Combat
         /// <summary>보스 진입 분 마크. 0 이하이면 보스 마크가 없다.</summary>
         public float BossMinuteMark => _bossMinuteMark;
 
+        /// <summary>이번 런에 적용된 챕터(#64). 선택 화면을 거쳤으면 선택된 챕터, 아니면 씬에 직렬화된 챕터다.</summary>
+        public ChapterData ActiveChapter => _chapterData;
+
         public event Action<int, WaveDefinition> OnWaveStarted;
         public event Action<int, WaveEndReason> OnWaveEnded;
         public event Action<int, int> OnRemainingEnemyCountChanged;
@@ -120,6 +130,51 @@ namespace Mukseon.Gameplay.Combat
 
         /// <summary>보스 마크 도달 시 1회 발행. 일반 스포닝은 이 시점에 중단된다. 보스 시스템(#37)이 구독.</summary>
         public event Action OnBossPhaseStarted;
+
+        /// <summary>
+        /// 챕터 해석은 반드시 <c>Awake</c>에서 끝나야 한다 — <c>OnEnable</c>이 곧바로 <see cref="StartWaves"/>를
+        /// 호출하므로, 그 시점에는 이미 이 챕터의 웨이브·마크가 자리잡아 있어야 한다.
+        /// (씬 로드 시 Unity는 모든 오브젝트의 Awake를 끝낸 뒤 OnEnable을 돌린다.)
+        /// </summary>
+        private void Awake()
+        {
+            ApplyChapterData();
+        }
+
+        /// <summary>
+        /// 스테이지 선택에서 고른 챕터를 우선하고, 없으면 씬에 직렬화된 챕터로 폴백한다.
+        /// 둘 다 없으면 아무것도 덮어쓰지 않아 종전처럼 씬 값으로 동작한다(#36의 캐릭터 해석과 같은 규약).
+        ///
+        /// 반영 단위는 <b>챕터 통째로</b>다. 필드마다 따로 폴백하면 미완성 챕터(2·3장 골격)를 골랐을 때
+        /// "웨이브·보스는 1장, 미니 보스만 없음" 같은 중간 상태가 만들어져 #64 DoD("챕터 진행 중 다른 챕터의
+        /// 적이 등장하지 않는다")가 조용히 깨진다. 세 디렉터가 각자 같은 판정을 내리므로 셋 다 함께 씬 값으로 남는다.
+        /// </summary>
+        private void ApplyChapterData()
+        {
+            ChapterData chapter = RunContext.SelectedChapter != null ? RunContext.SelectedChapter : _chapterData;
+            if (chapter == null)
+            {
+                return;
+            }
+
+            if (!chapter.IsValid(out string reason))
+            {
+                Debug.LogWarning(
+                    $"[WaveCombatDirector] 챕터 '{chapter.DisplayName}'가 유효하지 않아 씬 설정으로 진행합니다: {reason}");
+                return;
+            }
+
+            _chapterData = chapter;
+
+            // 아래 세 값은 IsValid를 통과한 챕터에서만 읽으므로 조건 없이 덮어쓴다 —
+            // 웨이브 데이터베이스가 비어 있지 않음은 검증이 보장한다.
+            _waveDatabase = chapter.WaveDatabase;
+            _bossMinuteMark = chapter.BossMinuteMark;
+
+            // 미니 보스 마크는 챕터의 차수 목록에서 파생된 값이다. 챕터에 차수가 없으면 마크도 없는 게 맞으므로
+            // 비어 있어도 그대로 반영한다 — 여기서 씬 값을 남겨두면 스포너에 없는 차수의 마크만 울린다.
+            _miniBossMinuteMarks = new List<float>(chapter.MiniBossMinuteMarks);
+        }
 
         private void OnEnable()
         {
