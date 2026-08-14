@@ -2,34 +2,12 @@ using System;
 using System.Collections.Generic;
 using Mukseon.Core;
 using Mukseon.Gameplay.Combat;
+using Mukseon.Gameplay.Progression.Cards;
 using Mukseon.Gameplay.Stats;
 using UnityEngine;
 
 namespace Mukseon.Gameplay.Progression
 {
-    public enum LevelUpSkillEffectType
-    {
-        // 스탯 기반 (범용)
-        StatFlat = 0,
-        StatPercent = 1,
-        BonusTargets = 2,
-        PickupRadius = 3,         // 혼불 당기기 (자력) — docs 3.3 기준 공용 스킬 7종 중 하나
-
-        // 공용 스킬 (6종) — PickupRadius 포함 시 7종, 클래스 전용 4종과 합산하면 총 11종
-        SummonDokkaebiOrb = 10,   // 도깨비불 소환
-        InkExplosionOnKill = 11,  // 먹물 폭발 (적 처치 시 광역)
-        BarrierRadiusExpand = 12, // 결계 확장
-        KnockbackShield = 13,     // 수호 장승의 진 (피격 시 넉백)
-        HealthRegen = 14,         // 재생의 굿거리
-        InkTrailSlow = 15,        // 끈적한 묵액 (궤적 둔화)
-
-        // 클래스 전용 스킬 (4종)
-        FanAttackBuff = 20,       // [무당 전용] 부채살 흩뿌리기
-        SwordAttackBuff = 21,     // [박수 전용] 묵직한 신검
-        SalPulliKummuBuff = 22,   // [무당 강신] 살풀이 검무
-        PaCheonJingBuff = 23,     // [박수 강신] 파천의 징
-    }
-
     [DisallowMultipleComponent]
     public class PlayerLevelSystem : MonoBehaviour
     {
@@ -54,10 +32,12 @@ namespace Mukseon.Gameplay.Progression
         [SerializeField]
         private List<SkillData> _skillDefinitions = new List<SkillData>();
 
-        private readonly List<SkillData> _currentChoices = new List<SkillData>(3);
-        private readonly Dictionary<string, int> _skillLevels = new Dictionary<string, int>();
+        private readonly List<SkillData> _currentChoices = new List<SkillData>(CardPool<SkillData>.DefaultDrawCount);
+        private readonly SkillLevelRegistry _skillLevels = new SkillLevelRegistry();
 
         private LevelProgressionModel _progressionModel;
+        private CardPool<SkillData> _cardPool;
+        private CardEffectApplier _effectApplier;
         private bool _startingSkillsGranted;
 
         public event Action<int, float, float> OnExperienceChanged;
@@ -92,14 +72,17 @@ namespace Mukseon.Gameplay.Progression
             }
 
             ResolveSkillDefinitions();
+            _effectApplier = new CardEffectApplier(_playerStatSystem, _swipeAttackEventListener, this);
             _progressionModel = new LevelProgressionModel(_baseExperienceThreshold, _thresholdGrowthFactor);
             NotifyExperienceChanged();
         }
 
         // 시작 스킬은 Start에서 부여한다. 다른 컴포넌트의 OnEnable(구독)이 모두 끝난 뒤여야
         // OnSkillEffectPending 구독자(예: FanAttackSkill)가 레벨 1 부여를 놓치지 않는다.
+        // 카드 풀도 여기서 만든다: PlayerStatSystem.Awake가 끝나야 이번 런의 캐릭터가 확정된다(#66).
         private void Start()
         {
+            InitializeCardPool();
             GrantStartingSkills();
         }
 
@@ -147,7 +130,7 @@ namespace Mukseon.Gameplay.Progression
             SkillData selected = _currentChoices[choiceIndex];
             ApplySkillEffect(selected);
 
-            int newLevel = IncrementSkillLevel(selected.SkillId);
+            int newLevel = _skillLevels.Increment(selected.SkillId);
             OnSkillApplied?.Invoke(selected, newLevel);
 
             IsSelectionOpen = false;
@@ -178,15 +161,8 @@ namespace Mukseon.Gameplay.Progression
             }
         }
 
-        public int GetSkillLevel(string skillId)
-        {
-            if (string.IsNullOrWhiteSpace(skillId))
-            {
-                return 0;
-            }
-
-            return _skillLevels.TryGetValue(skillId, out int level) ? level : 0;
-        }
+        /// <summary>해당 카드의 현재 보유 레벨(미보유 = 0). 카드 풀의 최대 레벨 제외 / 가중치 판정에 쓰인다.</summary>
+        public int GetSkillLevel(string skillId) => _skillLevels.GetLevel(skillId);
 
         /// <summary>
         /// CharacterData.StartingSkills를 레벨 1로 부여한다(예: 무당 = 부채살 흩뿌리기, #76).
@@ -236,7 +212,7 @@ namespace Mukseon.Gameplay.Progression
             // ApplySkillEffect는 미내장 효과(부채살 등)에 OnSkillEffectPending(skill, 1)을 발행하므로
             // 레벨 증가 전에 호출해 구독자가 레벨 1을 받게 한다(ApplyChoice와 동일한 순서).
             ApplySkillEffect(skill);
-            int newLevel = IncrementSkillLevel(skill.SkillId);
+            int newLevel = _skillLevels.Increment(skill.SkillId);
             OnSkillApplied?.Invoke(skill, newLevel);
         }
 
@@ -264,106 +240,106 @@ namespace Mukseon.Gameplay.Progression
             OnLevelSelectionOpened?.Invoke(CurrentLevel, _currentChoices);
         }
 
+        /// <summary>
+        /// 이번 런의 카드 풀을 만든다(#66). 캐릭터 전용 카드 필터링과 유효성 검사는 여기서 한 번만 수행하고,
+        /// 최대 레벨 제외 / 가중치는 매 추첨 시점에 <see cref="CardPool{T}.Draw"/>가 다시 계산한다.
+        /// </summary>
+        public void InitializeCardPool()
+        {
+            string characterId = _playerStatSystem != null && _playerStatSystem.CharacterData != null
+                ? _playerStatSystem.CharacterData.CharacterId
+                : null;
+
+            if (string.IsNullOrWhiteSpace(characterId))
+            {
+                Debug.LogWarning("[PlayerLevelSystem] 이번 런의 캐릭터를 확인할 수 없어 캐릭터 전용 카드 필터링을 건너뜁니다.", this);
+            }
+
+            // EligibilityFilter는 풀을 다시 만들어도 유지되어야 한다(강신 카드 적용 가능 여부 등, 외부에서 주입).
+            Func<SkillData, bool> previousFilter = _cardPool?.EligibilityFilter;
+            _cardPool = new CardPool<SkillData>(EnumerateValidDefinitions(), characterId)
+            {
+                EligibilityFilter = previousFilter,
+            };
+
+            if (_cardPool.Count <= 0)
+            {
+                Debug.LogWarning("[PlayerLevelSystem] 카드 풀이 비어 있습니다. 레벨업 선택지가 표시되지 않습니다.", this);
+            }
+        }
+
+        /// <summary>
+        /// 추첨 시점에 카드를 추가로 걸러내는 조건을 주입한다(null이면 해제).
+        /// 지금 선택해도 적용할 수 없는 카드를 제외해 "빈 선택"을 방지한다
+        /// (예: 강신 슬롯이 모두 찬 상태에서 미보유 강신 카드 — <see cref="GangshinCardApplier"/>).
+        /// </summary>
+        public void SetCardEligibilityFilter(Func<SkillData, bool> filter)
+        {
+            EnsureCardPool();
+            _cardPool.EligibilityFilter = filter;
+        }
+
+        /// <summary>
+        /// 자신이 등록한 조건만 해제한다. 그 사이 다른 쪽이 조건을 덮어썼다면 아무것도 하지 않아,
+        /// 컴포넌트 비활성화 순서에 따라 남의 조건을 지워버리는 일이 없다.
+        /// </summary>
+        public void ClearCardEligibilityFilter(Func<SkillData, bool> filter)
+        {
+            if (_cardPool != null && _cardPool.EligibilityFilter == filter)
+            {
+                _cardPool.EligibilityFilter = null;
+            }
+        }
+
         private void BuildRandomChoices()
         {
-            _currentChoices.Clear();
+            EnsureCardPool();
+            _cardPool.Draw(GetSkillLevel, _currentChoices);
+        }
 
-            var candidates = new List<SkillData>(_skillDefinitions.Count);
+        private void EnsureCardPool()
+        {
+            if (_cardPool == null)
+            {
+                InitializeCardPool();
+            }
+        }
+
+        /// <summary>null / 유효하지 않은 정의를 경고와 함께 걸러낸다. 풀 생성 시 1회만 순회한다.</summary>
+        private IEnumerable<SkillData> EnumerateValidDefinitions()
+        {
             for (int i = 0; i < _skillDefinitions.Count; i++)
             {
                 SkillData definition = _skillDefinitions[i];
                 if (definition == null)
                 {
-                    Debug.LogWarning("[PlayerLevelSystem] SkillData list contains a null entry.");
+                    Debug.LogWarning("[PlayerLevelSystem] SkillData list contains a null entry.", this);
                     continue;
                 }
 
                 if (!definition.IsValid(out string reason))
                 {
-                    Debug.LogWarning($"[PlayerLevelSystem] SkillData '{definition.name}' is invalid. {reason}");
+                    Debug.LogWarning($"[PlayerLevelSystem] SkillData '{definition.name}' is invalid. {reason}", this);
                     continue;
                 }
 
-                if (GetSkillLevel(definition.SkillId) >= definition.MaxLevel)
-                {
-                    continue;
-                }
-
-                candidates.Add(definition);
-            }
-
-            if (candidates.Count <= 0)
-            {
-                return;
-            }
-
-            Shuffle(candidates);
-            int choiceCount = Mathf.Min(3, candidates.Count);
-            for (int i = 0; i < choiceCount; i++)
-            {
-                _currentChoices.Add(candidates[i]);
-            }
-        }
-
-        private static void Shuffle<T>(IList<T> list)
-        {
-            for (int i = 0; i < list.Count - 1; i++)
-            {
-                int swapIndex = UnityEngine.Random.Range(i, list.Count);
-                (list[i], list[swapIndex]) = (list[swapIndex], list[i]);
+                yield return definition;
             }
         }
 
         private void ApplySkillEffect(SkillData definition)
         {
-            switch (definition.EffectType)
+            if (_effectApplier != null && _effectApplier.TryApply(definition))
             {
-                case LevelUpSkillEffectType.StatFlat:
-                    if (_playerStatSystem != null)
-                    {
-                        _playerStatSystem.AddModifier(definition.StatType, new StatModifier(definition.Value, StatModifierType.Flat, this));
-                    }
-                    break;
-                case LevelUpSkillEffectType.StatPercent:
-                    if (_playerStatSystem != null)
-                    {
-                        _playerStatSystem.AddModifier(definition.StatType, new StatModifier(definition.Value, StatModifierType.Percent, this));
-                    }
-                    break;
-                case LevelUpSkillEffectType.BonusTargets:
-                    if (_swipeAttackEventListener != null)
-                    {
-                        _swipeAttackEventListener.AddBonusTargets(Mathf.RoundToInt(definition.Value));
-                    }
-                    break;
-                case LevelUpSkillEffectType.PickupRadius:
-                    if (_playerStatSystem != null)
-                    {
-                        // 혼불 자력 반경을 Flat StatModifier로 증가시킨다(#40). SoulCollector가 MagnetRadius 스탯을 읽는다.
-                        _playerStatSystem.AddModifier(StatType.MagnetRadius, new StatModifier(definition.Value, StatModifierType.Flat, this));
-                    }
-                    break;
-                default:
-                    OnSkillEffectPending?.Invoke(definition, GetSkillLevel(definition.SkillId) + 1);
-                    if (OnSkillEffectPending == null)
-                    {
-                        Debug.LogWarning($"[PlayerLevelSystem] ApplySkillEffect: 처리되지 않은 스킬 타입 {definition.EffectType} ('{definition.SkillId}'). switch 케이스를 추가하거나 OnSkillEffectPending 구독을 확인하세요.");
-                    }
-                    break;
-            }
-        }
-
-        private int IncrementSkillLevel(string skillId)
-        {
-            if (string.IsNullOrWhiteSpace(skillId))
-            {
-                return 0;
+                return;
             }
 
-            int previous = GetSkillLevel(skillId);
-            int current = previous + 1;
-            _skillLevels[skillId] = current;
-            return current;
+            // 전담 시스템(도깨비불 / 결계 / 강신 등)이 처리해야 하는 효과.
+            OnSkillEffectPending?.Invoke(definition, GetSkillLevel(definition.SkillId) + 1);
+            if (OnSkillEffectPending == null)
+            {
+                Debug.LogWarning($"[PlayerLevelSystem] ApplySkillEffect: 처리되지 않은 스킬 타입 {definition.EffectType} ('{definition.SkillId}'). CardEffectApplier에 케이스를 추가하거나 OnSkillEffectPending 구독을 확인하세요.", this);
+            }
         }
 
         private void ResolveSkillDefinitions()

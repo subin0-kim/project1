@@ -149,6 +149,53 @@ namespace Mukseon.Gameplay.Combat
         }
 
         /// <summary>
+        /// 이미 보유 중인 강신의 레벨을 올린다(강화 카드 레벨업 — #66).
+        /// 교체(<see cref="ReplaceSlot"/>)와 달리 어빌리티가 그대로이므로 게이지를 초기화하지 않고
+        /// 새 필요 게이지에 맞춰 클램프만 한다 — 레벨업이 오히려 손해가 되지 않도록 한다.
+        /// 발동(Active) 중에도 허용한다: 어빌리티가 바뀌지 않아 진행 중인 효과와 충돌하지 않고,
+        /// 올라간 레벨은 다음 발동부터 반영된다.
+        /// </summary>
+        public bool TryUpgradeSlot(int index, int level, float requiredGauge)
+        {
+            if (index < 0 || index >= _slots.Length || !_slots[index].IsOccupied)
+            {
+                return false;
+            }
+
+            GangshinSlot slot = _slots[index];
+            slot.Level = Mathf.Max(1, level);
+            slot.RequiredGauge = Mathf.Max(0f, requiredGauge);
+            slot.Gauge = Mathf.Clamp(slot.Gauge, 0f, slot.RequiredGauge);
+
+            // 필요 게이지가 바뀌면 Ready 여부가 달라질 수 있다. 발동/쿨다운은 전역 잠금이므로 건드리지 않는다.
+            if (index == ActiveIndex && CurrentState != GangshinState.Active && CurrentState != GangshinState.Cooldown)
+            {
+                CurrentState = ResolveRestingState();
+            }
+
+            return true;
+        }
+
+        /// <summary>지정 어빌리티가 장착된 슬롯 인덱스를 반환한다. 보유하고 있지 않으면 -1.</summary>
+        public int IndexOf(GangshinAbilityBase ability)
+        {
+            if (ability == null)
+            {
+                return -1;
+            }
+
+            for (int i = 0; i < _slots.Length; i++)
+            {
+                if (_slots[i].IsOccupied && _slots[i].Ability == ability)
+                {
+                    return i;
+                }
+            }
+
+            return -1;
+        }
+
+        /// <summary>
         /// 장착 슬롯을 변경한다. 점유 슬롯만 장착 가능하며, 이미 장착 중이거나 발동(Active) 중이면
         /// 변경하지 않는다. 게이지는 슬롯에 보존되어 있으므로 별도 저장/복원이 필요 없다.
         /// </summary>

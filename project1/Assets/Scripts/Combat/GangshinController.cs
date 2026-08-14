@@ -246,7 +246,33 @@ namespace Mukseon.Gameplay.Combat
             return index;
         }
 
-        /// <summary>슬롯이 모두 찼을 때 지정 슬롯의 강신을 교체한다(레벨업 연동 — 후속 PR에서 호출).</summary>
+        /// <summary>지정 어빌리티가 장착된 슬롯 인덱스. 보유하고 있지 않으면 -1.</summary>
+        public int FindSlotIndex(GangshinAbilityBase ability)
+        {
+            return _slotState != null ? _slotState.IndexOf(ability) : -1;
+        }
+
+        /// <summary>
+        /// 이미 보유 중인 강신의 레벨을 올린다(강신 강화 카드 — #66). 게이지는 보존된다.
+        /// 해당 어빌리티를 보유하고 있지 않으면 false를 반환한다(이 경우 호출자가 추가/교체를 시도한다).
+        /// </summary>
+        public bool TryUpgradeAbility(GangshinAbilityBase ability, int level)
+        {
+            int slotIndex = FindSlotIndex(ability);
+            if (slotIndex < 0 || !_slotState.TryUpgradeSlot(slotIndex, level, ResolveRequiredGauge(ability, level)))
+            {
+                return false;
+            }
+
+            // 레벨에 따라 패시브 수치가 달라질 수 있으므로 재동기화한다.
+            SyncActivePassives();
+            OnSlotsChanged?.Invoke();
+            NotifyGaugeChanged();
+            HandleStateTransition();
+            return true;
+        }
+
+        /// <summary>슬롯이 모두 찼을 때 지정 슬롯의 강신을 교체한다(강신 강화 카드 교체 — #66).</summary>
         public bool TryReplaceAbility(int slotIndex, GangshinAbilityBase ability, int level = 1)
         {
             if (_slotState == null || !_slotState.ReplaceSlot(slotIndex, ability, ResolveRequiredGauge(ability, level), level))
