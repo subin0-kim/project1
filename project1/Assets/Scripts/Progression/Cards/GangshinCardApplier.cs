@@ -53,6 +53,13 @@ namespace Mukseon.Gameplay.Progression.Cards
         /// </summary>
         public bool SlotSwitchAvailable { get; set; }
 
+        // 이미 경고한 카드 ID(추첨은 레벨업마다 반복되므로 같은 설정 오류를 한 번만 알린다).
+        private readonly HashSet<string> _warnedUnresolvableCards = new HashSet<string>(StringComparer.Ordinal);
+
+        // 등록 여부를 참조 상태와 분리해 기억한다. 런 도중 컨트롤러가 파괴되어도 OnDisable이
+        // 등록을 그대로 남기지 않도록(조건이 남으면 강신 카드가 영영 제외된다) 하기 위함이다.
+        private bool _registered;
+
         private void Awake()
         {
             if (_playerLevelSystem == null)
@@ -74,36 +81,40 @@ namespace Mukseon.Gameplay.Progression.Cards
                 return;
             }
 
+            // 컨트롤러가 없으면 강신 카드를 적용할 수단이 없다. 이때는 추첨 조건도 걸지 않고 처리자로도
+            // 등록하지 않는다 — 조건만 걸면 강신 카드가 조용히 후보에서 사라져 원인이 드러나지 않는다.
+            // 등록을 모두 건너뛰면 카드가 그대로 제시되고, 선택 시 PlayerLevelSystem이 경고한다.
+            if (_gangshinController == null)
+            {
+                Debug.LogWarning("[GangshinCardApplier] GangshinController 참조가 없어 강신 카드가 적용되지 않습니다.", this);
+                return;
+            }
+
             _playerLevelSystem.OnSkillEffectPending += HandleSkillEffectPending;
             _playerLevelSystem.AddCardEligibilityFilter(IsCardEligible);
 
-            // 강신 카드를 실제로 적용할 수 있을 때만 처리자로 등록한다. 컨트롤러가 없으면 등록하지 않아
-            // "처리할 시스템이 없다" 경고가 뜨도록 둔다(조용한 빈 선택 방지 — #66).
-            if (_gangshinController != null)
+            for (int i = 0; i < HandledEffectTypes.Length; i++)
             {
-                for (int i = 0; i < HandledEffectTypes.Length; i++)
-                {
-                    _playerLevelSystem.RegisterEffectHandler(HandledEffectTypes[i]);
-                }
+                _playerLevelSystem.RegisterEffectHandler(HandledEffectTypes[i]);
             }
+
+            _registered = true;
         }
 
         private void OnDisable()
         {
-            if (_playerLevelSystem == null)
+            if (!_registered || _playerLevelSystem == null)
             {
                 return;
             }
 
+            _registered = false;
             _playerLevelSystem.OnSkillEffectPending -= HandleSkillEffectPending;
             _playerLevelSystem.RemoveCardEligibilityFilter(IsCardEligible);
 
-            if (_gangshinController != null)
+            for (int i = 0; i < HandledEffectTypes.Length; i++)
             {
-                for (int i = 0; i < HandledEffectTypes.Length; i++)
-                {
-                    _playerLevelSystem.UnregisterEffectHandler(HandledEffectTypes[i]);
-                }
+                _playerLevelSystem.UnregisterEffectHandler(HandledEffectTypes[i]);
             }
         }
 
@@ -118,6 +129,10 @@ namespace Mukseon.Gameplay.Progression.Cards
         /// <summary>
         /// 지금 선택해도 플레이어가 변화를 느끼지 못하는 강신 카드를 추첨 대상에서 제외한다.
         /// 강신 카드가 아니면 관여하지 않고 통과시킨다.
+        ///
+        /// 제외 사유는 성격이 둘로 갈린다. 기능 미구현(#59 전환 / 교체 UI)으로 인한 제외는 의도된
+        /// 것이라 조용히 빼지만, 설정 오류(어빌리티 ID 오타 / Available Abilities 누락)는 경고한다
+        /// — 그러지 않으면 "카드가 영영 안 뜬다"로만 나타나 원인을 추적할 단서가 없다.
         /// </summary>
         private bool IsCardEligible(SkillData card)
         {
@@ -129,6 +144,7 @@ namespace Mukseon.Gameplay.Progression.Cards
             GangshinAbilityBase ability = FindAbility(card.GangshinAbilityId);
             if (ability == null || _gangshinController == null)
             {
+                WarnUnresolvableCardOnce(card);
                 return false;
             }
 
@@ -162,12 +178,16 @@ namespace Mukseon.Gameplay.Progression.Cards
                 return;
             }
 
+            // 컨트롤러가 없으면 OnEnable에서 구독 자체를 하지 않으므로, 여기 오는 경우는 런 도중
+            // 컨트롤러가 파괴된 상황뿐이다(그대로 두면 아래에서 MissingReferenceException).
             if (_gangshinController == null)
             {
                 Debug.LogWarning($"[GangshinCardApplier] GangshinController 참조가 없어 '{card.SkillId}' 카드를 적용하지 못했습니다.", this);
                 return;
             }
 
+            // 추첨으로 온 카드는 IsCardEligible이 이미 걸러내지만, CharacterData.StartingSkills로 부여되는
+            // 강신 카드는 카드 풀을 거치지 않으므로(GrantStartingSkills) 이 경로로 들어올 수 있다.
             GangshinAbilityBase ability = FindAbility(card.GangshinAbilityId);
             if (ability == null)
             {
@@ -195,6 +215,23 @@ namespace Mukseon.Gameplay.Progression.Cards
             }
 
             Debug.LogWarning($"[GangshinCardApplier] 슬롯이 모두 차 있고 교체 UI 구독자가 없어 '{card.SkillId}' 카드를 적용하지 못했습니다.", this);
+        }
+
+        /// <summary>
+        /// 어빌리티를 찾지 못해 제외되는 강신 카드를 카드당 한 번만 경고한다.
+        /// 추첨은 레벨업마다 반복되므로 매번 찍으면 로그가 묻힌다.
+        /// </summary>
+        private void WarnUnresolvableCardOnce(SkillData card)
+        {
+            if (!_warnedUnresolvableCards.Add(card.SkillId))
+            {
+                return;
+            }
+
+            Debug.LogWarning(
+                $"[GangshinCardApplier] 강신 카드 '{card.SkillId}'의 어빌리티 ID '{card.GangshinAbilityId}'에 해당하는 " +
+                "어빌리티가 없어 추첨에서 제외됩니다. Available Abilities 배선과 GangshinAbilityData.AbilityId를 확인하세요.",
+                this);
         }
 
         private GangshinAbilityBase FindAbility(string abilityId)

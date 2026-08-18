@@ -136,6 +136,96 @@ namespace Mukseon.Tests.EditMode
         }
 
         [Test]
+        public void AddOrAdoptSlot_PreservesGauge_WhenAdoptingPlaceholder()
+        {
+            // placeholder의 게이지는 레거시 전체 펄스를 향해 실제로 차오른 값이다. 초기화하면
+            // 강신 획득이 곧 게이지 손실이 되어, 카드 선택에 설명되지 않는 비용이 붙는다.
+            var state = NewState();
+            state.AddSlot(null, 100f);
+            state.AddGaugeToActive(80f);
+            GangshinAbilityBase ability = NewAbility();
+
+            try
+            {
+                state.AddOrAdoptSlot(ability, 100f);
+
+                Assert.That(state.ActiveGauge, Is.EqualTo(80f));
+            }
+            finally
+            {
+                Object.DestroyImmediate(ability.gameObject);
+            }
+        }
+
+        [Test]
+        public void AddOrAdoptSlot_ClampsPreservedGauge_ToNewRequirement()
+        {
+            var state = NewState();
+            state.AddSlot(null, 100f);
+            state.AddGaugeToActive(100f); // 가득 참 → Ready
+            GangshinAbilityBase ability = NewAbility();
+
+            try
+            {
+                state.AddOrAdoptSlot(ability, 60f); // 새 강신의 필요 게이지가 더 낮다
+
+                Assert.That(state.ActiveGauge, Is.EqualTo(60f));
+                Assert.That(state.CurrentState, Is.EqualTo(GangshinState.Ready));
+            }
+            finally
+            {
+                Object.DestroyImmediate(ability.gameObject);
+            }
+        }
+
+        [Test]
+        public void ReplaceSlot_StillResetsGauge_ByDefault()
+        {
+            // 만석 교체는 기존 강신을 버리는 트레이드이므로 초기화가 기본값으로 남아야 한다.
+            var state = NewState();
+            state.AddSlot(null, 100f);
+            state.AddGaugeToActive(80f);
+            GangshinAbilityBase ability = NewAbility();
+
+            try
+            {
+                state.ReplaceSlot(0, ability, 100f);
+
+                Assert.That(state.ActiveGauge, Is.EqualTo(0f));
+            }
+            finally
+            {
+                Object.DestroyImmediate(ability.gameObject);
+            }
+        }
+
+        [Test]
+        public void AddOrAdoptSlot_InheritsCooldown_FromPlaceholder()
+        {
+            // 발동/쿨다운은 슬롯이 아니라 전역 잠금이라는 기존 모델을 따른다(문서화된 동작).
+            var state = NewState();
+            state.AddSlot(null, 100f);
+            state.AddGaugeToActive(100f);
+            state.TryActivate();
+            state.Tick(5f); // 발동 시간 종료 → Cooldown
+            GangshinAbilityBase ability = NewAbility();
+
+            try
+            {
+                Assert.That(state.CurrentState, Is.EqualTo(GangshinState.Cooldown));
+
+                state.AddOrAdoptSlot(ability, 100f);
+
+                Assert.That(state.CurrentState, Is.EqualTo(GangshinState.Cooldown));
+                Assert.That(state.ActiveSlot.Ability, Is.EqualTo(ability));
+            }
+            finally
+            {
+                Object.DestroyImmediate(ability.gameObject);
+            }
+        }
+
+        [Test]
         public void CanAdoptActiveSlot_IsFalse_WhilePlaceholderIsActive()
         {
             // 발동 중에는 장착 슬롯을 건드릴 수 없으므로 대체도 불가하다.

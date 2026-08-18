@@ -129,13 +129,23 @@ namespace Mukseon.Gameplay.Combat
         ///
         /// 발동(Active) 중이거나 대체할 placeholder가 없으면 일반 추가로 처리한다.
         /// 반환값은 <see cref="AddSlot"/>과 같다(슬롯 인덱스, 실패 시 -1).
+        ///
+        /// placeholder에서 물려받는 것:
+        /// - <b>게이지</b>: 보존한다(새 필요 게이지로 클램프). placeholder의 게이지는 노는 값이 아니라
+        ///   레거시 전체 펄스를 향해 실제로 차오른 값이므로, 초기화하면 강신 획득이 곧 게이지 손실이 된다.
+        ///   <see cref="ReplaceSlot"/>이 0으로 미는 것은 "기존 강신을 버리고 받는" 교체라서지,
+        ///   비어 있던 자리를 채우는 여기에는 해당하지 않는다(<see cref="TryUpgradeSlot"/>과 같은 규칙).
+        /// - <b>쿨다운</b>: 물려받는다. 발동/쿨다운은 슬롯이 아니라 전역 잠금이라는 기존 모델을 따른다
+        ///   (레거시 펄스 직후 강신을 얻으면 남은 쿨다운을 이어받는다. 최대 _cooldownDuration).
         /// </summary>
         public int AddOrAdoptSlot(GangshinAbilityBase ability, float requiredGauge, int level = 1)
         {
             if (ability != null && CanAdoptActiveSlot)
             {
                 int activeIndex = ActiveIndex;
-                return ReplaceSlot(activeIndex, ability, requiredGauge, level) ? activeIndex : -1;
+                return ReplaceSlot(activeIndex, ability, requiredGauge, level, preserveGauge: true)
+                    ? activeIndex
+                    : -1;
             }
 
             return AddSlot(ability, requiredGauge, level);
@@ -145,8 +155,17 @@ namespace Mukseon.Gameplay.Combat
         /// 슬롯이 모두 찼을 때(레벨업) 기존 강신을 교체한다. 교체된 슬롯의 게이지는 0으로 초기화된다.
         /// 빈 슬롯은 <see cref="AddSlot"/>로 채워야 하므로 점유된 슬롯만 대상으로 한다.
         /// 발동(Active) 중인 장착 슬롯은 교체할 수 없다.
+        ///
+        /// <paramref name="preserveGauge"/>가 true면 게이지를 초기화하지 않고 새 필요 게이지로
+        /// 클램프만 한다 — 버리는 강신이 없는 placeholder 대체(<see cref="AddOrAdoptSlot"/>) 전용이다.
+        /// 만석 교체는 기존 강신을 버리는 트레이드이므로 기본값(초기화)을 유지한다.
         /// </summary>
-        public bool ReplaceSlot(int index, GangshinAbilityBase ability, float requiredGauge, int level = 1)
+        public bool ReplaceSlot(
+            int index,
+            GangshinAbilityBase ability,
+            float requiredGauge,
+            int level = 1,
+            bool preserveGauge = false)
         {
             // 비어 있는 슬롯을 교체 대상으로 넘기면 IsOccupied=true인데 ActiveIndex가 갱신되지 않는 등
             // 상태 불일치가 생길 수 있으므로, 점유된 슬롯만 허용한다(빈 슬롯은 AddSlot 사용).
@@ -165,10 +184,10 @@ namespace Mukseon.Gameplay.Combat
             slot.Ability = ability;
             slot.RequiredGauge = Mathf.Max(0f, requiredGauge);
             slot.Level = Mathf.Max(1, level);
-            slot.Gauge = 0f;
+            slot.Gauge = preserveGauge ? Mathf.Clamp(slot.Gauge, 0f, slot.RequiredGauge) : 0f;
             slot.IsOccupied = true;
 
-            // 장착 슬롯을 교체하면 게이지가 0으로 리셋되므로 대기 상태를 다시 계산한다(Cooldown 유지).
+            // 게이지가 바뀌었으므로(리셋 또는 클램프) 장착 슬롯이면 대기 상태를 다시 계산한다(Cooldown 유지).
             if (index == ActiveIndex && CurrentState != GangshinState.Cooldown)
             {
                 CurrentState = ResolveRestingState();

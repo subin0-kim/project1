@@ -275,11 +275,27 @@ namespace Mukseon.Gameplay.Progression
         /// 지금 선택해도 적용할 수 없는 카드를 빼서 "빈 선택"을 막는다(예: <see cref="GangshinCardApplier"/>).
         /// 여기서 카드 풀을 만들지 않는다: 이 호출은 구독자의 OnEnable(= <see cref="Start"/> 이전)에서
         /// 일어나므로 풀을 미리 만들면 이중 생성이 되고 정의 유효성 경고도 두 번 찍힌다.
+        ///
+        /// 조건은 반드시 <b>메서드 그룹</b>으로 넘긴다. 람다는 호출마다 새 델리게이트가 만들어져
+        /// <see cref="RemoveCardEligibilityFilter"/>가 실패하고, 비활성/재활성을 반복하면 조건이 쌓여
+        /// AND 평가 결과가 조용히 좁아진다.
         /// </summary>
-        public void AddCardEligibilityFilter(Func<SkillData, bool> filter) => _cardEligibilityFilters.Add(filter);
+        public void AddCardEligibilityFilter(Func<SkillData, bool> filter)
+        {
+            if (!_cardEligibilityFilters.Add(filter))
+            {
+                Debug.LogWarning("[PlayerLevelSystem] 카드 추첨 조건 등록이 무시되었습니다(null이거나 이미 등록된 조건).", this);
+            }
+        }
 
         /// <summary>자신이 등록한 조건만 해제한다. 다른 등록자의 조건에는 영향을 주지 않는다.</summary>
-        public void RemoveCardEligibilityFilter(Func<SkillData, bool> filter) => _cardEligibilityFilters.Remove(filter);
+        public void RemoveCardEligibilityFilter(Func<SkillData, bool> filter)
+        {
+            if (!_cardEligibilityFilters.Remove(filter))
+            {
+                Debug.LogWarning("[PlayerLevelSystem] 등록된 적 없는 카드 추첨 조건을 해제하려 했습니다. 람다로 등록하면 해제되지 않으니 메서드 그룹으로 넘기세요.", this);
+            }
+        }
 
         /// <summary>
         /// 이 효과 타입을 처리하는 시스템이 활성화되었음을 등록한다(담당 컴포넌트의 OnEnable).
