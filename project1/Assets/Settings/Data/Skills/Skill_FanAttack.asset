@@ -22,3 +22,5 @@ MonoBehaviour:
   _value: 1
   _maxLevel: 3
   _icon: {fileID: 0}
+  _requiredCharacterId: character.mudang
+  _gangshinAbilityId:

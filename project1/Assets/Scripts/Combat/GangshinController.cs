@@ -96,8 +96,15 @@ namespace Mukseon.Gameplay.Combat
         /// <summary>현재 장착 슬롯 인덱스(보유 강신이 없으면 -1).</summary>
         public int ActiveSlotIndex => _slotState != null ? _slotState.ActiveIndex : -1;
 
-        /// <summary>남은 빈 슬롯이 있는지(레벨업 강신 추가 가능 여부, 후속 PR에서 사용).</summary>
+        /// <summary>남은 빈 슬롯이 있는지(레벨업 강신 추가 가능 여부).</summary>
         public bool HasFreeSlot => _slotState != null && _slotState.HasFreeSlot;
+
+        /// <summary>
+        /// 지금 강신을 추가하면 곧바로 장착까지 되는 상태인지 — 장착 슬롯이 어빌리티 없는 레거시
+        /// placeholder이고 발동 중이 아니어서, <see cref="TryAddAbility"/>가 그 자리를 대체하는 경우다.
+        /// 강신 강화 카드가 "빈 선택"이 되는지 판정할 때 쓴다(#66).
+        /// </summary>
+        public bool CanPromoteAddedAbility => _slotState != null && _slotState.CanAdoptActiveSlot;
 
         private void Awake()
         {
@@ -223,8 +230,12 @@ namespace Mukseon.Gameplay.Combat
         }
 
         /// <summary>
-        /// 빈 슬롯에 강신을 추가한다(레벨업 연동 — 후속 PR에서 호출). 성공 시 슬롯 인덱스,
+        /// 빈 슬롯에 강신을 추가한다(강신 강화 카드 — #66). 성공 시 슬롯 인덱스,
         /// 슬롯이 모두 차 있으면 -1을 반환한다(호출자가 교체 UI를 띄운다).
+        ///
+        /// 장착 슬롯이 어빌리티 없는 레거시 placeholder면 빈 슬롯 대신 그 자리를 대체해 곧바로
+        /// 장착시킨다(<see cref="GangshinSlotState.AddOrAdoptSlot"/>) — 비장착 슬롯에 들어간 강신은
+        /// 패시브도 게이지 충전도 받지 못해 카드를 골라도 아무 변화가 없기 때문이다.
         /// </summary>
         public int TryAddAbility(GangshinAbilityBase ability, int level = 1)
         {
@@ -233,20 +244,53 @@ namespace Mukseon.Gameplay.Combat
                 return -1;
             }
 
-            int index = _slotState.AddSlot(ability, ResolveRequiredGauge(ability, level), level);
+            int index = _slotState.AddOrAdoptSlot(ability, ResolveRequiredGauge(ability, level), level);
             if (index < 0)
             {
                 return -1;
             }
 
-            // 첫 강신이 이 호출로 장착되었다면 패시브를 반영한다.
+            // 이 호출로 장착 슬롯이 채워졌다면 패시브를 반영한다.
             SyncActivePassives();
             OnSlotsChanged?.Invoke();
             NotifyGaugeChanged();
+
+            // 장착 슬롯이 바뀌었을 수 있으므로(placeholder 대체) 필요 게이지 기준 Ready/Idle을 다시 알린다.
+            // 슬롯을 건드리는 다른 API(교체 / 레벨업 / 장착 전환)와 동일하게 전이를 통지한다.
+            HandleStateTransition();
             return index;
         }
 
-        /// <summary>슬롯이 모두 찼을 때 지정 슬롯의 강신을 교체한다(레벨업 연동 — 후속 PR에서 호출).</summary>
+        /// <summary>지정 어빌리티가 장착된 슬롯 인덱스. 보유하고 있지 않으면 -1.</summary>
+        public int FindSlotIndex(GangshinAbilityBase ability)
+        {
+            return _slotState != null ? _slotState.IndexOf(ability) : -1;
+        }
+
+        /// <summary>
+        /// 이미 보유 중인 강신의 레벨을 올린다(강신 강화 카드 — #66). 게이지는 보존된다.
+        /// 해당 어빌리티를 보유하고 있지 않으면 false를 반환한다(이 경우 호출자가 추가/교체를 시도한다).
+        /// </summary>
+        public bool TryUpgradeAbility(GangshinAbilityBase ability, int level)
+        {
+            int slotIndex = FindSlotIndex(ability);
+            if (slotIndex < 0 || !_slotState.TryUpgradeSlot(slotIndex, level, ResolveRequiredGauge(ability, level)))
+            {
+                return false;
+            }
+
+            // 어빌리티 자체는 그대로이므로 GangshinPassiveApplier.Sync는 조기 반환한다(사실상 no-op).
+            // 현재 패시브(GangshinAbilityData.PassiveEffects)에는 레벨 인자가 없어 레벨과 무관하기 때문에
+            // 지금은 재적용할 것이 없다. 레벨별 패시브 수치가 생기면(gangshin_balance_mvp.md) Sync의
+            // "같은 어빌리티면 조기 반환"도 함께 고쳐야 발동 효과만 오르고 패시브가 Lv1에 머무는 일이 없다.
+            SyncActivePassives();
+            OnSlotsChanged?.Invoke();
+            NotifyGaugeChanged();
+            HandleStateTransition();
+            return true;
+        }
+
+        /// <summary>슬롯이 모두 찼을 때 지정 슬롯의 강신을 교체한다(강신 강화 카드 교체 — #66).</summary>
         public bool TryReplaceAbility(int slotIndex, GangshinAbilityBase ability, int level = 1)
         {
             if (_slotState == null || !_slotState.ReplaceSlot(slotIndex, ability, ResolveRequiredGauge(ability, level), level))

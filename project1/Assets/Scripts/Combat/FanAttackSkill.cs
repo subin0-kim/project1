@@ -53,6 +53,10 @@ namespace Mukseon.Gameplay.Combat
             {
                 _playerLevelSystem.OnSkillEffectPending += HandleSkillEffectPending;
 
+                // 이 효과 타입의 처리자가 있음을 알린다. 등록이 없으면 해당 카드가 선택될 때
+                // "처리할 시스템이 없다" 경고가 뜬다(빈 선택 감지 — #66).
+                _playerLevelSystem.RegisterEffectHandler(LevelUpSkillEffectType.FanAttackBuff);
+
                 // 비활성 중 부여/레벨업 이벤트를 놓쳤을 수 있으므로 현재 레벨을 직접 동기화한다.
                 // (최초 로드 시엔 GrantStartingSkills(Start) 이전이라 0이며, 이후 이벤트로 갱신된다.)
                 ApplyLevel(_playerLevelSystem.GetSkillLevel(_skillId));
@@ -64,6 +68,7 @@ namespace Mukseon.Gameplay.Combat
             if (_playerLevelSystem != null)
             {
                 _playerLevelSystem.OnSkillEffectPending -= HandleSkillEffectPending;
+                _playerLevelSystem.UnregisterEffectHandler(LevelUpSkillEffectType.FanAttackBuff);
             }
         }
 

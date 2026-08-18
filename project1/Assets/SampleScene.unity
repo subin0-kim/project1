@@ -178,6 +178,7 @@ GameObject:
   - component: {fileID: 187285049}
   - component: {fileID: 187285048}
   - component: {fileID: 187285047}
+  - component: {fileID: 187285050}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -640,6 +641,21 @@ MonoBehaviour:
   m_EditorClassIdentifier: Mukseon.Core::Mukseon.Core.Input.GangshinInputDetector
   _doubleTapInterval: 0.3
   _maxTapTravel: 20
+--- !u!114 &187285050
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 187285028}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1fe6f7aff565acb458189374e737131e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.Progression.Cards.GangshinCardApplier
+  _playerLevelSystem: {fileID: 187285035}
+  _gangshinController: {fileID: 187285048}
+  _availableAbilities: []
 --- !u!1 &275740323
 GameObject:
   m_ObjectHideFlags: 0

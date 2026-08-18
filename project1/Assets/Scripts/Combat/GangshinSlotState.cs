@@ -70,6 +70,13 @@ namespace Mukseon.Gameplay.Combat
 
         public bool HasFreeSlot => FindFreeIndex() >= 0;
 
+        /// <summary>
+        /// 장착 슬롯이 어빌리티 없는 placeholder(컨트롤러가 레거시 펄스 보존용으로 시드)이고,
+        /// 발동 중이 아니라 새 강신이 그 자리를 대체할 수 있는 상태인지(<see cref="AddOrAdoptSlot"/>).
+        /// </summary>
+        public bool CanAdoptActiveSlot =>
+            ActiveSlot != null && ActiveSlot.Ability == null && CurrentState != GangshinState.Active;
+
         /// <summary>현재 장착 슬롯. 보유 강신이 없으면 null.</summary>
         public GangshinSlot ActiveSlot => IsValidActive ? _slots[ActiveIndex] : null;
 
@@ -113,11 +120,52 @@ namespace Mukseon.Gameplay.Combat
         }
 
         /// <summary>
+        /// 강신을 추가하되, 장착 슬롯이 placeholder면 빈 슬롯 대신 그 자리를 대체해 곧바로 장착시킨다(#66).
+        ///
+        /// <see cref="AddSlot"/>의 자동 장착은 보유 강신이 하나도 없을 때(ActiveIndex &lt; 0)만 동작하는데,
+        /// 컨트롤러가 Awake에서 어빌리티 없는 슬롯을 항상 시드하므로 ActiveIndex는 런 시작부터 0으로 확정된다.
+        /// 그래서 그냥 추가하면 새 강신이 비장착 슬롯에 들어가 패시브도 게이지 충전도 받지 못한다
+        /// — 카드를 골랐는데 아무 일도 일어나지 않는 상태가 된다.
+        ///
+        /// 발동(Active) 중이거나 대체할 placeholder가 없으면 일반 추가로 처리한다.
+        /// 반환값은 <see cref="AddSlot"/>과 같다(슬롯 인덱스, 실패 시 -1).
+        ///
+        /// placeholder에서 물려받는 것:
+        /// - <b>게이지</b>: 보존한다(새 필요 게이지로 클램프). placeholder의 게이지는 노는 값이 아니라
+        ///   레거시 전체 펄스를 향해 실제로 차오른 값이므로, 초기화하면 강신 획득이 곧 게이지 손실이 된다.
+        ///   <see cref="ReplaceSlot"/>이 0으로 미는 것은 "기존 강신을 버리고 받는" 교체라서지,
+        ///   비어 있던 자리를 채우는 여기에는 해당하지 않는다(<see cref="TryUpgradeSlot"/>과 같은 규칙).
+        /// - <b>쿨다운</b>: 물려받는다. 발동/쿨다운은 슬롯이 아니라 전역 잠금이라는 기존 모델을 따른다
+        ///   (레거시 펄스 직후 강신을 얻으면 남은 쿨다운을 이어받는다. 최대 _cooldownDuration).
+        /// </summary>
+        public int AddOrAdoptSlot(GangshinAbilityBase ability, float requiredGauge, int level = 1)
+        {
+            if (ability != null && CanAdoptActiveSlot)
+            {
+                int activeIndex = ActiveIndex;
+                return ReplaceSlot(activeIndex, ability, requiredGauge, level, preserveGauge: true)
+                    ? activeIndex
+                    : -1;
+            }
+
+            return AddSlot(ability, requiredGauge, level);
+        }
+
+        /// <summary>
         /// 슬롯이 모두 찼을 때(레벨업) 기존 강신을 교체한다. 교체된 슬롯의 게이지는 0으로 초기화된다.
         /// 빈 슬롯은 <see cref="AddSlot"/>로 채워야 하므로 점유된 슬롯만 대상으로 한다.
         /// 발동(Active) 중인 장착 슬롯은 교체할 수 없다.
+        ///
+        /// <paramref name="preserveGauge"/>가 true면 게이지를 초기화하지 않고 새 필요 게이지로
+        /// 클램프만 한다 — 버리는 강신이 없는 placeholder 대체(<see cref="AddOrAdoptSlot"/>) 전용이다.
+        /// 만석 교체는 기존 강신을 버리는 트레이드이므로 기본값(초기화)을 유지한다.
         /// </summary>
-        public bool ReplaceSlot(int index, GangshinAbilityBase ability, float requiredGauge, int level = 1)
+        public bool ReplaceSlot(
+            int index,
+            GangshinAbilityBase ability,
+            float requiredGauge,
+            int level = 1,
+            bool preserveGauge = false)
         {
             // 비어 있는 슬롯을 교체 대상으로 넘기면 IsOccupied=true인데 ActiveIndex가 갱신되지 않는 등
             // 상태 불일치가 생길 수 있으므로, 점유된 슬롯만 허용한다(빈 슬롯은 AddSlot 사용).
@@ -136,16 +184,64 @@ namespace Mukseon.Gameplay.Combat
             slot.Ability = ability;
             slot.RequiredGauge = Mathf.Max(0f, requiredGauge);
             slot.Level = Mathf.Max(1, level);
-            slot.Gauge = 0f;
+            slot.Gauge = preserveGauge ? Mathf.Clamp(slot.Gauge, 0f, slot.RequiredGauge) : 0f;
             slot.IsOccupied = true;
 
-            // 장착 슬롯을 교체하면 게이지가 0으로 리셋되므로 대기 상태를 다시 계산한다(Cooldown 유지).
+            // 게이지가 바뀌었으므로(리셋 또는 클램프) 장착 슬롯이면 대기 상태를 다시 계산한다(Cooldown 유지).
             if (index == ActiveIndex && CurrentState != GangshinState.Cooldown)
             {
                 CurrentState = ResolveRestingState();
             }
 
             return true;
+        }
+
+        /// <summary>
+        /// 이미 보유 중인 강신의 레벨을 올린다(강화 카드 레벨업 — #66).
+        /// 교체(<see cref="ReplaceSlot"/>)와 달리 어빌리티가 그대로이므로 게이지를 초기화하지 않고
+        /// 새 필요 게이지에 맞춰 클램프만 한다 — 레벨업이 오히려 손해가 되지 않도록 한다.
+        /// 발동(Active) 중에도 허용한다: 어빌리티가 바뀌지 않아 진행 중인 효과와 충돌하지 않는다.
+        /// 반영 시점은 둘로 갈린다 — 발동 효과(데미지 등)는 다음 발동부터, 필요 게이지는 이 호출에서 즉시
+        /// 새 값으로 바뀌고 현재 게이지도 그 자리에서 클램프된다(HUD 게이지 바가 즉시 움직인다).
+        /// </summary>
+        public bool TryUpgradeSlot(int index, int level, float requiredGauge)
+        {
+            if (index < 0 || index >= _slots.Length || !_slots[index].IsOccupied)
+            {
+                return false;
+            }
+
+            GangshinSlot slot = _slots[index];
+            slot.Level = Mathf.Max(1, level);
+            slot.RequiredGauge = Mathf.Max(0f, requiredGauge);
+            slot.Gauge = Mathf.Clamp(slot.Gauge, 0f, slot.RequiredGauge);
+
+            // 필요 게이지가 바뀌면 Ready 여부가 달라질 수 있다. 발동/쿨다운은 전역 잠금이므로 건드리지 않는다.
+            if (index == ActiveIndex && CurrentState != GangshinState.Active && CurrentState != GangshinState.Cooldown)
+            {
+                CurrentState = ResolveRestingState();
+            }
+
+            return true;
+        }
+
+        /// <summary>지정 어빌리티가 장착된 슬롯 인덱스를 반환한다. 보유하고 있지 않으면 -1.</summary>
+        public int IndexOf(GangshinAbilityBase ability)
+        {
+            if (ability == null)
+            {
+                return -1;
+            }
+
+            for (int i = 0; i < _slots.Length; i++)
+            {
+                if (_slots[i].IsOccupied && _slots[i].Ability == ability)
+                {
+                    return i;
+                }
+            }
+
+            return -1;
         }
 
         /// <summary>
