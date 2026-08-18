@@ -34,6 +34,8 @@ namespace Mukseon.Gameplay.Progression
 
         private readonly List<SkillData> _currentChoices = new List<SkillData>(CardPool<SkillData>.DefaultDrawCount);
         private readonly SkillLevelRegistry _skillLevels = new SkillLevelRegistry();
+        private readonly CardEligibilityFilterSet<SkillData> _cardEligibilityFilters = new CardEligibilityFilterSet<SkillData>();
+        private readonly SkillEffectHandlerRegistry _effectHandlers = new SkillEffectHandlerRegistry();
 
         private LevelProgressionModel _progressionModel;
         private CardPool<SkillData> _cardPool;
@@ -80,6 +82,7 @@ namespace Mukseon.Gameplay.Progression
         // 시작 스킬은 Start에서 부여한다. 다른 컴포넌트의 OnEnable(구독)이 모두 끝난 뒤여야
         // OnSkillEffectPending 구독자(예: FanAttackSkill)가 레벨 1 부여를 놓치지 않는다.
         // 카드 풀도 여기서 만든다: PlayerStatSystem.Awake가 끝나야 이번 런의 캐릭터가 확정된다(#66).
+        // 구독자가 OnEnable에서 먼저 건 추첨 조건(AddCardEligibilityFilter)은 이 시점에 함께 반영된다.
         private void Start()
         {
             InitializeCardPool();
@@ -255,11 +258,10 @@ namespace Mukseon.Gameplay.Progression
                 Debug.LogWarning("[PlayerLevelSystem] 이번 런의 캐릭터를 확인할 수 없어 캐릭터 전용 카드 필터링을 건너뜁니다.", this);
             }
 
-            // EligibilityFilter는 풀을 다시 만들어도 유지되어야 한다(강신 카드 적용 가능 여부 등, 외부에서 주입).
-            Func<SkillData, bool> previousFilter = _cardPool?.EligibilityFilter;
+            // 추첨 조건은 이 컴포넌트가 소유하므로(_cardEligibilityFilters) 풀을 다시 만들어도 그대로 유지된다.
             _cardPool = new CardPool<SkillData>(EnumerateValidDefinitions(), characterId)
             {
-                EligibilityFilter = previousFilter,
+                EligibilityFilter = _cardEligibilityFilters.Evaluate,
             };
 
             if (_cardPool.Count <= 0)
@@ -269,27 +271,24 @@ namespace Mukseon.Gameplay.Progression
         }
 
         /// <summary>
-        /// 추첨 시점에 카드를 추가로 걸러내는 조건을 주입한다(null이면 해제).
-        /// 지금 선택해도 적용할 수 없는 카드를 제외해 "빈 선택"을 방지한다
-        /// (예: 강신 슬롯이 모두 찬 상태에서 미보유 강신 카드 — <see cref="GangshinCardApplier"/>).
+        /// 추첨 시점에 카드를 추가로 걸러내는 조건을 등록한다(<see cref="CardEligibilityFilterSet{T}"/>).
+        /// 지금 선택해도 적용할 수 없는 카드를 빼서 "빈 선택"을 막는다(예: <see cref="GangshinCardApplier"/>).
+        /// 여기서 카드 풀을 만들지 않는다: 이 호출은 구독자의 OnEnable(= <see cref="Start"/> 이전)에서
+        /// 일어나므로 풀을 미리 만들면 이중 생성이 되고 정의 유효성 경고도 두 번 찍힌다.
         /// </summary>
-        public void SetCardEligibilityFilter(Func<SkillData, bool> filter)
-        {
-            EnsureCardPool();
-            _cardPool.EligibilityFilter = filter;
-        }
+        public void AddCardEligibilityFilter(Func<SkillData, bool> filter) => _cardEligibilityFilters.Add(filter);
+
+        /// <summary>자신이 등록한 조건만 해제한다. 다른 등록자의 조건에는 영향을 주지 않는다.</summary>
+        public void RemoveCardEligibilityFilter(Func<SkillData, bool> filter) => _cardEligibilityFilters.Remove(filter);
 
         /// <summary>
-        /// 자신이 등록한 조건만 해제한다. 그 사이 다른 쪽이 조건을 덮어썼다면 아무것도 하지 않아,
-        /// 컴포넌트 비활성화 순서에 따라 남의 조건을 지워버리는 일이 없다.
+        /// 이 효과 타입을 처리하는 시스템이 활성화되었음을 등록한다(담당 컴포넌트의 OnEnable).
+        /// 판정 이유는 <see cref="SkillEffectHandlerRegistry"/> 참조.
         /// </summary>
-        public void ClearCardEligibilityFilter(Func<SkillData, bool> filter)
-        {
-            if (_cardPool != null && _cardPool.EligibilityFilter == filter)
-            {
-                _cardPool.EligibilityFilter = null;
-            }
-        }
+        public void RegisterEffectHandler(LevelUpSkillEffectType effectType) => _effectHandlers.Register(effectType);
+
+        /// <summary>담당 시스템이 비활성화될 때 등록을 해제한다(OnDisable).</summary>
+        public void UnregisterEffectHandler(LevelUpSkillEffectType effectType) => _effectHandlers.Unregister(effectType);
 
         private void BuildRandomChoices()
         {
@@ -336,9 +335,13 @@ namespace Mukseon.Gameplay.Progression
 
             // 전담 시스템(도깨비불 / 결계 / 강신 등)이 처리해야 하는 효과.
             OnSkillEffectPending?.Invoke(definition, GetSkillLevel(definition.SkillId) + 1);
-            if (OnSkillEffectPending == null)
+
+            // 판정 기준은 "구독자가 있는가"가 아니라 "이 타입을 처리하는 시스템이 등록되어 있는가"다.
+            // 구독자는 자기 타입이 아니면 무시하므로, 구독자 유무로 보면 담당 컴포넌트가 씬에서 빠져도
+            // 경고 없이 지나간다(카드는 뜨는데 아무 일도 일어나지 않는 상태).
+            if (!_effectHandlers.IsHandled(definition.EffectType))
             {
-                Debug.LogWarning($"[PlayerLevelSystem] ApplySkillEffect: 처리되지 않은 스킬 타입 {definition.EffectType} ('{definition.SkillId}'). CardEffectApplier에 케이스를 추가하거나 OnSkillEffectPending 구독을 확인하세요.", this);
+                Debug.LogWarning($"[PlayerLevelSystem] ApplySkillEffect: '{definition.SkillId}'의 효과 타입 {definition.EffectType}을(를) 처리할 시스템이 없습니다. CardEffectApplier에 케이스를 추가하거나, 담당 컴포넌트가 씬에 있고 RegisterEffectHandler를 호출하는지 확인하세요.", this);
             }
         }
 

@@ -11,11 +11,12 @@ namespace Mukseon.Gameplay.Progression.Cards
     ///
     /// 적용 규칙(우선순위 순):
     /// 1. 이미 보유 중 → 레벨업(게이지 보존)
-    /// 2. 빈 슬롯 있음 → 해당 슬롯에 추가
+    /// 2. 빈 슬롯 있음 → 해당 슬롯에 추가(장착 슬롯이 placeholder면 그 자리를 대체해 즉시 장착)
     /// 3. 슬롯 4개가 모두 참 → <see cref="OnReplaceRequested"/>로 교체 UI에 위임(#59)
     ///
-    /// 3번을 처리할 구독자가 없으면 그 카드는 애초에 추첨 대상에서 빠진다
-    /// (<see cref="IsCardEligible"/>). 선택했는데 아무 일도 일어나지 않는 "빈 선택"을 막기 위함이다.
+    /// 판정 기준은 "슬롯이 남았는가"가 아니라 "이 카드를 고르면 플레이어가 변화를 느끼는가"다.
+    /// 지금 적용해도 아무 변화가 없는 카드는 애초에 추첨 대상에서 뺀다(<see cref="IsCardEligible"/>).
+    /// 선택했는데 아무 일도 일어나지 않는 "빈 선택"으로 선택권 1회가 날아가는 것을 막기 위함이다.
     /// </summary>
     [DisallowMultipleComponent]
     public class GangshinCardApplier : MonoBehaviour
@@ -36,6 +37,21 @@ namespace Mukseon.Gameplay.Progression.Cards
         /// 교체 UI가 구독해 슬롯을 고른 뒤 <see cref="ResolveReplacement"/>를 호출해야 한다(#59).
         /// </summary>
         public event Action<SkillData, GangshinAbilityBase, int> OnReplaceRequested;
+
+        /// <summary>이 컴포넌트가 처리하는 효과 타입(= <see cref="CardCategory.Gangshin"/>으로 파생되는 타입).</summary>
+        private static readonly LevelUpSkillEffectType[] HandledEffectTypes =
+        {
+            LevelUpSkillEffectType.SalPulliKummuBuff,
+            LevelUpSkillEffectType.PaCheonJingBuff,
+        };
+
+        /// <summary>
+        /// 장착 슬롯 전환 UI(#59 후속)가 준비되었는지. 비장착 슬롯의 강신은 패시브도 게이지 충전도
+        /// 받지 못하므로, 전환 수단이 없는 동안에는 "빈 슬롯에 추가만 되는" 강신 카드를 추첨에서 제외한다.
+        /// 전환 UI가 <see cref="GangshinController.TryEquipSlot"/>을 호출할 수 있게 되는 시점에 true로
+        /// 설정하면 해당 카드들이 자동으로 후보에 복귀한다(<see cref="OnReplaceRequested"/> 구독과 같은 원리).
+        /// </summary>
+        public bool SlotSwitchAvailable { get; set; }
 
         private void Awake()
         {
@@ -59,7 +75,17 @@ namespace Mukseon.Gameplay.Progression.Cards
             }
 
             _playerLevelSystem.OnSkillEffectPending += HandleSkillEffectPending;
-            _playerLevelSystem.SetCardEligibilityFilter(IsCardEligible);
+            _playerLevelSystem.AddCardEligibilityFilter(IsCardEligible);
+
+            // 강신 카드를 실제로 적용할 수 있을 때만 처리자로 등록한다. 컨트롤러가 없으면 등록하지 않아
+            // "처리할 시스템이 없다" 경고가 뜨도록 둔다(조용한 빈 선택 방지 — #66).
+            if (_gangshinController != null)
+            {
+                for (int i = 0; i < HandledEffectTypes.Length; i++)
+                {
+                    _playerLevelSystem.RegisterEffectHandler(HandledEffectTypes[i]);
+                }
+            }
         }
 
         private void OnDisable()
@@ -70,7 +96,15 @@ namespace Mukseon.Gameplay.Progression.Cards
             }
 
             _playerLevelSystem.OnSkillEffectPending -= HandleSkillEffectPending;
-            _playerLevelSystem.ClearCardEligibilityFilter(IsCardEligible);
+            _playerLevelSystem.RemoveCardEligibilityFilter(IsCardEligible);
+
+            if (_gangshinController != null)
+            {
+                for (int i = 0; i < HandledEffectTypes.Length; i++)
+                {
+                    _playerLevelSystem.UnregisterEffectHandler(HandledEffectTypes[i]);
+                }
+            }
         }
 
         /// <summary>
@@ -82,7 +116,7 @@ namespace Mukseon.Gameplay.Progression.Cards
         }
 
         /// <summary>
-        /// 지금 선택해도 적용할 수 없는 강신 카드를 추첨 대상에서 제외한다.
+        /// 지금 선택해도 플레이어가 변화를 느끼지 못하는 강신 카드를 추첨 대상에서 제외한다.
         /// 강신 카드가 아니면 관여하지 않고 통과시킨다.
         /// </summary>
         private bool IsCardEligible(SkillData card)
@@ -98,13 +132,26 @@ namespace Mukseon.Gameplay.Progression.Cards
                 return false;
             }
 
-            // 보유 중이면 레벨업으로, 빈 슬롯이 있으면 추가로 적용할 수 있다.
-            if (_gangshinController.FindSlotIndex(ability) >= 0 || _gangshinController.HasFreeSlot)
+            // 1) 이미 보유 중 → 레벨업. 항상 체감된다.
+            if (_gangshinController.FindSlotIndex(ability) >= 0)
             {
                 return true;
             }
 
-            // 슬롯이 모두 찬 경우엔 교체를 처리할 구독자가 있을 때만 제시한다.
+            // 2) 장착 슬롯이 어빌리티 없는 placeholder면 새 강신이 그 자리를 대체해 즉시 장착된다.
+            if (_gangshinController.CanPromoteAddedAbility)
+            {
+                return true;
+            }
+
+            // 3) 빈 슬롯에 "추가만" 되는 경우: 비장착 슬롯은 패시브도 게이지 충전도 받지 못하므로,
+            //    플레이어가 장착을 바꿀 수 있을 때(전환 UI, #59)만 제시한다.
+            if (_gangshinController.HasFreeSlot)
+            {
+                return SlotSwitchAvailable;
+            }
+
+            // 4) 슬롯이 모두 찬 경우엔 교체를 처리할 구독자가 있을 때만 제시한다.
             return OnReplaceRequested != null;
         }
 
@@ -134,7 +181,7 @@ namespace Mukseon.Gameplay.Progression.Cards
                 return;
             }
 
-            // 2) 빈 슬롯 → 추가. 첫 강신이면 자동으로 장착 슬롯이 된다.
+            // 2) 빈 슬롯 → 추가. 장착 슬롯이 placeholder면 그 자리를 대체해 곧바로 장착된다.
             if (_gangshinController.TryAddAbility(ability, nextLevel) >= 0)
             {
                 return;

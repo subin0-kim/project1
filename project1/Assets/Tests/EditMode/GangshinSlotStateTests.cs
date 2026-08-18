@@ -1,5 +1,6 @@
 using Mukseon.Gameplay.Combat;
 using NUnit.Framework;
+using UnityEngine;
 
 namespace Mukseon.Tests.EditMode
 {
@@ -12,6 +13,12 @@ namespace Mukseon.Tests.EditMode
         private static GangshinSlotState NewState()
         {
             return new GangshinSlotState(maxGauge: 100f, activeDuration: 5f, cooldownDuration: 10f);
+        }
+
+        /// <summary>슬롯 점유 여부만 보는 테스트를 위한 최소 어빌리티 인스턴스(Data는 비어 있어도 무방).</summary>
+        private static GangshinAbilityBase NewAbility()
+        {
+            return new GameObject("Gangshin").AddComponent<GangshinAbilityMudang>();
         }
 
         [Test]
@@ -54,6 +61,91 @@ namespace Mukseon.Tests.EditMode
 
             Assert.That(state.ActiveGauge, Is.EqualTo(50f));
             Assert.That(state.Slots[1].Gauge, Is.EqualTo(0f));
+        }
+
+        // ── placeholder 대체(#66 강신 강화 카드) ────────────────────────────
+
+        [Test]
+        public void AddSlot_DoesNotEquipNewAbility_WhenPlaceholderHoldsActiveSlot()
+        {
+            // 컨트롤러가 Awake에서 어빌리티 없는 슬롯을 시드하므로 ActiveIndex가 0으로 고정된다.
+            // 그냥 추가하면 새 강신은 비장착 슬롯에 들어간다 — AddOrAdoptSlot이 필요한 이유.
+            var state = NewState();
+            state.AddSlot(null, 100f); // placeholder(slot 0, 장착)
+            GangshinAbilityBase ability = NewAbility();
+
+            try
+            {
+                int index = state.AddSlot(ability, 100f);
+
+                Assert.That(index, Is.EqualTo(1));
+                Assert.That(state.ActiveIndex, Is.EqualTo(0));
+                Assert.That(state.ActiveSlot.Ability, Is.Null, "새 강신이 장착되지 않은 채 슬롯만 차지한다.");
+            }
+            finally
+            {
+                Object.DestroyImmediate(ability.gameObject);
+            }
+        }
+
+        [Test]
+        public void AddOrAdoptSlot_ReplacesPlaceholder_SoNewAbilityIsEquipped()
+        {
+            var state = NewState();
+            state.AddSlot(null, 100f); // placeholder(slot 0, 장착)
+            GangshinAbilityBase ability = NewAbility();
+
+            try
+            {
+                int index = state.AddOrAdoptSlot(ability, 80f);
+
+                Assert.That(index, Is.EqualTo(0), "placeholder 자리를 대체해야 한다.");
+                Assert.That(state.ActiveIndex, Is.EqualTo(0));
+                Assert.That(state.ActiveSlot.Ability, Is.EqualTo(ability));
+                Assert.That(state.ActiveRequiredGauge, Is.EqualTo(80f));
+                Assert.That(state.Count, Is.EqualTo(1), "슬롯을 낭비하지 않아야 한다.");
+            }
+            finally
+            {
+                Object.DestroyImmediate(ability.gameObject);
+            }
+        }
+
+        [Test]
+        public void AddOrAdoptSlot_AddsToFreeSlot_WhenActiveSlotHasAbility()
+        {
+            var state = NewState();
+            GangshinAbilityBase equipped = NewAbility();
+            GangshinAbilityBase added = NewAbility();
+
+            try
+            {
+                state.AddOrAdoptSlot(equipped, 100f); // slot 0(장착)
+
+                int index = state.AddOrAdoptSlot(added, 100f);
+
+                Assert.That(index, Is.EqualTo(1));
+                Assert.That(state.ActiveIndex, Is.EqualTo(0), "이미 강신이 장착되어 있으면 장착을 빼앗지 않는다.");
+                Assert.That(state.Count, Is.EqualTo(2));
+            }
+            finally
+            {
+                Object.DestroyImmediate(equipped.gameObject);
+                Object.DestroyImmediate(added.gameObject);
+            }
+        }
+
+        [Test]
+        public void CanAdoptActiveSlot_IsFalse_WhilePlaceholderIsActive()
+        {
+            // 발동 중에는 장착 슬롯을 건드릴 수 없으므로 대체도 불가하다.
+            var state = NewState();
+            state.AddSlot(null, 100f);
+            state.AddGaugeToActive(100f);
+            state.TryActivate();
+
+            Assert.That(state.CurrentState, Is.EqualTo(GangshinState.Active));
+            Assert.That(state.CanAdoptActiveSlot, Is.False);
         }
 
         [Test]

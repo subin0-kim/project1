@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using Mukseon.Gameplay.Progression;
 using Mukseon.Gameplay.Progression.Cards;
 using NUnit.Framework;
+using UnityEngine;
 
 namespace Mukseon.Tests.EditMode
 {
@@ -71,6 +72,11 @@ namespace Mukseon.Tests.EditMode
         {
             return new CardPool<FakeCard>(cards, characterId);
         }
+
+        // 조건 합성 테스트용 필터. 메서드 그룹이라 등록/해제 시 델리게이트 동등성이 성립한다.
+        private static bool RejectA(FakeCard card) => card.CardId != "a";
+
+        private static bool RejectB(FakeCard card) => card.CardId != "b";
 
         // ── 추첨 장수 / 중복 ────────────────────────────────────────────────
 
@@ -284,6 +290,182 @@ namespace Mukseon.Tests.EditMode
 
             Assert.That(results.Count, Is.EqualTo(1));
             Assert.That(results[0].CardId, Is.EqualTo("allowed"));
+        }
+
+        // ── 여러 등록자의 조건 합성 ─────────────────────────────────────────
+
+        [Test]
+        public void FilterSet_RejectsCard_WhenAnyFilterRejects()
+        {
+            var set = new CardEligibilityFilterSet<FakeCard>();
+            set.Add(card => card.CardId != "a");
+            set.Add(card => card.CardId != "b");
+
+            Assert.That(set.Evaluate(new FakeCard("a")), Is.False);
+            Assert.That(set.Evaluate(new FakeCard("b")), Is.False);
+            Assert.That(set.Evaluate(new FakeCard("c")), Is.True);
+        }
+
+        [Test]
+        public void FilterSet_KeepsOtherFilters_WhenOneIsRemoved()
+        {
+            // 나중에 등록한 쪽이 앞의 조건을 덮어쓰거나, 해제하면서 남의 조건까지 지우면 안 된다.
+            var set = new CardEligibilityFilterSet<FakeCard>();
+            set.Add(RejectA);
+            set.Add(RejectB);
+
+            set.Remove(RejectB);
+
+            Assert.That(set.Count, Is.EqualTo(1));
+            Assert.That(set.Evaluate(new FakeCard("a")), Is.False, "남아 있어야 할 조건이 사라졌습니다.");
+            Assert.That(set.Evaluate(new FakeCard("b")), Is.True);
+        }
+
+        [Test]
+        public void FilterSet_IgnoresDuplicateAndNullRegistration()
+        {
+            var set = new CardEligibilityFilterSet<FakeCard>();
+
+            Assert.That(set.Add(RejectA), Is.True);
+            Assert.That(set.Add(RejectA), Is.False);
+            Assert.That(set.Add(null), Is.False);
+            Assert.That(set.Remove(null), Is.False);
+            Assert.That(set.Count, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void FilterSet_AcceptsEveryCard_WhenNoFilterRegistered()
+        {
+            var set = new CardEligibilityFilterSet<FakeCard>();
+
+            Assert.That(set.Evaluate(new FakeCard("a")), Is.True);
+        }
+
+        [Test]
+        public void Draw_AppliesComposedFilters_ThroughPool()
+        {
+            CardPool<FakeCard> pool = CreatePool(Mudang,
+                new FakeCard("a"), new FakeCard("b"), new FakeCard("c"));
+            var set = new CardEligibilityFilterSet<FakeCard>();
+            set.Add(card => card.CardId != "a");
+            set.Add(card => card.CardId != "b");
+            pool.EligibilityFilter = set.Evaluate;
+            var results = new List<FakeCard>();
+
+            pool.Draw(_ => 0, results, 3, new SeededRandomSource(11));
+
+            Assert.That(results.Count, Is.EqualTo(1));
+            Assert.That(results[0].CardId, Is.EqualTo("c"));
+        }
+
+        // ── 처리자 등록(빈 선택 감지) ───────────────────────────────────────
+
+        [Test]
+        public void EffectHandlerRegistry_ReportsHandledOnlyWhileRegistered()
+        {
+            var registry = new SkillEffectHandlerRegistry();
+
+            Assert.That(registry.IsHandled(LevelUpSkillEffectType.FanAttackBuff), Is.False);
+
+            registry.Register(LevelUpSkillEffectType.FanAttackBuff);
+            Assert.That(registry.IsHandled(LevelUpSkillEffectType.FanAttackBuff), Is.True);
+
+            registry.Unregister(LevelUpSkillEffectType.FanAttackBuff);
+            Assert.That(registry.IsHandled(LevelUpSkillEffectType.FanAttackBuff), Is.False);
+        }
+
+        [Test]
+        public void EffectHandlerRegistry_KeepsTypeHandled_UntilLastHandlerLeaves()
+        {
+            // 같은 타입을 두 컴포넌트가 처리할 수 있다. 하나가 비활성화돼도 남은 쪽이 처리한다.
+            var registry = new SkillEffectHandlerRegistry();
+            registry.Register(LevelUpSkillEffectType.HealthRegen);
+            registry.Register(LevelUpSkillEffectType.HealthRegen);
+
+            registry.Unregister(LevelUpSkillEffectType.HealthRegen);
+            Assert.That(registry.IsHandled(LevelUpSkillEffectType.HealthRegen), Is.True);
+
+            registry.Unregister(LevelUpSkillEffectType.HealthRegen);
+            Assert.That(registry.IsHandled(LevelUpSkillEffectType.HealthRegen), Is.False);
+        }
+
+        [Test]
+        public void EffectHandlerRegistry_IgnoresUnbalancedUnregister()
+        {
+            var registry = new SkillEffectHandlerRegistry();
+
+            registry.Unregister(LevelUpSkillEffectType.InkTrailSlow);
+
+            Assert.That(registry.IsHandled(LevelUpSkillEffectType.InkTrailSlow), Is.False);
+        }
+
+        // ── SkillData(실제 SO) 계약 ────────────────────────────────────────
+
+        [Test]
+        public void SkillData_ExposesCardContract()
+        {
+            var card = ScriptableObject.CreateInstance<SkillData>();
+
+            try
+            {
+                card.ConfigureForTests("fan_attack", LevelUpSkillEffectType.FanAttackBuff, 3, Mudang);
+
+                Assert.That(card.CardId, Is.EqualTo("fan_attack"));
+                Assert.That(card.RequiredCharacterId, Is.EqualTo(Mudang));
+                Assert.That(card.Category, Is.EqualTo(CardCategory.Skill));
+                Assert.That(card.MaxLevel, Is.EqualTo(3));
+            }
+            finally
+            {
+                Object.DestroyImmediate(card);
+            }
+        }
+
+        [Test]
+        public void Constructor_ExcludesMudangOnlySkillData_ForBaksuRun()
+        {
+            // Skill_FanAttack.asset과 같은 구성(무당 전용)을 실제 SO로 재현한다.
+            var fan = ScriptableObject.CreateInstance<SkillData>();
+            var shared = ScriptableObject.CreateInstance<SkillData>();
+
+            try
+            {
+                fan.ConfigureForTests("fan_attack", LevelUpSkillEffectType.FanAttackBuff, 3, Mudang);
+                shared.ConfigureForTests("hp_up", LevelUpSkillEffectType.StatFlat, 5);
+
+                var baksuPool = new CardPool<SkillData>(new[] { fan, shared }, Baksu);
+                var mudangPool = new CardPool<SkillData>(new[] { fan, shared }, Mudang);
+
+                Assert.That(baksuPool.Count, Is.EqualTo(1));
+                Assert.That(baksuPool.Cards[0].CardId, Is.EqualTo("hp_up"));
+                Assert.That(mudangPool.Count, Is.EqualTo(2));
+            }
+            finally
+            {
+                Object.DestroyImmediate(fan);
+                Object.DestroyImmediate(shared);
+            }
+        }
+
+        [Test]
+        public void SkillData_IsInvalid_WhenGangshinCardHasNoAbilityId()
+        {
+            // 강신 카드는 대상 어빌리티를 특정하지 못하면 선택해도 적용할 수 없다.
+            var card = ScriptableObject.CreateInstance<SkillData>();
+
+            try
+            {
+                card.ConfigureForTests("gangshin_salpulli", LevelUpSkillEffectType.SalPulliKummuBuff, 3);
+                Assert.That(card.IsValid(out _), Is.False);
+
+                card.ConfigureForTests("gangshin_salpulli", LevelUpSkillEffectType.SalPulliKummuBuff, 3,
+                    gangshinAbilityId: "gangshin.salpulli");
+                Assert.That(card.IsValid(out _), Is.True);
+            }
+            finally
+            {
+                Object.DestroyImmediate(card);
+            }
         }
 
         // ── SkillData 카테고리 파생 ─────────────────────────────────────────

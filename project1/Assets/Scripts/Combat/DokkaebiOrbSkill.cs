@@ -120,6 +120,8 @@ namespace Mukseon.Gameplay.Combat
             if (_playerLevelSystem != null)
             {
                 _playerLevelSystem.OnSkillEffectPending += HandleSkillEffectPending;
+                // 이 효과 타입의 처리자가 있음을 알린다(등록이 없으면 선택 시 경고 — 빈 선택 감지, #66).
+                _playerLevelSystem.RegisterEffectHandler(LevelUpSkillEffectType.SummonDokkaebiOrb);
                 // 비활성 중 부여/레벨업 이벤트를 놓쳤을 수 있어 현재 레벨을 직접 동기화한다.
                 ApplyLevel(_playerLevelSystem.GetSkillLevel(_skillId));
             }
@@ -130,6 +132,7 @@ namespace Mukseon.Gameplay.Combat
             if (_playerLevelSystem != null)
             {
                 _playerLevelSystem.OnSkillEffectPending -= HandleSkillEffectPending;
+                _playerLevelSystem.UnregisterEffectHandler(LevelUpSkillEffectType.SummonDokkaebiOrb);
             }
 
             // 스킬이 해제되면(게임오버·씬 언로드 등) 모든 드론을 회수해 잔존하지 않도록 한다.

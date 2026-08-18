@@ -99,12 +99,18 @@ namespace Mukseon.Gameplay.Progression
             return true;
         }
 
-        internal void ConfigureForTests(string skillId, LevelUpSkillEffectType effectType, int maxLevel, string requiredCharacterId = null)
+        internal void ConfigureForTests(
+            string skillId,
+            LevelUpSkillEffectType effectType,
+            int maxLevel,
+            string requiredCharacterId = null,
+            string gangshinAbilityId = null)
         {
             _skillId = skillId;
             _effectType = effectType;
             _maxLevel = maxLevel;
             _requiredCharacterId = requiredCharacterId;
+            _gangshinAbilityId = gangshinAbilityId;
         }
     }
 }
