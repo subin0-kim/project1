@@ -1,7 +1,10 @@
 using System.Collections.Generic;
 using System.IO;
+using Mukseon.Core;
+using Mukseon.Core.Input;
 using Mukseon.Core.Persistence;
 using NUnit.Framework;
+using UnityEngine;
 
 namespace Mukseon.Tests.EditMode
 {
@@ -47,6 +50,9 @@ namespace Mukseon.Tests.EditMode
             Assert.That(data.UnlockedSkills, Is.Empty);
             Assert.That(data.UpgradeLevels.Count, Is.EqualTo(0));
             Assert.That(data.TutorialCompleted, Is.False);
+            Assert.That(data.DirectionDisplayMode, Is.EqualTo((int)DirectionDisplayMode.Both));
+            Assert.That(data.DirectionArrowAssist, Is.False);
+            Assert.That(data.DirectionColors.Count, Is.EqualTo(0));
         }
 
         // ---- 라운드트립: 모든 필드 보존 ----
@@ -102,6 +108,39 @@ namespace Mukseon.Tests.EditMode
             Assert.That(loaded.UpgradeLevels.ContainsKey("missing"), Is.False);
         }
 
+        // ---- 방향 색상 오버라이드(#83) 직렬화 왕복 ----
+
+        [Test]
+        public void DirectionColors_SerializationRoundTrip_PreservesMapping()
+        {
+            SaveData data = SaveData.CreateDefault();
+            data.DirectionDisplayMode = (int)DirectionDisplayMode.Orb;
+            data.DirectionArrowAssist = true;
+            data.DirectionColors.SetColor(SwipeDirection.Up, new Color(0.2f, 0.4f, 0.6f));
+            data.DirectionColors.SetColor(SwipeDirection.Left, Color.red);
+            data.DirectionColors.SetColor(SwipeDirection.Up, Color.green); // 덮어쓰기 확인
+
+            _storage.Save(data);
+            SaveData loaded = _storage.Load();
+
+            Assert.That(loaded.DirectionDisplayMode, Is.EqualTo((int)DirectionDisplayMode.Orb));
+            Assert.That(loaded.DirectionArrowAssist, Is.True);
+            Assert.That(loaded.DirectionColors.Count, Is.EqualTo(2));
+            Assert.That(loaded.DirectionColors.TryGetColor(SwipeDirection.Up, out Color up), Is.True);
+            Assert.That(ColorUtility.ToHtmlStringRGB(up), Is.EqualTo(ColorUtility.ToHtmlStringRGB(Color.green)));
+            Assert.That(loaded.DirectionColors.TryGetColor(SwipeDirection.Right, out _), Is.False);
+        }
+
+        [Test]
+        public void DirectionColors_None_IsNotStorable()
+        {
+            var overrides = new DirectionColorOverrides();
+            overrides.SetColor(SwipeDirection.None, Color.red);
+
+            Assert.That(overrides.Count, Is.EqualTo(0));
+            Assert.That(overrides.TryGetColor(SwipeDirection.None, out _), Is.False);
+        }
+
         // ---- 파일 부재 시 동작 ----
 
         [Test]
@@ -153,6 +192,36 @@ namespace Mukseon.Tests.EditMode
 
             Assert.That(migrated, Is.Not.Null);
             Assert.That(migrated.SaveDataVersion, Is.EqualTo(SaveData.CurrentVersion));
+        }
+
+        // v1 세이브에는 방향 색상 필드가 없다. 승격 시 '둘 다'로 시작해야 한다 —
+        // 정수 0이 그대로 남으면 글로우 전용으로 켜져, 기존 유저의 색 오브가 말없이 사라진다(#83).
+        [Test]
+        public void Migrate_LegacyV1_StartsWithBothDisplayMode()
+        {
+            SaveData legacy = SaveData.CreateDefault();
+            legacy.SaveDataVersion = 1;
+            legacy.DirectionDisplayMode = 0;
+            legacy.DirectionArrowAssist = true;
+            legacy.DirectionColors.SetColor(SwipeDirection.Up, Color.magenta);
+
+            SaveData migrated = SaveMigration.Migrate(legacy);
+
+            Assert.That(migrated.SaveDataVersion, Is.EqualTo(SaveData.CurrentVersion));
+            Assert.That(migrated.DirectionDisplayMode, Is.EqualTo((int)DirectionDisplayMode.Both));
+            Assert.That(migrated.DirectionArrowAssist, Is.False);
+            Assert.That(migrated.DirectionColors.Count, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void Migrate_NullDirectionColors_IsNormalized()
+        {
+            SaveData data = SaveData.CreateDefault();
+            data.DirectionColors = null;
+
+            SaveData migrated = SaveMigration.Migrate(data);
+
+            Assert.That(migrated.DirectionColors, Is.Not.Null);
         }
 
         // ---- 저장 안정성: 원자적 교체 / 임시 파일 잔존 없음 ----

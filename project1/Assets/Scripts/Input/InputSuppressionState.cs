@@ -18,6 +18,9 @@ namespace Mukseon.Core.Input
 
         /// <summary>조작 안내 카드 표시 중(#112). 카드가 떠 있는 동안 스와이프·더블탭이 먹으면 안 된다.</summary>
         GuideOverlay = 1 << 3,
+
+        /// <summary>환경설정 오버레이 표시 중(#83). 설정을 만지는 동안 스와이프가 공격으로 새면 안 된다.</summary>
+        SettingsOverlay = 1 << 4,
     }
 
     /// <summary>

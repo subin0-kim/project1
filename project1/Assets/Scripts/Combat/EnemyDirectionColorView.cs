@@ -1,3 +1,4 @@
+using Mukseon.Core;
 using Mukseon.Core.Input;
 using UnityEngine;
 
@@ -7,6 +8,9 @@ namespace Mukseon.Gameplay.Combat
     /// 적의 현재 방향 속성을 색상으로 시각화한다(#82, `combat_system.md` §3 — 외곽선 글로우).
     /// SpriteRenderer의 MaterialPropertyBlock에 방향 색상을 글로우 프로퍼티로 적용한다.
     /// 글로우 셰이더/머티리얼이 아직 연결되지 않아도 안전하게 동작한다(프로퍼티 미존재 시 no-op).
+    ///
+    /// 표시 방식이 '색 오브 전용'이면 글로우를 끈다(#83). <see cref="DirectionColorSettings.OnChanged"/>를
+    /// 구독해 인게임 중 설정 변경도 즉시 반영한다.
     /// </summary>
     [RequireComponent(typeof(EnemyHealth))]
     [DisallowMultipleComponent]
@@ -91,6 +95,9 @@ namespace Mukseon.Gameplay.Combat
                 _converter.OnConverted += HandleConverted;
             }
 
+            // 표시 방식/커스텀 색이 인게임 중 바뀌면 살아 있는 적도 즉시 따라가야 한다(#83).
+            DirectionColorSettings.OnChanged += ApplyCurrentColor;
+
             // 풀 재사용 직후 변환 피드백 상태를 초기화한다.
             _imminence = 0f;
             _flashTimer = 0f;
@@ -118,6 +125,8 @@ namespace Mukseon.Gameplay.Combat
                 _converter.OnHitCountChanged -= HandleHitCountChanged;
                 _converter.OnConverted -= HandleConverted;
             }
+
+            DirectionColorSettings.OnChanged -= ApplyCurrentColor;
         }
 
         // 이벤트 시그니처상 인자를 받지만 현재 방향은 ApplyCurrentColor가 직접 조회하므로 사용하지 않는다.
@@ -221,6 +230,11 @@ namespace Mukseon.Gameplay.Combat
         /// <summary>주어진 글로우 색과 현재 스프라이트 UV 바운드를 MaterialPropertyBlock으로 적용한다.</summary>
         private void WriteGlow(Color glow)
         {
+            // 표시 방식 토글(#83)은 알파로 처리한다 — 셰이더가 외곽선 강도에 _GlowColor.a를 곱하므로
+            // 알파 0이면 글로우가 완전히 사라진다. 머티리얼 교체나 렌더러 on/off가 필요 없어
+            // 인게임 중 즉시 전환되고, 스프라이트 본체 렌더링에는 아무 영향이 없다.
+            glow.a = DirectionColorSettings.GlowEnabled ? 1f : 0f;
+
             _spriteRenderer.GetPropertyBlock(_propertyBlock);
             _propertyBlock.SetColor(_glowColorId, glow);
             _propertyBlock.SetVector(_spriteRectId, ResolveSpriteUvBounds());
