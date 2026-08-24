@@ -48,28 +48,35 @@ namespace Mukseon.UI
         };
 
         /// <summary>
-        /// 배정 가능한 색 스와치.
+        /// 배정 가능한 색 스와치를 만든다.
         ///
         /// 자유로운 RGB 피커 대신 고정 스와치를 쓰는 이유: 방향 색은 "서로 확실히 구분되는가"가
         /// 전부인데, 슬라이더는 네 방향을 비슷한 색으로 만들어 게임을 망가뜨리기 쉽다. 여기 있는 색은
-        /// 모두 어두운 수묵 배경 위에서 대비가 확보되고 서로 충분히 떨어지도록 고른 값이며,
-        /// 앞 4개는 기본 매핑(오방색 재구성)과 같은 값이라 "원래 색"이 목록에서 사라지지 않는다.
+        /// 모두 어두운 수묵 배경 위에서 대비가 확보되고 서로 충분히 떨어지도록 고른 값이다.
+        ///
+        /// 정적 목록이 아니라 팔레트의 함수인 이유: 앞 4개는 "현재 기본 매핑"이어야 한다.
+        /// 목록을 <see cref="DirectionColorPalette.DefaultColor"/>에 고정해 두면 팔레트 에셋이
+        /// 배선되는 순간 '현재 색'(팔레트)과 스와치(정적 디폴트)가 어긋나, 선택 링이 어느 스와치에도
+        /// 붙지 않고 유저가 원래 색으로 되돌릴 수단도 사라진다. 호출부는 결과를 캐싱해 쓴다.
         /// </summary>
-        public static readonly IReadOnlyList<ColorSwatch> Swatches = new[]
+        public static IReadOnlyList<ColorSwatch> BuildSwatches(DirectionColorPalette palette)
         {
-            // 앞 4개는 기본 매핑 그대로다. 값을 옮겨 적지 않고 팔레트에서 읽어야, 기본색이 바뀌어도
-            // 스와치가 따라가고 유저가 "원래 색"으로 되돌릴 길이 남는다.
-            new ColorSwatch("청록", DirectionColorPalette.DefaultColor(SwipeDirection.Up)),
-            new ColorSwatch("황금", DirectionColorPalette.DefaultColor(SwipeDirection.Down)),
-            new ColorSwatch("적", DirectionColorPalette.DefaultColor(SwipeDirection.Left)),
-            new ColorSwatch("녹", DirectionColorPalette.DefaultColor(SwipeDirection.Right)),
+            return new[]
+            {
+                // 앞 4개는 기본 매핑 그대로다. 값을 옮겨 적지 않고 팔레트에서 읽어야, 기본색이 바뀌어도
+                // 스와치가 따라가고 유저가 "원래 색"으로 되돌릴 길이 남는다.
+                new ColorSwatch("청록", DirectionColorPalette.BaseColor(palette, SwipeDirection.Up)),
+                new ColorSwatch("황금", DirectionColorPalette.BaseColor(palette, SwipeDirection.Down)),
+                new ColorSwatch("적", DirectionColorPalette.BaseColor(palette, SwipeDirection.Left)),
+                new ColorSwatch("녹", DirectionColorPalette.BaseColor(palette, SwipeDirection.Right)),
 
-            // 나머지는 위 4색 및 서로와 충분히 떨어지도록 고른 대체 색이다.
-            new ColorSwatch("남", new Color(0.35f, 0.48f, 0.92f)),
-            new ColorSwatch("자", new Color(0.75f, 0.40f, 0.85f)),
-            new ColorSwatch("주황", new Color(0.95f, 0.55f, 0.18f)),
-            new ColorSwatch("백", new Color(0.90f, 0.89f, 0.85f)),
-        };
+                // 나머지는 위 4색 및 서로와 충분히 떨어지도록 고른 대체 색이다.
+                new ColorSwatch("남", new Color(0.35f, 0.48f, 0.92f)),
+                new ColorSwatch("자", new Color(0.75f, 0.40f, 0.85f)),
+                new ColorSwatch("주황", new Color(0.95f, 0.55f, 0.18f)),
+                new ColorSwatch("백", new Color(0.90f, 0.89f, 0.85f)),
+            };
+        }
 
         public readonly struct DisplayModeOption
         {

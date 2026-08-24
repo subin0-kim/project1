@@ -74,7 +74,7 @@ namespace Mukseon.Tests.EditMode
         [Test]
         public void Swatches_AreDistinct_AndCoverAllDirections()
         {
-            IReadOnlyList<SettingsScreenContent.ColorSwatch> swatches = SettingsScreenContent.Swatches;
+            IReadOnlyList<SettingsScreenContent.ColorSwatch> swatches = SettingsScreenContent.BuildSwatches(null);
             Assert.That(swatches.Count, Is.GreaterThanOrEqualTo(RealDirections.Length));
 
             var seen = new HashSet<string>();
@@ -91,7 +91,7 @@ namespace Mukseon.Tests.EditMode
         public void Swatches_ContainEveryDefaultDirectionColor()
         {
             var swatchHexes = new HashSet<string>();
-            foreach (SettingsScreenContent.ColorSwatch swatch in SettingsScreenContent.Swatches)
+            foreach (SettingsScreenContent.ColorSwatch swatch in SettingsScreenContent.BuildSwatches(null))
             {
                 swatchHexes.Add(ColorUtility.ToHtmlStringRGB(swatch.Color));
             }
@@ -100,6 +100,37 @@ namespace Mukseon.Tests.EditMode
             {
                 string defaultHex = ColorUtility.ToHtmlStringRGB(DirectionColorPalette.DefaultColor(direction));
                 Assert.That(swatchHexes, Does.Contain(defaultHex), $"{direction}의 기본 색이 스와치에 없습니다.");
+            }
+        }
+
+        // 스와치 앞 4개는 "현재 기본 매핑"이어야 한다. 정적 디폴트에 고정돼 있으면 팔레트 에셋이
+        // 배선되는 순간 '현재 색'(팔레트)과 스와치가 어긋나, 어느 스와치에도 선택 링이 붙지 않고
+        // 유저가 원래 색으로 되돌릴 수단도 사라진다. 그 증상은 조용해서 원인을 되짚기 어렵다.
+        [Test]
+        public void BuildSwatches_FollowsPaletteAsset_NotStaticDefaults()
+        {
+            var palette = ScriptableObject.CreateInstance<DirectionColorPalette>();
+            try
+            {
+                // _up은 [SerializeField] private이라 직렬화 경로로 덮어쓴다(에디터 전용 API 없이).
+                JsonUtility.FromJsonOverwrite("{\"_up\":{\"r\":0.1,\"g\":0.2,\"b\":0.3,\"a\":1.0}}", palette);
+
+                string paletteUp = ColorUtility.ToHtmlStringRGB(palette.GetColor(SwipeDirection.Up));
+                Assert.That(paletteUp,
+                    Is.Not.EqualTo(ColorUtility.ToHtmlStringRGB(DirectionColorPalette.DefaultColor(SwipeDirection.Up))),
+                    "테스트 전제가 깨졌다: 팔레트 색이 정적 디폴트와 달라야 의미가 있다.");
+
+                var hexes = new HashSet<string>();
+                foreach (SettingsScreenContent.ColorSwatch swatch in SettingsScreenContent.BuildSwatches(palette))
+                {
+                    hexes.Add(ColorUtility.ToHtmlStringRGB(swatch.Color));
+                }
+
+                Assert.That(hexes, Does.Contain(paletteUp), "팔레트가 정한 기본 색이 스와치 목록에 있어야 한다.");
+            }
+            finally
+            {
+                ScriptableObject.DestroyImmediate(palette);
             }
         }
     }

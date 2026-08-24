@@ -37,6 +37,10 @@ namespace Mukseon.UI
         // 팔레트 에셋은 아직 없어 정적 디폴트가 기본 색이다. 에셋이 생기면 여기에 주입하면 된다.
         private readonly DirectionColorPalette _palette;
 
+        // 스와치 앞 4개가 팔레트에서 나오므로 목록도 팔레트에 의존한다. 격자 조립과 선택 상태 갱신이
+        // 반드시 같은 목록을 봐야 해서(다르면 선택 링이 엉뚱한 칸에 붙는다) 생성자에서 한 번만 만든다.
+        private readonly IReadOnlyList<SettingsScreenContent.ColorSwatch> _swatches;
+
         // SetCustomColor가 매번 호출할 기본색 조회 콜백. 클릭마다 람다를 새로 만들지 않도록 한 번만 만든다.
         private readonly DirectionColorSource _baseColors;
 
@@ -50,6 +54,7 @@ namespace Mukseon.UI
             _palette = palette;
             _onAssigned = onAssigned;
             _baseColors = ResolveBaseColor;
+            _swatches = SettingsScreenContent.BuildSwatches(palette);
 
             IReadOnlyList<SettingsScreenContent.DirectionRow> definitions = SettingsScreenContent.DirectionRows;
             for (int i = 0; i < definitions.Count; i++)
@@ -63,8 +68,6 @@ namespace Mukseon.UI
         /// <summary>현재 매핑에 맞춰 각 행의 색 칩과 선택된 스와치 표시를 갱신한다.</summary>
         public void Refresh()
         {
-            IReadOnlyList<SettingsScreenContent.ColorSwatch> swatches = SettingsScreenContent.Swatches;
-
             for (int r = 0; r < _rows.Count; r++)
             {
                 Row row = _rows[r];
@@ -74,7 +77,7 @@ namespace Mukseon.UI
                 for (int s = 0; s < row.Swatches.Length; s++)
                 {
                     // 이 스와치가 현재 이 방향에 배정된 색인지 — 흰 테두리로 선택 상태를 보여 준다.
-                    bool selected = SameColor(swatches[s].Color, current);
+                    bool selected = SameColor(_swatches[s].Color, current);
                     ApplySelectionBorder(row.Swatches[s], selected);
                 }
             }
@@ -102,11 +105,10 @@ namespace Mukseon.UI
             ScreenUiFactory.SetBorderRadius(currentChip, CurrentChipDiameter * 0.5f);
             row.Add(currentChip);
 
-            IReadOnlyList<SettingsScreenContent.ColorSwatch> swatches = SettingsScreenContent.Swatches;
-            var buttons = new Button[swatches.Count];
-            for (int i = 0; i < swatches.Count; i++)
+            var buttons = new Button[_swatches.Count];
+            for (int i = 0; i < _swatches.Count; i++)
             {
-                buttons[i] = BuildSwatch(row, definition.Direction, swatches[i]);
+                buttons[i] = BuildSwatch(row, definition.Direction, _swatches[i]);
             }
 
             return new Row(definition.Direction, currentChip, buttons);

@@ -242,6 +242,35 @@ namespace Mukseon.Gameplay.Combat
         }
 
         /// <summary>
+        /// 이 적의 머티리얼이 실제로 글로우를 그릴 수 있는지(#83).
+        ///
+        /// 글로우 머티리얼 배선은 프리팹마다 다르므로 호출부에서 정적으로 알 수 없다.
+        /// HUD가 "색 오브는 글로우와 중복이니 숨긴다"고 판단하려면 이 값을 물어야 한다 —
+        /// 글로우가 없는 적의 오브까지 숨기면 그 적은 방향 단서가 하나도 없는 상태가 된다.
+        /// </summary>
+        public bool GlowSupported
+        {
+            get
+            {
+                if (_spriteRenderer == null)
+                {
+                    return false;
+                }
+
+                Material material = _spriteRenderer.sharedMaterial;
+                if (material == null)
+                {
+                    return false;
+                }
+
+                // Awake 전이면 프로퍼티 ID가 아직 없으므로(0은 유효한 ID가 아니다) 이름으로 조회한다.
+                return _glowColorId != 0
+                    ? material.HasProperty(_glowColorId)
+                    : material.HasProperty(_glowColorProperty);
+            }
+        }
+
+        /// <summary>
         /// 이 적의 외곽선 글로우와 동일한 팔레트 인스턴스로 지정 방향의 색을 조회한다(#82).
         /// HUD 색 오브가 글로우와 같은 색을 쓰도록 외부(<c>GameplayHudBootstrapper</c>)에서 사용한다.
         /// </summary>

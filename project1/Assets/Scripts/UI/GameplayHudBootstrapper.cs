@@ -900,8 +900,15 @@ namespace Mukseon.Gameplay.UI
             {
                 // 색상 1차 표시(#82): 단일 방향 적은 현재 방향 표시 하나만 띄운다.
                 // 이 표시는 외곽선 글로우와 같은 정보라, 표시 방식이 '글로우 전용'이면 숨긴다(#83).
+                //
+                // 단, '중복'이라고 말할 수 있는 건 글로우가 이 적에게 실제로 그려질 때뿐이다.
+                // 글로우 머티리얼이 없는 프리팹의 오브까지 숨기면 방향 단서가 0이 되고, 유저에게는
+                // "설정을 바꿨더니 적이 안 죽는다"로 보인다 — 원인이 프리팹 배선이라 추적할 수도 없다.
+                // 판정 기준을 슬롯 종류가 아니라 런타임의 머티리얼 상태로 둬야 앞으로 추가되는
+                // 프리팹도 같은 함정에 빠지지 않는다.
+                bool glowCovers = hud.ColorView != null && hud.ColorView.GlowSupported;
                 SwipeDirection direction = enemy.SwipeDirection;
-                ApplyDirectionMarker(hud.ArrowLabels[0], direction, ResolveDirectionColor(hud, direction), true, false);
+                ApplyDirectionMarker(hud.ArrowLabels[0], direction, ResolveDirectionColor(hud, direction), true, !glowCovers);
                 for (int i = 1; i < 3; i++)
                 {
                     hud.ArrowLabels[i].style.display = DisplayStyle.None;
@@ -1247,7 +1254,7 @@ namespace Mukseon.Gameplay.UI
             _worldRoot.Add(_patternOrb);
         }
 
-        // 보스 본체 색 오브와 동일한 팔레트로 해석해 색을 일치시킨다. 보스가 없으면 정적 디폴트로 폴백.
+        // 보스 본체 색 오브와 동일한 팔레트로 해석해 색을 일치시킨다. 보스 HUD가 아직 없으면 폴백한다.
         private Color ResolvePatternOrbColor(SwipeDirection direction)
         {
             if (_bossEnemy != null && _sequenceHuds.TryGetValue(_bossEnemy, out SequenceHud hud))
@@ -1255,7 +1262,9 @@ namespace Mukseon.Gameplay.UI
                 return ResolveDirectionColor(hud, direction);
             }
 
-            return DirectionColorPalette.DefaultColor(direction);
+            // 폴백도 반드시 Resolve를 거쳐야 유저 커스텀 매핑(#83)이 적용된다. DefaultColor로 빠지면
+            // 카운터 방향을 알려주는 텔레그래프만 옛 색 규칙을 쓰게 되고, 유저는 그대로 틀린 방향을 벤다.
+            return DirectionColorPalette.Resolve(null, direction);
         }
 
         private void PositionPatternOrb(Camera camera, IPanel panel)
