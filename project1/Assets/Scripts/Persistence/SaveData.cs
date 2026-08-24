@@ -12,7 +12,7 @@ namespace Mukseon.Core.Persistence
     public class SaveData
     {
         /// <summary>현재 세이브 스키마 버전. 필드 추가/구조 변경 시 올리고 SaveMigration에 단계를 추가한다.</summary>
-        public const int CurrentVersion = 1;
+        public const int CurrentVersion = 2;
 
         /// <summary>게임 시작부터 기본 해금되는 캐릭터(무당). CharacterData 에셋의 CharacterId와 일치해야 한다.</summary>
         public const string DefaultUnlockedCharacterId = "character.mudang";
@@ -37,6 +37,19 @@ namespace Mukseon.Core.Persistence
         /// <summary>튜토리얼 완료 여부(#39가 기록).</summary>
         public bool TutorialCompleted;
 
+        /// <summary>
+        /// 방향 색상 표시 방식(#83). <see cref="Mukseon.Core.DirectionDisplayMode"/>의 정수 값이다.
+        /// enum이 아니라 int로 두는 이유: 알 수 없는 값이 들어와도 역직렬화가 실패하지 않고,
+        /// <see cref="Mukseon.Core.DirectionColorSettings.ApplyFrom"/>이 기본값으로 폴백할 수 있다.
+        /// </summary>
+        public int DirectionDisplayMode = (int)Core.DirectionDisplayMode.Both;
+
+        /// <summary>색맹·색약용 방향 화살표 병행 표시 여부(#83). 표시 방식과 독립적이다.</summary>
+        public bool DirectionArrowAssist;
+
+        /// <summary>유저가 바꾼 방향↔색상 매핑(#83). 비어 있으면 기본 팔레트를 쓴다.</summary>
+        public DirectionColorOverrides DirectionColors = new DirectionColorOverrides();
+
         /// <summary>신규 저장 파일의 초기 상태를 만든다(무당 기본 해금).</summary>
         public static SaveData CreateDefault()
         {
@@ -49,6 +62,9 @@ namespace Mukseon.Core.Persistence
                 UnlockedCharacters = new List<string> { DefaultUnlockedCharacterId },
                 UnlockedSkills = new List<string>(),
                 TutorialCompleted = false,
+                DirectionDisplayMode = (int)Core.DirectionDisplayMode.Both,
+                DirectionArrowAssist = false,
+                DirectionColors = new DirectionColorOverrides(),
             };
         }
     }

@@ -4,6 +4,7 @@ using Mukseon.Core;
 using Mukseon.Core.Input;
 using Mukseon.Gameplay.Combat;
 using Mukseon.Gameplay.Progression;
+using Mukseon.UI;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UIElements;
@@ -35,6 +36,7 @@ namespace Mukseon.Gameplay.UI
         private static class Strings
         {
             public const string LevelUpTitle = "레벨 업! 스킬을 선택하세요";
+            public const string SettingsButton = "설정";
         }
 
         private const string RootObjectName = "GameplayHudRuntime";
@@ -84,12 +86,19 @@ namespace Mukseon.Gameplay.UI
             public Action SequenceSetHandler;
             public Action<SwipeDirection> DirectionChangedHandler;
             public EnemyDirectionColorView ColorView;
+
+            // 표시할 슬롯이 하나도 없는 상태(#83). 위치 갱신이 매 프레임 컨테이너를 다시 켜지 않도록
+            // RefreshSequenceHud가 계산한 결과를 여기 남겨 PositionSequenceHud가 읽는다.
+            public bool HasVisibleMarker = true;
         }
 
         private readonly HashSet<EnemyHealth> _trackedEnemies = new HashSet<EnemyHealth>();
         private readonly Dictionary<EnemyHealth, SequenceHud> _sequenceHuds = new Dictionary<EnemyHealth, SequenceHud>();
         private readonly List<FloatingText> _floatingTexts = new List<FloatingText>();
         private readonly List<EnemyHealth> _enemyBuffer = new List<EnemyHealth>(64);
+        // 설정 변경 시 방향 표시를 다시 그릴 때 쓰는 버퍼(#83). SyncEnemies의 _enemyBuffer와 공유하면
+        // 두 순회가 겹칠 때 서로의 내용을 지운다.
+        private readonly List<EnemyHealth> _markerRefreshBuffer = new List<EnemyHealth>(64);
         private readonly List<EnemyHealth> _removedEnemyBuffer = new List<EnemyHealth>(64);
         private float _resolveRetryTimer;
         private Camera _cachedCamera;
@@ -102,11 +111,13 @@ namespace Mukseon.Gameplay.UI
         private bool _stopPolling;
 
         // 패턴 인디케이터 오브(#69): 적 머리 위 색 오브와 동일한 HUD 요소를, 보스 패턴 텔레그래프
-        // 위치 상단에 띄운다. 접근성(화살표) 모드는 적 오브와 같은 ApplyOrb/Arrow 경로로 함께 처리된다(#83).
+        // 위치 상단에 띄운다. 접근성(화살표) 모드는 적 오브와 같은 ApplyDirectionMarker 경로로 함께 처리된다(#83).
         private Label _patternOrb;
         private Transform _patternOrbAnchor;
         private Vector3 _patternOrbWorldOffset;
         private bool _patternOrbActive;
+        // 설정이 바뀌면 오브를 다시 그려야 하므로 현재 표시 중인 방향을 들고 있는다(#83).
+        private SwipeDirection _patternOrbDirection;
         private const float PatternOrbWorldYOffset = 0.8f;
 
         // 보스 등장 연출(#69): 연출 동안 체력바를 가렸다가(스폰 직후) 채움 비율로 드러낸다.
@@ -138,6 +149,8 @@ namespace Mukseon.Gameplay.UI
             Instance = this;
             DontDestroyOnLoad(gameObject);
             SceneManager.sceneLoaded += HandleSceneLoaded;
+            // 인게임에서 설정을 바꿔도 이미 떠 있는 방향 표시가 즉시 따라가야 한다(#83).
+            DirectionColorSettings.OnChanged += RefreshDirectionMarkers;
             EnsureUi();
             HandleSceneLoaded();
         }
@@ -150,6 +163,7 @@ namespace Mukseon.Gameplay.UI
             }
 
             SceneManager.sceneLoaded -= HandleSceneLoaded;
+            DirectionColorSettings.OnChanged -= RefreshDirectionMarkers;
             UnsubscribeAll();
             ClearEnemies();
 
@@ -266,6 +280,8 @@ namespace Mukseon.Gameplay.UI
 
             _experienceRoot = Panel(_root, 760f, 972f, 400f, 52f);
             _experienceFill = Bar(_experienceRoot, out _experienceLabel, true);
+
+            BuildSettingsButton();
 
             _waveRoot = Panel(_root, 790f, 16f, 340f, 54f);
             _waveLabel = Text(_waveRoot, 0f, 4f, 340f, 22f, 22, TextAnchor.MiddleCenter);
@@ -882,14 +898,24 @@ namespace Mukseon.Gameplay.UI
 
             if (!enemy.UsesAttackSequence)
             {
-                // 색상 1차 표시(#82): 단일 방향 적은 현재 방향 색 오브 하나만 표시한다.
-                ApplyOrb(hud.ArrowLabels[0], ResolveDirectionColor(hud, enemy.SwipeDirection), true);
+                // 색상 1차 표시(#82): 단일 방향 적은 현재 방향 표시 하나만 띄운다.
+                // 이 표시는 외곽선 글로우와 같은 정보라, 표시 방식이 '글로우 전용'이면 숨긴다(#83).
+                //
+                // 단, '중복'이라고 말할 수 있는 건 글로우가 이 적에게 실제로 그려질 때뿐이다.
+                // 글로우 머티리얼이 없는 프리팹의 오브까지 숨기면 방향 단서가 0이 되고, 유저에게는
+                // "설정을 바꿨더니 적이 안 죽는다"로 보인다 — 원인이 프리팹 배선이라 추적할 수도 없다.
+                // 판정 기준을 슬롯 종류가 아니라 런타임의 머티리얼 상태로 둬야 앞으로 추가되는
+                // 프리팹도 같은 함정에 빠지지 않는다.
+                bool glowCovers = hud.ColorView != null && hud.ColorView.GlowSupported;
+                SwipeDirection direction = enemy.SwipeDirection;
+                ApplyDirectionMarker(hud.ArrowLabels[0], direction, ResolveDirectionColor(hud, direction), true, !glowCovers);
                 for (int i = 1; i < 3; i++)
                 {
                     hud.ArrowLabels[i].style.display = DisplayStyle.None;
                 }
 
                 hud.EllipsisLabel.style.display = DisplayStyle.None;
+                SyncSequenceContainerVisibility(hud);
                 return;
             }
 
@@ -904,8 +930,11 @@ namespace Mukseon.Gameplay.UI
 
                 if (seqIdx < total)
                 {
-                    // 시퀀스 적(보스): 현재 타격 대상(i==0)만 강조 색 오브, 이후는 흐린 색 오브.
-                    ApplyOrb(label, ResolveDirectionColor(hud, seq.Sequence[seqIdx]), i == 0);
+                    // 시퀀스 적(보스): 현재 타격 대상(i==0)만 강조, 이후는 흐리게.
+                    // 다음 순번 방향은 글로우(현재 방향 하나)가 담지 못하는 정보라, 표시 방식이
+                    // '글로우 전용'이어도 숨기지 않는다 — 숨기면 보스 시퀀스를 읽을 방법이 사라진다(#83).
+                    SwipeDirection direction = seq.Sequence[seqIdx];
+                    ApplyDirectionMarker(label, direction, ResolveDirectionColor(hud, direction), i == 0, true);
                 }
                 else
                 {
@@ -914,6 +943,24 @@ namespace Mukseon.Gameplay.UI
             }
 
             hud.EllipsisLabel.style.display = remaining > 3 ? DisplayStyle.Flex : DisplayStyle.None;
+            SyncSequenceContainerVisibility(hud);
+        }
+
+        /// <summary>
+        /// 표시할 슬롯이 하나도 없으면 컨테이너까지 숨긴다(#83).
+        /// 컨테이너는 반투명 검정 배경과 좌우 패딩을 갖고 있어, 그대로 두면 표시 방식이
+        /// '글로우 전용'일 때 적 머리 위에 빈 검은 알약만 떠 있게 된다.
+        /// </summary>
+        private static void SyncSequenceContainerVisibility(SequenceHud hud)
+        {
+            bool anyVisible = hud.EllipsisLabel.style.display == DisplayStyle.Flex;
+            for (int i = 0; i < hud.ArrowLabels.Length && !anyVisible; i++)
+            {
+                anyVisible = hud.ArrowLabels[i].style.display == DisplayStyle.Flex;
+            }
+
+            hud.HasVisibleMarker = anyVisible;
+            hud.Container.style.display = anyVisible ? DisplayStyle.Flex : DisplayStyle.None;
         }
 
         private void HandleEnemyDamaged(EnemyHealth enemy, float damageAmount, object source)
@@ -1065,7 +1112,9 @@ namespace Mukseon.Gameplay.UI
         private static void PositionSequenceHud(EnemyHealth enemy, SequenceHud hud, Camera camera, IPanel panel)
         {
             VisualElement container = hud.Container;
-            if (enemy == null || container == null || !enemy.IsAlive)
+            // 표시 방식이 '글로우 전용'이면 그릴 슬롯이 없다(#83). 이 검사를 빼면 매 프레임
+            // 컨테이너를 다시 켜 버려, 적 머리 위에 빈 검은 알약만 남는다.
+            if (enemy == null || container == null || !enemy.IsAlive || !hud.HasVisibleMarker)
             {
                 if (container != null)
                 {
@@ -1094,7 +1143,67 @@ namespace Mukseon.Gameplay.UI
 
         // ── 패턴 인디케이터 오브(#69) ───────────────────────────────────────
         // 적 머리 위 색 오브와 동일한 HUD 요소를, 보스 패턴 텔레그래프 위치 상단에 띄운다.
-        // 일반 적 오브와 같은 ApplyOrb 경로를 쓰므로, 접근성(화살표) 모드는 한 곳에서 처리된다(#83).
+        // 일반 적 오브와 같은 ApplyDirectionMarker 경로를 쓰므로, 접근성(화살표) 모드는 한 곳에서 처리된다(#83).
+
+        /// <summary>
+        /// 인게임 환경설정 진입점(#83). 방향 표시 방식은 실제 전투 화면과 대조해야 고를 수 있으므로,
+        /// 타이틀에서만 열 수 있으면 설정의 목적을 절반 잃는다.
+        ///
+        /// 좌상단은 체력바, 상단 중앙은 웨이브 패널이 차지하므로 우상단에 붙인다.
+        /// 오조작으로 전투가 멈추지 않도록 작게 두고, 열리면 오버레이가 정지를 소유한다.
+        /// </summary>
+        private void BuildSettingsButton()
+        {
+            var button = new Button(SettingsOverlay.Open) { text = Strings.SettingsButton };
+            button.style.position = Position.Absolute;
+            button.style.right = 16f;
+            button.style.top = 16f;
+            button.style.width = 92f;
+            button.style.height = 44f;
+            button.style.marginTop = 0f;
+            button.style.marginBottom = 0f;
+            button.style.marginLeft = 0f;
+            button.style.marginRight = 0f;
+            button.style.paddingTop = 0f;
+            button.style.paddingBottom = 0f;
+            button.style.paddingLeft = 0f;
+            button.style.paddingRight = 0f;
+            button.style.fontSize = 18;
+            button.style.color = new Color(0.92f, 0.90f, 0.86f, 0.9f);
+            button.style.backgroundColor = new Color(0f, 0f, 0f, 0.55f);
+            button.style.borderTopLeftRadius = 6f;
+            button.style.borderTopRightRadius = 6f;
+            button.style.borderBottomLeftRadius = 6f;
+            button.style.borderBottomRightRadius = 6f;
+            _root.Add(button);
+        }
+
+        /// <summary>
+        /// 표시 방식·화살표 병행·커스텀 색이 바뀌었을 때 화면에 떠 있는 모든 방향 표시를 다시 그린다(#83).
+        /// 적 외곽선 글로우는 각 <see cref="EnemyDirectionColorView"/>가 같은 이벤트를 따로 구독해 처리한다.
+        /// </summary>
+        private void RefreshDirectionMarkers()
+        {
+            // RefreshSequenceHud가 딕셔너리를 수정하지는 않지만, 열거 중 적이 죽어 항목이 빠지는 상황을
+            // 피하려고 키를 먼저 버퍼에 복사한다(SyncEnemies와 같은 방식).
+            _markerRefreshBuffer.Clear();
+            foreach (EnemyHealth enemy in _sequenceHuds.Keys)
+            {
+                _markerRefreshBuffer.Add(enemy);
+            }
+
+            for (int i = 0; i < _markerRefreshBuffer.Count; i++)
+            {
+                RefreshSequenceHud(_markerRefreshBuffer[i]);
+            }
+
+            _markerRefreshBuffer.Clear();
+
+            if (_patternOrbActive && _patternOrb != null)
+            {
+                ApplyDirectionMarker(_patternOrb, _patternOrbDirection, ResolvePatternOrbColor(_patternOrbDirection), true, true);
+            }
+        }
 
         /// <summary>보스 패턴 텔레그래프 위치(앵커+오프셋) 상단에 카운터 방향 색 오브를 띄운다.</summary>
         public void ShowPatternOrb(Transform anchor, Vector2 worldOffset, SwipeDirection direction)
@@ -1113,7 +1222,9 @@ namespace Mukseon.Gameplay.UI
             _patternOrbAnchor = anchor;
             _patternOrbWorldOffset = new Vector3(worldOffset.x, worldOffset.y, 0f);
             _patternOrbActive = true;
-            ApplyOrb(_patternOrb, ResolvePatternOrbColor(direction), true);
+            _patternOrbDirection = direction;
+            // 패턴 텔레그래프는 적 개체가 아니라 공간을 가리키므로 글로우로 대체될 수 없다 → alwaysVisible.
+            ApplyDirectionMarker(_patternOrb, direction, ResolvePatternOrbColor(direction), true, true);
         }
 
         /// <summary>패턴 인디케이터 오브를 숨긴다.</summary>
@@ -1137,10 +1248,13 @@ namespace Mukseon.Gameplay.UI
             _patternOrb = new Label();
             _patternOrb.style.position = Position.Absolute;
             _patternOrb.style.display = DisplayStyle.None;
+            // 접근성 화살표 글리프가 슬롯 중앙에 오도록 한다(#83). 색 오브만 쓸 때는 영향이 없다.
+            _patternOrb.style.unityTextAlign = TextAnchor.MiddleCenter;
+            _patternOrb.style.whiteSpace = WhiteSpace.Normal;
             _worldRoot.Add(_patternOrb);
         }
 
-        // 보스 본체 색 오브와 동일한 팔레트로 해석해 색을 일치시킨다. 보스가 없으면 정적 디폴트로 폴백.
+        // 보스 본체 색 오브와 동일한 팔레트로 해석해 색을 일치시킨다. 보스 HUD가 아직 없으면 폴백한다.
         private Color ResolvePatternOrbColor(SwipeDirection direction)
         {
             if (_bossEnemy != null && _sequenceHuds.TryGetValue(_bossEnemy, out SequenceHud hud))
@@ -1148,7 +1262,9 @@ namespace Mukseon.Gameplay.UI
                 return ResolveDirectionColor(hud, direction);
             }
 
-            return DirectionColorPalette.DefaultColor(direction);
+            // 폴백도 반드시 Resolve를 거쳐야 유저 커스텀 매핑(#83)이 적용된다. DefaultColor로 빠지면
+            // 카운터 방향을 알려주는 텔레그래프만 옛 색 규칙을 쓰게 되고, 유저는 그대로 틀린 방향을 벤다.
+            return DirectionColorPalette.Resolve(null, direction);
         }
 
         private void PositionPatternOrb(Camera camera, IPanel panel)
@@ -1182,7 +1298,7 @@ namespace Mukseon.Gameplay.UI
             _patternOrb.style.translate = new Translate(Length.Percent(-50f), Length.Percent(-50f));
         }
 
-        // 접근성 화살표 표시(#83)에서 재사용 예정. 현재 기본 표시는 색 오브.
+        // 접근성 화살표 병행 표시(#83)의 글리프. 색으로만 방향을 구분할 수 없는 유저를 위한 형태 단서다.
         private static string Arrow(SwipeDirection direction)
         {
             switch (direction)
@@ -1207,22 +1323,47 @@ namespace Mukseon.Gameplay.UI
         /// </summary>
         private static Color ResolveDirectionColor(SequenceHud hud, SwipeDirection direction)
         {
+            // 폴백도 반드시 Resolve를 거쳐야 유저 커스텀 매핑(#83)이 적용된다.
             return hud.ColorView != null
                 ? hud.ColorView.ResolveColor(direction)
-                : DirectionColorPalette.DefaultColor(direction);
+                : DirectionColorPalette.Resolve(null, direction);
         }
 
         /// <summary>
-        /// 방향 표시 슬롯을 색 오브(둥근 색 구슬)로 스타일링한다(#82, `combat_system.md` §3).
-        /// current=true면 현재 타격 대상으로 크게·불투명·밝은 외곽선 강조, false면 작게·반투명.
+        /// 방향 표시 슬롯을 현재 표시 설정에 맞춰 스타일링한다(#82/#83, `combat_system.md` §3).
+        ///
+        /// 색 오브(둥근 색 구슬)와 접근성 화살표는 서로 독립적으로 켜진다:
+        /// <list type="bullet">
+        /// <item>오브 O / 화살표 X — 색 구슬만 (기본)</item>
+        /// <item>오브 O / 화살표 O — 색 구슬 안에 방향 화살표 (색맹·색약 유저도 방향을 읽을 수 있다)</item>
+        /// <item>오브 X / 화살표 O — 배경 없이 방향 색 화살표만</item>
+        /// <item>오브 X / 화살표 X — 슬롯을 숨긴다(<paramref name="alwaysVisible"/>이면 오브로 폴백)</item>
+        /// </list>
+        ///
+        /// <paramref name="current"/>=true면 현재 타격 대상으로 크게·불투명·밝은 외곽선 강조, false면 작게·반투명.
         /// 색상은 <see cref="ResolveDirectionColor"/>가 적 팔레트에서 해석한 값을 받는다.
         /// </summary>
-        private static void ApplyOrb(Label slot, Color color, bool current)
+        /// <param name="alwaysVisible">
+        /// 외곽선 글로우가 대체할 수 없는 정보를 담은 슬롯(보스 시퀀스의 다음 순번, 패턴 텔레그래프)은
+        /// 표시 방식이 '글로우 전용'이어도 숨기면 안 되므로 true를 넘긴다.
+        /// </param>
+        private static void ApplyDirectionMarker(Label slot, SwipeDirection direction, Color color, bool current, bool alwaysVisible)
         {
-            slot.style.display = DisplayStyle.Flex;
-            slot.text = string.Empty;
+            bool showArrow = DirectionColorSettings.ArrowAssistEnabled;
+            bool showOrb = DirectionColorSettings.OrbEnabled || (alwaysVisible && !showArrow);
 
-            float size = current ? 20f : 14f;
+            if (!showOrb && !showArrow)
+            {
+                slot.style.display = DisplayStyle.None;
+                return;
+            }
+
+            slot.style.display = DisplayStyle.Flex;
+
+            // 화살표 글리프가 들어가면 같은 지름으로는 읽히지 않으므로 슬롯을 키운다.
+            float size = showArrow
+                ? (current ? 26f : 19f)
+                : (current ? 20f : 14f);
             slot.style.width = size;
             slot.style.height = size;
             slot.style.marginLeft = 3f;
@@ -1234,16 +1375,38 @@ namespace Mukseon.Gameplay.UI
             slot.style.borderBottomLeftRadius = radius;
             slot.style.borderBottomRightRadius = radius;
 
-            color.a = current ? 1f : 0.5f;
-            slot.style.backgroundColor = color;
+            // 아직 차례가 오지 않은 슬롯은 반투명하게 낮춰 현재 타격 대상과 구분한다.
+            float alpha = current ? 1f : 0.5f;
 
-            float border = current ? 2f : 0f;
+            Color fill = color;
+            fill.a = showOrb ? alpha : 0f;
+            slot.style.backgroundColor = fill;
+
+            if (showArrow)
+            {
+                slot.text = Arrow(direction);
+                slot.style.fontSize = size * 0.72f;
+                slot.style.unityTextAlign = TextAnchor.MiddleCenter;
+                slot.style.unityFontStyleAndWeight = FontStyle.Bold;
+
+                // 오브 위에서는 대비를 위해 흰 글리프, 오브 없이 단독일 때는 방향 색 자체를 글리프에 쓴다.
+                Color glyph = showOrb ? Color.white : color;
+                glyph.a = alpha;
+                slot.style.color = glyph;
+            }
+            else
+            {
+                slot.text = string.Empty;
+            }
+
+            // 외곽선 강조는 오브가 있을 때만 의미가 있다(배경 없는 화살표에 테두리를 두르면 사각형이 보인다).
+            float border = current && showOrb ? 2f : 0f;
             slot.style.borderTopWidth = border;
             slot.style.borderBottomWidth = border;
             slot.style.borderLeftWidth = border;
             slot.style.borderRightWidth = border;
 
-            Color borderColor = new Color(1f, 1f, 1f, current ? 0.9f : 0f);
+            Color borderColor = new Color(1f, 1f, 1f, border > 0f ? 0.9f : 0f);
             slot.style.borderTopColor = borderColor;
             slot.style.borderBottomColor = borderColor;
             slot.style.borderLeftColor = borderColor;
