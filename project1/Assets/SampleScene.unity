@@ -179,6 +179,7 @@ GameObject:
   - component: {fileID: 187285048}
   - component: {fileID: 187285047}
   - component: {fileID: 187285050}
+  - component: {fileID: 187285051}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -370,6 +371,21 @@ MonoBehaviour:
   m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.Stats.PlayerStatSystem
   _characterData: {fileID: 11400000, guid: 1e2bc5133718e524ca66b76fada5e98b, type: 2}
   _initialStats: {fileID: 11400000, guid: a916fc540523e704dbb15d407ab587f7, type: 2}
+--- !u!114 &187285051
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 187285028}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 52a5fc780ea1416a8433970b095473c2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.Progression.Shrine.ShrineUpgradeApplier
+  _catalog: {fileID: 11400000, guid: 2ae313d0f3354088939ca77e111f1736, type: 2}
+  _playerStatSystem: {fileID: 187285037}
+  _showDebugLogs: 0
 --- !u!114 &187285038
 MonoBehaviour:
   m_ObjectHideFlags: 0

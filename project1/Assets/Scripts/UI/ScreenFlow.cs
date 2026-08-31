@@ -16,6 +16,7 @@ namespace Mukseon.UI
     public class ScreenFlow : MonoBehaviour
     {
         public const string TitleScene = "Title";
+        public const string ShrineScene = "Shrine";
         public const string CharacterSelectScene = "CharacterSelect";
         public const string GameplayScene = "SampleScene";
 
@@ -106,6 +107,8 @@ namespace Mukseon.UI
         }
 
         public static void LoadTitle() => Load(TitleScene);
+
+        public static void LoadShrine() => Load(ShrineScene);
 
         public static void LoadCharacterSelect() => Load(CharacterSelectScene);
 

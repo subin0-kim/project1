@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 53007301f9a645249dd1bcf7bbf4d5d1, type: 3}
+  m_Name: ShrineUpgradeCatalog
+  m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.Progression.Shrine.ShrineUpgradeCatalog
+  _upgrades:
+  - {fileID: 11400000, guid: 315cff40ae7e4cd082d126cb38e24993, type: 2}
+  - {fileID: 11400000, guid: 1996ad68af764e0593b8a55bb08b9fe2, type: 2}
+  - {fileID: 11400000, guid: b65f4a3b3c634224aab2518fd3e66f8f, type: 2}
+  - {fileID: 11400000, guid: 423f18838f2f4abbb19bee0eac5aa0a2, type: 2}
+  - {fileID: 11400000, guid: 25329926119448a79f8113ea24f97a1e, type: 2}
