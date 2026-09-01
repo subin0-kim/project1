@@ -20,6 +20,9 @@ namespace Mukseon.Tests.EditMode
         private const string MudangStatsPath = "Assets/Settings/Data/Stats/PlayerStats_Mudang.asset";
         private const string BaksuStatsPath = "Assets/Settings/Data/Stats/PlayerStats_Baksu.asset";
 
+        /// <summary>캐릭터가 정해지지 않았을 때 PlayerStatSystem이 쓰는 폴백 정의(씬의 _initialStats).</summary>
+        private const string FallbackStatsPath = "Assets/Settings/PlayerStats_Default.asset";
+
         /// <summary>`currency_system.md`의 업그레이드 5종과 Max Level.</summary>
         private static readonly (string Id, int MaxLevel)[] ExpectedUpgrades =
         {
@@ -148,6 +151,25 @@ namespace Mukseon.Tests.EditMode
                     stats[StatType.SwipeDamageMultiplier],
                     Is.EqualTo(1f).Within(0.0001f),
                     $"{path}의 스와이프 데미지 배율 기본값이 1이 아닙니다.");
+            }
+        }
+
+        [Test]
+        public void FallbackStatsDefinition_CoversEveryShrineTargetedStat()
+        {
+            // 캐릭터 정의를 못 찾으면 PlayerStatSystem이 이 폴백으로 내려온다. 여기에 빠진 스탯은
+            // 그 상황에서 조용히 무효가 되므로, 신당이 건드리는 스탯은 폴백에도 전부 있어야 한다.
+            HashSet<StatType> fallback = LoadDefinedStats(FallbackStatsPath);
+
+            foreach (ShrineUpgradeData upgrade in LoadCatalog().Upgrades)
+            {
+                foreach (ShrineUpgradeEffect effect in upgrade.Effects)
+                {
+                    Assert.That(
+                        fallback,
+                        Does.Contain(effect.StatType),
+                        $"폴백 스탯 정의에 '{effect.StatType}'이 없어 '{upgrade.UpgradeId}'가 적용되지 않습니다.");
+                }
             }
         }
 
