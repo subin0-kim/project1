@@ -28,6 +28,6 @@ MonoBehaviour:
   - 7200
   - 8000
   _effects:
-  - _statType: 1
+  - _statType: 13
     _modifierType: 1
     _valuePerLevel: 0.03

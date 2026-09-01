@@ -44,16 +44,26 @@ namespace Mukseon.Gameplay.Progression.Shrine
         /// <summary>
         /// 지정 레벨을 구매하는 비용. <paramref name="level"/>은 1-based(1레벨을 사는 비용 = 1)이며,
         /// 범위 밖이면 false — 최대 레벨 도달 여부 판정을 호출부가 따로 하지 않아도 된다.
+        ///
+        /// 0 이하의 비용도 false다. 0을 그대로 돌려주면 "골드 0 이상이면 구매 가능"이 되어
+        /// 값이 잘못 들어간 에셋이 무료 구매로 팔린다. 비용이 없는 레벨은 살 수 없는 레벨로 본다.
         /// </summary>
         public bool TryGetCost(int level, out int cost)
         {
+            cost = 0;
+
             if (_costs == null || level < 1 || level > _costs.Count)
             {
-                cost = 0;
                 return false;
             }
 
-            cost = Mathf.Max(0, _costs[level - 1]);
+            int defined = _costs[level - 1];
+            if (defined <= 0)
+            {
+                return false;
+            }
+
+            cost = defined;
             return true;
         }
 
@@ -107,9 +117,11 @@ namespace Mukseon.Gameplay.Progression.Shrine
 
             for (int i = 0; i < _costs.Count; i++)
             {
-                if (_costs[i] < 0)
+                // 0도 막는다. TryGetCost가 0 이하를 "살 수 없는 레벨"로 보므로, 여기서 통과시키면
+                // 에디터에선 멀쩡해 보이는 항목이 게임에선 그 레벨에서 영영 막힌다.
+                if (_costs[i] <= 0)
                 {
-                    reason = $"'{UpgradeId}'의 {i + 1}레벨 비용이 음수입니다.";
+                    reason = $"'{UpgradeId}'의 {i + 1}레벨 비용이 0 이하입니다.";
                     return false;
                 }
             }

@@ -113,6 +113,45 @@ namespace Mukseon.Tests.EditMode
         }
 
         [Test]
+        public void AttackUpgrade_TargetsTheMultiplierStat_NotTheAdditiveOne()
+        {
+            // StatType.AttackPower는 SwipeAttackEventListener.ResolveDamage가 기본 데미지에 '더하는' 가산항이다.
+            // 거기에 Percent를 걸면 총 데미지가 아니라 가산항만 커져, "+30%" 표기가 캐릭터별로 +15%/+16.7%가 된다.
+            // 이 항목은 최종 데미지에 곱해지는 SwipeDamageMultiplier를 대상으로 해야 표기와 체감이 일치한다.
+            ShrineUpgradeData upgrade = LoadCatalog().Find("shrine.attack_power");
+            Assert.That(upgrade, Is.Not.Null);
+
+            foreach (ShrineUpgradeEffect effect in upgrade.Effects)
+            {
+                Assert.That(
+                    effect.StatType,
+                    Is.EqualTo(StatType.SwipeDamageMultiplier),
+                    "공격력 업그레이드는 배율 스탯을 올려야 한다.");
+                Assert.That(effect.ModifierType, Is.EqualTo(StatModifierType.Percent));
+            }
+        }
+
+        [Test]
+        public void DamageMultiplierStat_StartsAtOneForBothCharacters()
+        {
+            // 배율의 기본값이 1이 아니면 아무도 사지 않은 상태의 데미지가 달라지고,
+            // 0이면 Percent 보정을 곱해도 0이라 업그레이드가 조용히 아무 일도 하지 않는다.
+            foreach (string path in new[] { MudangStatsPath, BaksuStatsPath })
+            {
+                Dictionary<StatType, float> stats = LoadStatBaseValues(path);
+
+                Assert.That(
+                    stats.ContainsKey(StatType.SwipeDamageMultiplier),
+                    Is.True,
+                    $"{path}에 스와이프 데미지 배율 스탯이 없습니다.");
+                Assert.That(
+                    stats[StatType.SwipeDamageMultiplier],
+                    Is.EqualTo(1f).Within(0.0001f),
+                    $"{path}의 스와이프 데미지 배율 기본값이 1이 아닙니다.");
+            }
+        }
+
+        [Test]
         public void ShrineScene_IsRegisteredInBuildSettings()
         {
             // 씬이 빌드 목록에 없으면 타이틀의 신당 버튼이 런타임에만 실패한다.
@@ -140,16 +179,22 @@ namespace Mukseon.Tests.EditMode
 
         private static HashSet<StatType> LoadDefinedStats(string path)
         {
+            return new HashSet<StatType>(LoadStatBaseValues(path).Keys);
+        }
+
+        private static Dictionary<StatType, float> LoadStatBaseValues(string path)
+        {
             var definition = AssetDatabase.LoadAssetAtPath<PlayerStatsDefinition>(path);
             Assert.That(definition, Is.Not.Null, $"스탯 정의 에셋을 찾을 수 없습니다: {path}");
 
-            var defined = new HashSet<StatType>();
+            var values = new Dictionary<StatType, float>();
             for (int i = 0; i < definition.Stats.Count; i++)
             {
-                defined.Add(definition.Stats[i].StatType);
+                StatValueDefinition stat = definition.Stats[i];
+                values[stat.StatType] = stat.BaseValue;
             }
 
-            return defined;
+            return values;
         }
     }
 }

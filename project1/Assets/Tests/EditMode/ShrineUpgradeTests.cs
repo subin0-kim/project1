@@ -91,9 +91,19 @@ namespace Mukseon.Tests.EditMode
             ShrineUpgradeData upgrade = CreateUpgrade(
                 "shrine.power",
                 new[] { 100, 200, 300 },
-                new ShrineUpgradeEffect(StatType.AttackPower, StatModifierType.Percent, 0.05f));
+                new ShrineUpgradeEffect(StatType.SwipeDamageMultiplier, StatModifierType.Percent, 0.05f));
 
             Assert.That(upgrade.FormatEffect(3), Is.EqualTo("+15%"));
+        }
+
+        [Test]
+        public void TryGetCost_RejectsNonPositiveCosts()
+        {
+            // 0을 "비용 0"으로 돌려주면 골드 보유량과 무관하게 구매 조건을 통과한다.
+            ShrineUpgradeData upgrade = CreateUpgrade("shrine.test", new[] { 100, 0, -50 });
+
+            Assert.That(upgrade.TryGetCost(2, out _), Is.False, "비용 0은 살 수 있는 레벨이 아니다.");
+            Assert.That(upgrade.TryGetCost(3, out _), Is.False, "음수 비용은 살 수 있는 레벨이 아니다.");
         }
 
         [Test]
@@ -104,6 +114,10 @@ namespace Mukseon.Tests.EditMode
 
             ShrineUpgradeData noEffects = CreateUpgrade("shrine.noeffect", new[] { 100 });
             Assert.That(noEffects.IsValid(out _), Is.False, "효과가 없으면 사도 의미가 없다.");
+
+            ShrineUpgradeData zeroCost = CreateUpgrade("shrine.free", new[] { 100, 0 }, DefaultEffect());
+            Assert.That(zeroCost.IsValid(out string reason), Is.False, "비용 0인 레벨은 유효하지 않다.");
+            Assert.That(reason, Does.Contain("2레벨"));
         }
 
         [Test]
@@ -188,6 +202,53 @@ namespace Mukseon.Tests.EditMode
             Assert.That(system.Gold, Is.EqualTo(1000), "저장 실패 시 골드가 되돌아와야 한다.");
             Assert.That(system.GetLevel(upgrade), Is.EqualTo(0), "저장 실패 시 레벨이 되돌아와야 한다.");
             Assert.That(changedCount, Is.EqualTo(0), "실패한 구매로 화면을 갱신하면 안 된다.");
+        }
+
+        [Test]
+        public void TryPurchase_WithZeroCost_IsRejectedInsteadOfSoldForFree()
+        {
+            // 비용에 0이 들어간 에셋을 무료 구매로 팔면, 잘못된 데이터가 밸런스 붕괴로 곧장 이어진다.
+            ShrineUpgradeData upgrade = CreateUpgrade("shrine.free", new[] { 0 }, DefaultEffect());
+            var service = CreateService(gold: 0);
+            var system = new ShrineUpgradeSystem(CreateCatalog(upgrade), service);
+
+            Assert.That(system.CanPurchase(upgrade), Is.False);
+            Assert.That(system.TryPurchase(upgrade), Is.EqualTo(ShrinePurchaseResult.InvalidUpgrade));
+            Assert.That(system.GetLevel(upgrade), Is.EqualTo(0));
+        }
+
+        [Test]
+        public void TryPurchase_LeavesNoSaveEntry_WhenTheFirstPurchaseFails()
+        {
+            // 원복은 "값을 0으로 되돌린다"가 아니라 "손대기 전 모양으로 되돌린다"여야 한다.
+            ShrineUpgradeData upgrade = CreateUpgrade("shrine.health", new[] { 500 }, DefaultEffect());
+            var service = new SaveService(new FailingStorage());
+            service.Load();
+            service.Current.TotalGold = 1000;
+
+            var system = new ShrineUpgradeSystem(CreateCatalog(upgrade), service);
+
+            Assert.That(system.TryPurchase(upgrade), Is.EqualTo(ShrinePurchaseResult.SaveFailed));
+            Assert.That(
+                service.Current.UpgradeLevels.ContainsKey("shrine.health"),
+                Is.False,
+                "한 번도 산 적 없는 항목이 세이브에 0 엔트리로 남으면 안 된다.");
+        }
+
+        [Test]
+        public void TryPurchase_KeepsPreviousLevel_WhenALaterPurchaseFails()
+        {
+            ShrineUpgradeData upgrade = CreateUpgrade("shrine.health", new[] { 500, 1000 }, DefaultEffect());
+            var service = new SaveService(new FailingStorage());
+            service.Load();
+            service.Current.TotalGold = 5000;
+            service.Current.UpgradeLevels.Set("shrine.health", 1);
+
+            var system = new ShrineUpgradeSystem(CreateCatalog(upgrade), service);
+
+            Assert.That(system.TryPurchase(upgrade), Is.EqualTo(ShrinePurchaseResult.SaveFailed));
+            Assert.That(system.GetLevel(upgrade), Is.EqualTo(1), "이미 산 레벨까지 잃으면 안 된다.");
+            Assert.That(service.Current.UpgradeLevels.ContainsKey("shrine.health"), Is.True);
         }
 
         [Test]

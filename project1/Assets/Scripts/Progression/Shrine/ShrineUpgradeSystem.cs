@@ -87,13 +87,26 @@ namespace Mukseon.Gameplay.Progression.Shrine
             long previousGold = save.TotalGold;
             int previousLevel = GetLevel(upgrade);
 
+            // 실패 시 "값을 되돌린다"가 아니라 "손대기 전 상태로 되돌린다"여야 한다. 원래 키가 없었는데
+            // Set(id, 0)으로 되돌리면 구매한 적 없는 항목이 세이브에 0 엔트리로 남는다(동작엔 무해하지만 잔여물이다).
+            bool hadEntry = save.UpgradeLevels.ContainsKey(upgrade.UpgradeId);
+
             save.TotalGold = previousGold - cost;
             save.UpgradeLevels.Set(upgrade.UpgradeId, previousLevel + 1);
 
             if (!_saveService.Save())
             {
                 save.TotalGold = previousGold;
-                save.UpgradeLevels.Set(upgrade.UpgradeId, previousLevel);
+
+                if (hadEntry)
+                {
+                    save.UpgradeLevels.Set(upgrade.UpgradeId, previousLevel);
+                }
+                else
+                {
+                    save.UpgradeLevels.Remove(upgrade.UpgradeId);
+                }
+
                 return ShrinePurchaseResult.SaveFailed;
             }
 

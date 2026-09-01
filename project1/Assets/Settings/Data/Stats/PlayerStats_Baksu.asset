@@ -39,3 +39,5 @@ MonoBehaviour:
     _baseValue: 1
   - _statType: 12
     _baseValue: 1
+  - _statType: 13
+    _baseValue: 1
