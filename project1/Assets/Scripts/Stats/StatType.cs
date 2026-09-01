@@ -20,5 +20,11 @@ namespace Mukseon.Gameplay.Stats
         HonbulAcquireMultiplier = 10,    // 혼불 1개당 획득 경험치 배율.
         GoldGain = 11,                   // 골드 획득 배율(골드 시스템 도입 시 연동).
         ExperienceGain = 12,             // 혼불 배율과 별개로 적용되는 경험치 보너스 배율.
+
+        // 스와이프 최종 데미지 배율(기본 1.0). AttackPower와 나누어 둔 이유:
+        // AttackPower는 소비자(SwipeAttackEventListener.ResolveDamage)가 기본 데미지에 '더하는' 가산항이라,
+        // 여기에 Percent 보정을 걸면 총 데미지가 아니라 가산항만 커진다(+30% 표기 → 실제 +15%, 캐릭터마다 다름).
+        // 이 스탯은 (기본 데미지 + AttackPower) 전체에 곱해지므로 표기한 비율이 그대로 체감된다.
+        SwipeDamageMultiplier = 13,
     }
 }

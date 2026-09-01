@@ -266,7 +266,13 @@ namespace Mukseon.Gameplay.Combat
                 damage += Mathf.Max(0f, attackPower);
             }
 
-            return damage;
+            // 배율은 가산항을 모두 더한 뒤 마지막에 곱한다. 신당의 '기본 공격력 증가'(#34)처럼
+            // "+n%"로 표기되는 보정이 표기 그대로 총 데미지에 반영되려면 이 순서여야 한다.
+            // 스탯이 정의돼 있지 않은 캐릭터는 1.0으로 폴백한다 — 0을 곱해 데미지가 사라지면 안 된다.
+            float multiplier = PlayerStatSystem.ResolveValueOrDefault(
+                _playerStatSystem, StatType.SwipeDamageMultiplier, 1f);
+
+            return damage * multiplier;
         }
 
         public void AddBonusTargets(int amount)

@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 68922e8c29964b6682566d8f9331ae61, type: 3}
+  m_Name: ShrineUpgrade_GangshinCharge
+  m_EditorClassIdentifier: Mukseon.Core::Mukseon.Gameplay.Progression.Shrine.ShrineUpgradeData
+  _upgradeId: shrine.gangshin_charge
+  _displayName: 강신 게이지 획득 보너스
+  _description: 적을 처치할 때 차오르는 신력이 늘어납니다.
+  _effectUnit: 
+  _costs:
+  - 1500
+  - 3000
+  - 4500
+  - 6000
+  - 7500
+  _effects:
+  - _statType: 6
+    _modifierType: 1
+    _valuePerLevel: 0.08

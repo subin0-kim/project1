@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -16,6 +17,7 @@ namespace Mukseon.UI
             public const string Title = "묵선";
             public const string Subtitle = "墨線";
             public const string TouchToStart = "터치하여 시작";
+            public const string Shrine = "신당";
             public const string Settings = "환경설정";
         }
 
@@ -39,25 +41,42 @@ namespace Mukseon.UI
             // "아무 곳이나 터치"는 버튼 하나로 표현할 수 없으므로 화면 전체에서 포인터를 받는다.
             screen.RegisterCallback<PointerDownEvent>(_ => HandleStart());
 
-            BuildSettingsButton(screen);
+            BuildCornerButtons(screen);
         }
 
         /// <summary>
-        /// 환경설정 진입점(#83). 방향 색상 표시 방식·접근성 설정을 런 시작 전에 손볼 수 있어야 한다.
+        /// 화면 아래 양쪽 진입점: 신당(#34)과 환경설정(#83). 둘 다 런을 시작하기 전에 들르는 곳이라
+        /// "터치하여 시작"과 같은 화면에 놓이되, 시작 동작과 헷갈리지 않도록 구석에 둔다.
         ///
         /// 화면 전체가 "터치하여 시작"을 받으므로, 버튼의 포인터 이벤트가 화면으로 버블링되면
-        /// 설정을 열자마자 캐릭터 선택으로 넘어가 버린다. 버튼에서 전파를 끊는다.
+        /// 신당·설정을 여는 순간 캐릭터 선택으로도 넘어가 버린다. 버튼에서 전파를 끊는다.
         /// </summary>
-        private void BuildSettingsButton(VisualElement screen)
+        private void BuildCornerButtons(VisualElement screen)
         {
-            Button settings = ScreenUiFactory.MenuButton(screen, Strings.Settings, OpenSettings);
-            settings.style.position = Position.Absolute;
-            settings.style.right = 40f;
-            settings.style.bottom = 40f;
-            settings.style.width = 200f;
-            settings.style.height = 56f;
-            settings.style.fontSize = 22;
-            settings.RegisterCallback<PointerDownEvent>(evt => evt.StopPropagation());
+            BuildCornerButton(screen, Strings.Shrine, OpenShrine).style.left = 40f;
+            BuildCornerButton(screen, Strings.Settings, OpenSettings).style.right = 40f;
+        }
+
+        private static Button BuildCornerButton(VisualElement screen, string text, Action onClick)
+        {
+            Button button = ScreenUiFactory.MenuButton(screen, text, onClick);
+            button.style.position = Position.Absolute;
+            button.style.bottom = 40f;
+            button.style.width = 200f;
+            button.style.height = 56f;
+            button.style.fontSize = 22;
+            button.RegisterCallback<PointerDownEvent>(evt => evt.StopPropagation());
+            return button;
+        }
+
+        private void OpenShrine()
+        {
+            if (ScreenFlow.IsTransitioning || SettingsOverlay.IsOpen)
+            {
+                return;
+            }
+
+            ScreenFlow.LoadShrine();
         }
 
         private void OpenSettings()

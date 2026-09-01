@@ -9,6 +9,9 @@ EditorBuildSettings:
     path: Assets/Scenes/Title.unity
     guid: abbda81951d9a1e42bc8c4b0e7c3b99e
   - enabled: 1
+    path: Assets/Scenes/Shrine.unity
+    guid: d82ee5b3e98142e0b7dc8f66f7e09916
+  - enabled: 1
     path: Assets/Scenes/CharacterSelect.unity
     guid: b3aedfd7021a69b4ea2d3ce8632c8343
   - enabled: 1
